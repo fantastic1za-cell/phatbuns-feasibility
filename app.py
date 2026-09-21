@@ -4,11 +4,16 @@ import io
 import re
 import sqlite3
 import json
+import urllib.parse
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 import streamlit as st
 import pandas as pd
 from PIL import Image
 
-# ReportLab Imports for Complete Master Document Generation
+# ReportLab Imports for Comprehensive Executive PDF Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage, PageBreak
@@ -127,6 +132,62 @@ def process_uploaded_file(uploaded_file):
             return pil_img, ""
         except Exception:
             return None, ""
+
+# ==========================================
+# GMAIL & DISPATCH ENGINE (WITH READ RECEIPTS)
+# ==========================================
+def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename):
+    sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
+    sender_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
+    
+    if not sender_password:
+        return False, "Gmail App Password not configured in Streamlit secrets."
+
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"Phatbuns SA Master Rights <{sender_email}>"
+        msg['To'] = recipient_email
+        msg['Subject'] = f"Phatbuns SA — Executive Franchisee & Feasibility Pack ({site_name})"
+        
+        # Delivery & Read Receipt Headers
+        msg['Disposition-Notification-To'] = sender_email
+        msg['Return-Receipt-To'] = sender_email
+        msg['X-Confirm-Reading-To'] = sender_email
+
+        body_text = f"""Dear {recipient_name},
+
+Thank you for your interest in the Phatbuns South Africa franchise expansion program.
+
+Please find attached the complete Master Franchisee Investor Pack for {site_name}, including:
+1. Executive Site Evaluation & Investment Analysis
+2. Financial Outlay & Debt Serviceability Breakdown
+3. 5-Year Pro Forma Income Statement & 60-Month P&L Projections (35% COGS)
+4. Development Layout & Leasing Site Plan
+5. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
+
+Please review, sign the NCNDA section, and return a copy to proceed.
+
+Best regards,
+Nisaar Ally
+Master Rights Holder — Phatbuns South Africa
+Email: nisaar@fantastic1.com | fantastic1za@gmail.com
+WhatsApp: +27 82 786 7712
+"""
+        msg.attach(MIMEText(body_text, 'plain'))
+
+        # Attach PDF
+        part = MIMEApplication(pdf_bytes, Name=pdf_filename)
+        part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
+        msg.attach(part)
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        server.quit()
+        return True, "Email successfully sent with delivery & read-receipt requests enabled!"
+    except Exception as e:
+        return False, str(e)
 
 # ==========================================
 # STREAMLIT PAGE CONFIG & BRAND STYLING
@@ -254,6 +315,7 @@ if "ext_rates_taxes" not in st.session_state: st.session_state["ext_rates_taxes"
 if "ext_generator" not in st.session_state: st.session_state["ext_generator"] = 8.00
 if "ext_escalation" not in st.session_state: st.session_state["ext_escalation"] = 7.00
 if "ext_mktg" not in st.session_state: st.session_state["ext_mktg"] = 5.00
+if "uploaded_blueprint_img" not in st.session_state: st.session_state["uploaded_blueprint_img"] = None
 
 STORE_MODELS = {
     "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
@@ -265,7 +327,7 @@ STORE_MODELS = {
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# MASTER 6-PAGE PDF GENERATOR ENGINE
+# MASTER PDF GENERATION ENGINE
 # ==========================================
 def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img):
     buffer = io.BytesIO()
@@ -306,8 +368,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     # KPI Bar
     kpi_bar_data = [
         [Paragraph("TURNKEY SETUP", body_regular), Paragraph("WORKING CAPITAL", body_regular), Paragraph("BASE NET RENTAL", body_regular), Paragraph("OPS COST", body_regular)],
-        [Paragraph(f"<b>R {capital:,.0f}</b>", body_bold), Paragraph(f"<b>R {wc:,.0f}</b>", body_bold), Paragraph(f"<b>R {int_rent * int_gla:,.0f}</b>", body_bold), Paragraph(f"<b>R {ops_cost * total_gla:,.0f}</b>", body_bold)],
-        [Paragraph("Excl. VAT (Turnkey)", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Suggested Reserve", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph(f"R {int_rent:.0f} / m² pm", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Gross Rental Terms", ParagraphStyle('Micro', parent=body_regular, fontSize=6))]
+        [Paragraph(f"<b>R {int(round(capital)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(wc)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(int_rent * int_gla)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(ops_cost * total_gla)):,}</b>", body_bold)],
+        [Paragraph("Excl. VAT (Turnkey)", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Suggested Reserve", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph(f"R {int(round(int_rent))} / m² pm", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Gross Rental Terms", ParagraphStyle('Micro', parent=body_regular, fontSize=6))]
     ]
     t_kpi_bar = Table(kpi_bar_data, colWidths=[135, 135, 135, 135])
     t_kpi_bar.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4), ('ALIGN', (0,0), (-1,-1), 'CENTER')]))
@@ -321,12 +383,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     sec1_table_data = [
         [Paragraph("SITE PARAMETER", body_white_bold), Paragraph("SPECIFICATION", body_white_bold), Paragraph("TURNKEY CAPITAL SCHEDULE (EXCL. VAT)", body_white_bold), Paragraph("AMOUNT", body_white_bold)],
-        [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name} ({shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {capital*0.50:,.0f}", body_regular)],
-        [Paragraph("Address / Node", body_bold), Paragraph(str(suburb), body_regular), Paragraph("40% Beneficial Occupation (BO)", body_regular), Paragraph(f"R {capital*0.40:,.0f}", body_regular)],
-        [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {capital*0.10:,.0f}", body_regular)],
-        [Paragraph("Managing Agent / Owner", body_bold), Paragraph("Property Developers / Landlord", body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {capital:,.0f}", body_bold)],
-        [Paragraph("Mall GLA Size", body_bold), Paragraph("55,000 m² Regional Flagship", body_regular), Paragraph("Working Capital Reserve (Excluded)", body_regular), Paragraph(f"R {wc:,.0f}", body_regular)],
-        [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Captured & Uploaded)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {total_lease_outlay*2:,.0f}", body_regular)],
+        [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name} ({shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {int(round(capital*0.50)):,}", body_regular)],
+        [Paragraph("Address / Node", body_bold), Paragraph(str(suburb), body_regular), Paragraph("40% Beneficial Occupation (BO)", body_regular), Paragraph(f"R {int(round(capital*0.40)):,}", body_regular)],
+        [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {int(round(capital*0.10)):,}", body_regular)],
+        [Paragraph("Managing Agent / Owner", body_bold), Paragraph("Property Developers / Landlord", body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {int(round(capital)):,}", body_bold)],
+        [Paragraph("Mall GLA Size", body_bold), Paragraph("55,000 m² Regional Flagship", body_regular), Paragraph("Working Capital Reserve (Excluded)", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
+        [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Captured & Uploaded)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {int(round(total_lease_outlay*2)):,}", body_regular)],
     ]
     t_sec1 = Table(sec1_table_data, colWidths=[110, 150, 180, 100])
     t_sec1.setStyle(TableStyle([('BACKGROUND', (0,0), (1,0), NAVY_HEADER), ('BACKGROUND', (2,0), (3,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
@@ -341,9 +403,9 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec2_table_data = [
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
         [Paragraph("Lease Period & Renewal Option", body_bold), Paragraph("5 Years Initial Period + 5-Year Renewal Option", body_regular), Paragraph("60 Months Base Amortization", body_regular)],
-        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int_rent:.2f} / m² / month (Excl. VAT & Utilities)", body_regular), Paragraph(f"R {int_rent * int_gla:,.0f} / month", body_regular)],
-        [Paragraph("Annual Rental Escalation", body_bold), Paragraph(f"{st.session_state.get('ext_escalation', 7.0):.1f}% per annum effective anniversary of commencement", body_regular), Paragraph(f"Year 2 Base: R {(int_rent * int_gla * 1.07):,.0f} / month", body_regular)],
-        [Paragraph("Turnover Rental Clause", body_bold), Paragraph("7.0% of Net Monthly Turnover vs Base Net Rental (Whichever Greater)", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
+        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int(round(int_rent)):,} / m² / month (Excl. VAT & Utilities)", body_regular), Paragraph(f"R {int(round(int_rent * int_gla)):,} / month", body_regular)],
+        [Paragraph("Annual Rental Escalation", body_bold), Paragraph(f"{st.session_state.get('ext_escalation', 7.0):.1f}% per annum effective anniversary", body_regular), Paragraph(f"Year 2 Base: R {int(round(int_rent * int_gla * 1.07)):,} / month", body_regular)],
+        [Paragraph("Turnover Rental Clause", body_bold), Paragraph("7.0% of Net Monthly Turnover vs Base Net Rental", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
     ]
     t_sec2 = Table(sec2_table_data, colWidths=[150, 240, 150])
@@ -394,10 +456,10 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", ParagraphStyle('P2Sec2', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
     fin_p2_data = [
-        [Paragraph("<b>Total Turnkey Capital:</b>", body_regular), Paragraph(f"R {capital:,.2f}", body_regular)],
-        [Paragraph("<b>Working Capital Reserve:</b>", body_regular), Paragraph(f"R {wc:,.2f}", body_regular)],
-        [Paragraph("<b>Total Initial Capital Required:</b>", body_regular), Paragraph(f"R {capital+wc:,.2f}", body_regular)],
-        [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_regular), Paragraph(f"R {total_lease_outlay:,.2f}", body_regular)],
+        [Paragraph("<b>Total Turnkey Capital:</b>", body_regular), Paragraph(f"R {int(round(capital)):,}", body_regular)],
+        [Paragraph("<b>Working Capital Reserve:</b>", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
+        [Paragraph("<b>Total Initial Capital Required:</b>", body_regular), Paragraph(f"R {int(round(capital+wc)):,}", body_regular)],
+        [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_regular), Paragraph(f"R {int(round(total_lease_outlay)):,}", body_regular)],
         [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_regular), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_regular)],
         [Paragraph("<b>Full Capital Recovery Period:</b>", body_regular), Paragraph("Month 15", body_regular)],
     ]
@@ -428,10 +490,10 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(PageBreak())
 
     # ==========================================
-    # PAGE 3: 5-YEAR PRO FORMA INCOME STATEMENT (P&L)
+    # PAGE 3: 5-YEAR PRO FORMA P&L (Photo 24 Fixed: 35% COGS & No Decimals)
     # ==========================================
     elements.append(Paragraph("4. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST", ParagraphStyle('P3PnlH', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
-    elements.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 33% COGS | 9% Royalties & Marketing", body_regular))
+    elements.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 35% COGS | 9% Royalties & Marketing", body_regular))
     elements.append(Spacer(1, 8))
 
     pnl_table_data = [[Paragraph(f"<b>{col}</b>", body_white_bold) for col in df_pnl_annual.columns]]
@@ -439,15 +501,18 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         row_cells = []
         for col in df_pnl_annual.columns:
             val = row[col]
-            formatted = f"R {val:,.2f}" if isinstance(val, (int, float)) else str(val)
+            if isinstance(val, (int, float)):
+                formatted = f"R {int(round(val)):,}"
+            else:
+                formatted = str(val)
             row_cells.append(Paragraph(formatted, body_regular))
         pnl_table_data.append(row_cells)
 
-    t_pnl = Table(pnl_table_data, colWidths=[65, 65, 60, 55, 55, 55, 60, 60, 65])
+    t_pnl = Table(pnl_table_data, colWidths=[50, 68, 62, 60, 58, 60, 62, 60, 60])
     t_pnl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('PADDING', (0,0), (-1,-1), 3),
         ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
     ]))
     elements.append(t_pnl)
@@ -455,7 +520,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(PageBreak())
 
     # ==========================================
-    # PAGE 4: ADDENDUM SITE LAYOUT PLAN (Photo 1)
+    # PAGE 4: ADDENDUM SITE DEVELOPMENT PLAN (Photo 1 / Photo 23 Fixed)
     # ==========================================
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
@@ -466,12 +531,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             img_byte_arr = io.BytesIO()
             blueprint_pil_img.save(img_byte_arr, format='PNG')
             img_byte_arr.seek(0)
-            rl_img = RLImage(img_byte_arr, width=520, height=520)
+            rl_img = RLImage(img_byte_arr, width=520, height=480)
             elements.append(rl_img)
         except Exception:
             pass
 
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 10))
     sig_p2 = [
         [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_regular), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_regular)],
         [Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular), Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular)]
@@ -483,7 +548,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(PageBreak())
 
     # ==========================================
-    # PAGE 5 & 6: NON-CIRCUMVENTION & CONFIDENTIALITY AGREEMENT (NCNDA)
+    # PAGE 5 & 6: NCNDA LEGAL AGREEMENT
     # ==========================================
     ncnda_title = ParagraphStyle('NCNDATitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
     ncnda_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
@@ -563,7 +628,7 @@ def generate_pipeline_pdf(df_pipeline):
                 Paragraph(f"{row['full_name']}<br/>{row['mobile']}", body_style),
                 Paragraph(str(row['preferred_site']), body_style),
                 Paragraph(str(row['store_model']), body_style),
-                Paragraph(f"R {row['capital_available']:,.2f}", body_style),
+                Paragraph(f"R {int(round(row['capital_available'])):,}", body_style),
                 Paragraph(f"{row['unencumbered_cash_pct']:.0f}%", body_style),
                 Paragraph(str(row['ceo_approval']), body_style)
             ])
@@ -663,16 +728,19 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
+    # FIX ISSUE 1 & 3: Persistent Blueprint Image Session State
     st.subheader("Site Blueprint & Development Layout Plan")
     blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
-    blueprint_pil_img = None
+    
     if blueprint_file is not None:
         pil_img, pdf_text = process_uploaded_file(blueprint_file)
         if pil_img is not None:
-            blueprint_pil_img = pil_img
-            st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
-        else:
-            st.info(f"📄 **Blueprint PDF Attached:** {blueprint_file.name}")
+            st.session_state["uploaded_blueprint_img"] = pil_img
+
+    blueprint_pil_img = st.session_state.get("uploaded_blueprint_img", None)
+    
+    if blueprint_pil_img is not None:
+        st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
     else:
         st.info("ℹ️ **Blueprint Status:** Loftus Leasing Layout Plan attached by default.")
 
@@ -704,12 +772,12 @@ with tab1:
     with col_int_rent:
         internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", key="ext_internal_rent", step=10.0, format="%.2f")
         total_internal_rent = internal_gla * internal_rent_sqm
-        st.caption(f"💵 **Total Monthly Internal Rent:** R {total_internal_rent:,.2f} (Excl. VAT)")
+        st.caption(f"💵 **Total Monthly Internal Rent:** R {int(round(total_internal_rent)):,} (Excl. VAT)")
 
     with col_ext_rent:
         external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", key="ext_external_rent", step=5.0, format="%.2f")
         total_external_rent = external_gla * external_rent_sqm
-        st.caption(f"💵 **Total Monthly External Rent:** R {total_external_rent:,.2f} (Excl. VAT)")
+        st.caption(f"💵 **Total Monthly External Rent:** R {int(round(total_external_rent)):,} (Excl. VAT)")
 
     total_base_rent_monthly = total_internal_rent + total_external_rent
 
@@ -732,7 +800,7 @@ with tab1:
         monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f")
 
     total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
-    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay:** R {total_lease_outlay_monthly:,.2f} (Excl. VAT)")
+    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay:** R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)")
 
     st.divider()
 
@@ -765,11 +833,11 @@ with tab1:
 
     payback_matrix_data = {
         "FINANCIAL METRIC": ["Monthly CapEx Amortization", "Total Monthly Cash Outflow", "Required Monthly Turnover", "Daily Orders Needed (R150 Avg Ticket)"],
-        "OPERATIONAL BREAKEVEN": ["R 0.00", f"R {outflow_breakeven:,.2f}", f"R {turnover_req_be:,.2f}", daily_orders_be],
-        "12-MONTH PAYBACK": [f"R {capex_12:,.2f}", f"R {outflow_12:,.2f}", f"R {turnover_req_12:,.2f}", daily_orders_12],
-        "24-MONTH PAYBACK": [f"R {capex_24:,.2f}", f"R {outflow_24:,.2f}", f"R {turnover_req_24:,.2f}", daily_orders_24],
-        "36-MONTH PAYBACK": [f"R {capex_36:,.2f}", f"R {outflow_36:,.2f}", f"R {turnover_req_36:,.2f}", daily_orders_36],
-        "60-MONTH LEASE TERM": [f"R {capex_60:,.2f}", f"R {outflow_60:,.2f}", f"R {turnover_req_60:,.2f}", daily_orders_60]
+        "OPERATIONAL BREAKEVEN": ["R 0", f"R {int(round(outflow_breakeven)):,}", f"R {int(round(turnover_req_be)):,}", daily_orders_be],
+        "12-MONTH PAYBACK": [f"R {int(round(capex_12)):,}", f"R {int(round(outflow_12)):,}", f"R {int(round(turnover_req_12)):,}", daily_orders_12],
+        "24-MONTH PAYBACK": [f"R {int(round(capex_24)):,}", f"R {int(round(outflow_24)):,}", f"R {int(round(turnover_req_24)):,}", daily_orders_24],
+        "36-MONTH PAYBACK": [f"R {int(round(capex_36)):,}", f"R {int(round(outflow_36)):,}", f"R {int(round(turnover_req_36)):,}", daily_orders_36],
+        "60-MONTH LEASE TERM": [f"R {int(round(capex_60)):,}", f"R {int(round(outflow_60)):,}", f"R {int(round(turnover_req_60)):,}", daily_orders_60]
     }
 
     df_payback_matrix = pd.DataFrame(payback_matrix_data)
@@ -777,7 +845,8 @@ with tab1:
 
     st.divider()
 
-    st.header("5. 60-Month Cash Flow Forecast & Annual Pro Forma P&L")
+    # FIX ISSUE 2: COGS Updated to 35% & Whole Rand Numbers
+    st.header("5. 60-Month Cash Flow Forecast & Annual Pro Forma P&L (35% COGS)")
     
     total_initial_investment = turnkey_capital + working_capital
     debt_portion = total_initial_investment * 0.50
@@ -794,7 +863,7 @@ with tab1:
         
         monthly_turnover = (turnover_req_12 * (1.08 ** year_idx)) * season_multiplier
         monthly_lease = total_lease_outlay_monthly * (st.session_state["ext_escalation"] / 100 + 1) ** year_idx
-        monthly_cogs = monthly_turnover * 0.33
+        monthly_cogs = monthly_turnover * 0.35  # COGS 35%
         monthly_royalties = monthly_turnover * 0.09
         
         total_monthly_expenses = monthly_lease + monthly_cogs + monthly_royalties + monthly_labor_cost
@@ -804,34 +873,53 @@ with tab1:
         cumulative_cash_flow += net_profit
         if cumulative_cash_flow >= 0 and break_even_month is None: break_even_month = m
             
-        cash_flow_data.append({"Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover, "Lease Outlay": monthly_lease, "COGS (33%)": monthly_cogs, "Labor": monthly_labor_cost, "Royalties (9%)": monthly_royalties, "Total Expenses": total_monthly_expenses, "EBITDA": ebitda, "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit, "Cumulative Cash Flow": cumulative_cash_flow})
+        cash_flow_data.append({"Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover, "Lease Outlay": monthly_lease, "COGS (35%)": monthly_cogs, "Labor": monthly_labor_cost, "Royalties (9%)": monthly_royalties, "Total Expenses": total_monthly_expenses, "EBITDA": ebitda, "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit, "Cumulative Cash Flow": cumulative_cash_flow})
 
     df_cashflow = pd.DataFrame(cash_flow_data)
     df_cashflow['Year_Label'] = "Year " + df_cashflow['Year'].astype(str)
-    annual_pnl = df_cashflow.groupby('Year_Label').agg({'Turnover': 'sum', 'Lease Outlay': 'sum', 'COGS (33%)': 'sum', 'Labor': 'sum', 'Royalties (9%)': 'sum', 'EBITDA': 'sum', 'Bank Repayment': 'sum', 'Net Operating Profit': 'sum'}).reset_index()
+    annual_pnl = df_cashflow.groupby('Year_Label').agg({'Turnover': 'sum', 'Lease Outlay': 'sum', 'COGS (35%)': 'sum', 'Labor': 'sum', 'Royalties (9%)': 'sum', 'EBITDA': 'sum', 'Bank Repayment': 'sum', 'Net Operating Profit': 'sum'}).reset_index()
 
-    st.dataframe(annual_pnl.style.format({'Turnover': 'R {:,.2f}', 'Lease Outlay': 'R {:,.2f}', 'COGS (33%)': 'R {:,.2f}', 'Labor': 'R {:,.2f}', 'Royalties (9%)': 'R {:,.2f}', 'EBITDA': 'R {:,.2f}', 'Bank Repayment': 'R {:,.2f}', 'Net Operating Profit': 'R {:,.2f}'}), use_container_width=True)
+    # Clean P&L Display without Decimals
+    st.dataframe(annual_pnl.style.format({'Turnover': 'R {:,.0f}', 'Lease Outlay': 'R {:,.0f}', 'COGS (35%)': 'R {:,.0f}', 'Labor': 'R {:,.0f}', 'Royalties (9%)': 'R {:,.0f}', 'EBITDA': 'R {:,.0f}', 'Bank Repayment': 'R {:,.0f}', 'Net Operating Profit': 'R {:,.0f}'}), use_container_width=True)
 
     st.divider()
 
     st.header("6. Generate Master Franchisee Investor Pack")
-    pdf_file = generate_pdf_report(
+    
+    # Generate PDF in Memory
+    pdf_buffer = generate_pdf_report(
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
         max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
         ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img
     )
+    pdf_bytes = pdf_buffer.getvalue()
 
+    # FIX ISSUE 4: Automatically Save Local Copy in /Locations Directory
+    clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
+    pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
+    
+    locations_dir = os.path.join(os.getcwd(), "Locations")
+    os.makedirs(locations_dir, exist_ok=True)
+    local_pdf_path = os.path.join(locations_dir, pdf_filename)
+    
+    with open(local_pdf_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    st.success(f"📁 **File auto-archived on server:** `{local_pdf_path}`")
+
+    # FIX ISSUE 3: Mobile Web Session Retention (No Refresh / No Redirect Loop)
     st.download_button(
-        label="📥 Download Master Franchisee Pack (Includes Site Analysis, Payback Matrix, 60-Month P&L, Layout Plan & NCNDA)",
-        data=pdf_file,
-        file_name=f"Phatbuns_Master_Investor_Pack_{location_name.replace(' ', '_')}.pdf",
+        label="📥 Download Master Franchisee Investor Pack PDF",
+        data=pdf_bytes,
+        file_name=pdf_filename,
         mime="application/pdf",
         use_container_width=True
     )
 
 with tab2:
-    st.header("Franchisee & Investor Lead Intake")
-    with st.form("investor_registration_form", clear_on_submit=True):
+    st.header("Franchisee & Investor Lead Intake & Auto-Dispatch")
+    
+    with st.form("investor_registration_form", clear_on_submit=False):
         f_col1, f_col2 = st.columns(2)
         with f_col1:
             full_name = st.text_input("Full Name *")
@@ -839,7 +927,7 @@ with tab2:
             id_or_passport = st.text_input("ID or Passport Number *")
             email = st.text_input("Email Address *")
         with f_col2:
-            mobile = st.text_input("Mobile Number *")
+            mobile = st.text_input("Mobile / WhatsApp Number (e.g. +27827867712) *")
             preferred_site = st.text_input("Preferred Target Site / Node *", value=location_name)
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()))
             capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=4500000.0, step=100000.0)
@@ -850,13 +938,42 @@ with tab2:
         with c_col2: ndnca_signed = st.checkbox("Signed NCNDA Received")
         with c_col3: popia_consent = st.checkbox("POPIA / NCA Consent Received")
 
-        submitted = st.form_submit_button("Submit Application to Database")
+        submitted = st.form_submit_button("Submit & Dispatch Investor Pack")
         if submitted:
             if not full_name or not email or not mobile or not id_or_passport or not preferred_site:
                 st.error("Please fill in all mandatory fields (*).")
             else:
-                save_investor_lead({"full_name": full_name, "entity_name": entity_name, "id_or_passport": id_or_passport, "email": email, "mobile": mobile, "preferred_site": preferred_site, "store_model": store_model_choice, "capital_available": capital_available, "unencumbered_cash_pct": unencumbered_cash_pct, "admin_fee_paid": 1 if admin_fee_paid else 0, "ndnca_signed": 1 if ndnca_signed else 0, "popia_consent": 1 if popia_consent else 0})
-                st.success(f"Applicant record for **{full_name}** successfully logged in database!")
+                # 1. Save to Database
+                save_investor_lead({
+                    "full_name": full_name, "entity_name": entity_name, "id_or_passport": id_or_passport,
+                    "email": email, "mobile": mobile, "preferred_site": preferred_site,
+                    "store_model": store_model_choice, "capital_available": capital_available,
+                    "unencumbered_cash_pct": unencumbered_cash_pct,
+                    "admin_fee_paid": 1 if admin_fee_paid else 0,
+                    "ndnca_signed": 1 if ndnca_signed else 0,
+                    "popia_consent": 1 if popia_consent else 0
+                })
+                
+                # FIX ISSUE 5: Gmail Email Dispatch with Read Receipts & Direct WhatsApp Link
+                email_sent, email_msg = send_franchisee_email_pack(email, full_name, preferred_site, pdf_bytes, pdf_filename)
+                
+                if email_sent:
+                    st.success(f"📧 **Executive Pack Dispatched via Gmail:** Delivery & Read-receipt headers attached ({email_msg}).")
+                else:
+                    st.warning(f"⚠️ Email Status: {email_msg}")
+
+                clean_mobile = re.sub(r'[^0-9]', '', mobile)
+                wa_text = f"Hi {full_name}, this is Nisaar Ally from Phatbuns South Africa. I have dispatched the Executive Feasibility Pack for {preferred_site} to {email}. Please review the attached pack and NCNDA."
+                encoded_wa_text = urllib.parse.quote(wa_text)
+                wa_url = f"https://api.whatsapp.com/send?phone={clean_mobile}&text={encoded_wa_text}"
+
+                st.markdown(f"""
+                <a href="{wa_url}" target="_blank" style="text-decoration:none;">
+                    <div style="background-color:#25D366; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; font-size:16px;">
+                        💬 Launch WhatsApp Direct Chat with {full_name} ({clean_mobile})
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
 
     st.divider()
 
@@ -865,7 +982,7 @@ with tab2:
     if not df_pipeline.empty:
         st.dataframe(df_pipeline, use_container_width=True)
         pipeline_pdf_file = generate_pipeline_pdf(df_pipeline)
-        st.download_button(label="📥 Download CEO Pipeline & Investor Audit PDF Report", data=pipeline_pdf_file, file_name="Phatbuns_Investor_Pipeline_Report.pdf", mime="application/pdf", use_container_width=True)
+        st.download_button(label="📥 Download CEO Pipeline Audit PDF Report", data=pipeline_pdf_file, file_name="Phatbuns_Investor_Pipeline_Report.pdf", mime="application/pdf", use_container_width=True)
     else:
         st.info("No franchisee applications currently recorded in database.")
 
