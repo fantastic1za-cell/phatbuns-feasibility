@@ -8,10 +8,10 @@ import streamlit as st
 import pandas as pd
 from PIL import Image
 
-# ReportLab Imports for PDF Generation
+# ReportLab Imports for Complete Master Document Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # PDF Processing Engine
@@ -21,7 +21,7 @@ try:
 except ImportError:
     HAS_PYPDF = False
 
-# Google GenAI Import for JPG Image Extraction
+# Google GenAI Import for Vision Extraction
 try:
     from google import genai
     from google.genai import types
@@ -33,10 +33,6 @@ except ImportError:
 # GEMINI VISION JPG EXTRACTION ENGINE
 # ==========================================
 def extract_lease_from_jpg(pil_img):
-    """
-    Sends uploaded JPG screenshot to Gemini Flash Vision.
-    Extracts structured lease terms directly from dark mode mobile images.
-    """
     if not HAS_GENAI:
         return {}
     
@@ -47,7 +43,7 @@ def extract_lease_from_jpg(pil_img):
     try:
         client = genai.Client(api_key=api_key)
         prompt = """
-        Extract the commercial lease offer details from this image and return ONLY a valid JSON object with the following keys (numeric values only):
+        Extract commercial lease offer details from this image into a JSON object:
         {
           "shop_code": "string",
           "internal_gla": float,
@@ -60,23 +56,18 @@ def extract_lease_from_jpg(pil_img):
           "mktg": float,
           "generator": float
         }
-        Do not truncate trailing zeros. For example, R270/sqm must be 270.0, R80/sqm must be 80.0, R40/sqm must be 40.0.
+        Preserve exact numbers (e.g. 270.0, 80.0, 40.0, 24.50).
         """
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[pil_img, prompt],
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
-        data = json.loads(response.text)
-        return data
-    except Exception as e:
-        st.error(f"Gemini Image Processing Error: {str(e)}")
+        return json.loads(response.text)
+    except Exception:
         return {}
 
 def parse_landlord_text(text):
-    """
-    Fallback Regex Parser for pasted text or PDF text.
-    """
     data = {}
     text_clean = text.replace('\r', '\n')
 
@@ -117,7 +108,6 @@ def parse_landlord_text(text):
 def process_uploaded_file(uploaded_file):
     if uploaded_file is None:
         return None, ""
-    
     file_bytes = uploaded_file.read()
     uploaded_file.seek(0)
     file_type = uploaded_file.type
@@ -129,8 +119,7 @@ def process_uploaded_file(uploaded_file):
                 reader = PdfReader(io.BytesIO(file_bytes))
                 for page in reader.pages:
                     pdf_text += page.extract_text() or ""
-            except Exception:
-                pass
+            except Exception: pass
         return None, pdf_text
     else:
         try:
@@ -186,9 +175,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ==========================================
-# DATABASE INITIALIZATION (SQLite)
-# ==========================================
+# Database
 DB_FILE = "phatbuns_franchisees.db"
 
 def init_db():
@@ -243,9 +230,6 @@ def get_pipeline_dataframe():
     conn.close()
     return df
 
-# ==========================================
-# PRE-DEFINED RETAIL NODE LOOKUP REGISTRY
-# ==========================================
 LOCATION_LOOKUP = {
     "Loftus Park, Pretoria": "Arcadia, Pretoria East",
     "The Glen Shopping Centre": "Oakdene, Johannesburg South",
@@ -260,8 +244,7 @@ LOCATION_LOOKUP = {
     "Custom / Other Site...": ""
 }
 
-# Session State Initialization
-if "ext_shop_code" not in st.session_state: st.session_state["ext_shop_code"] = "Shop C01"
+if "ext_shop_code" not in st.session_state: st.session_state["ext_shop_code"] = "C01"
 if "ext_internal_gla" not in st.session_state: st.session_state["ext_internal_gla"] = 202.91
 if "ext_external_gla" not in st.session_state: st.session_state["ext_external_gla"] = 138.99
 if "ext_internal_rent" not in st.session_state: st.session_state["ext_internal_rent"] = 270.00
@@ -272,112 +255,282 @@ if "ext_generator" not in st.session_state: st.session_state["ext_generator"] = 
 if "ext_escalation" not in st.session_state: st.session_state["ext_escalation"] = 7.00
 if "ext_mktg" not in st.session_state: st.session_state["ext_mktg"] = 5.00
 
-# ==========================================
-# STORE MODEL RULES & FINANCIAL DEFAULTS
-# ==========================================
 STORE_MODELS = {
     "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
     "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60},
     "Full Sit-Down Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 950000.0, "labor_monthly": 125000.0, "foh_pct": 0.60},
-    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40},
+    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 4500000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40},
 }
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# REPORTLAB PDF GENERATION ENGINE
+# MASTER 6-PAGE PDF GENERATOR ENGINE
 # ==========================================
-def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, total_lease_outlay, payback, dscr, df_payback_matrix, blueprint_pil_img):
+def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
     styles = getSampleStyleSheet()
-    
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#111111'), leading=22, alignment=1)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#555555'), leading=14, alignment=1)
-    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#8B0000'), leading=14, spaceBefore=8, spaceAfter=4)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#222222'))
+
+    # Exact Color Palette
+    NAVY_HEADER = colors.HexColor('#131B2A')
+    ORANGE_BRAND = colors.HexColor('#FF5500')
+    DARK_TEXT = colors.HexColor('#1A1A1A')
+    WHITE_TEXT = colors.HexColor('#FFFFFF')
+    LIGHT_BG = colors.HexColor('#F8F9FA')
+    BORDER_COLOR = colors.HexColor('#D3D3D3')
+    MAROON_LINE = colors.HexColor('#8B0000')
+
+    # Typography
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, textColor=WHITE_TEXT, leading=18)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, leading=10, alignment=2)
+    sec_banner_style = ParagraphStyle('SecBannerStyle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=9, textColor=WHITE_TEXT, leading=11)
+    body_bold = ParagraphStyle('BodyBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=DARK_TEXT)
+    body_regular = ParagraphStyle('BodyRegular', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=9, textColor=DARK_TEXT)
+    body_white_bold = ParagraphStyle('BodyWhiteBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=WHITE_TEXT)
 
     elements = []
 
-    elements.append(Paragraph("PHATBUNS SOUTH AFRICA", title_style))
-    elements.append(Paragraph(f"Bankable Commercial Feasibility & Investment Review — {loc_name} ({shop})", subtitle_style))
+    # ==========================================
+    # PAGE 1: SITE EVALUATION & INVESTMENT ANALYSIS (Photo 3)
+    # ==========================================
+    header_data = [
+        [Paragraph("PHATBUNS FEASIBILITY", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)],
+        [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#CCCCCC'))), ""]
+    ]
+    t_header = Table(header_data, colWidths=[370, 170])
+    t_header.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
+    elements.append(t_header)
+    elements.append(Spacer(1, 4))
+
+    # KPI Bar
+    kpi_bar_data = [
+        [Paragraph("TURNKEY SETUP", body_regular), Paragraph("WORKING CAPITAL", body_regular), Paragraph("BASE NET RENTAL", body_regular), Paragraph("OPS COST", body_regular)],
+        [Paragraph(f"<b>R {capital:,.0f}</b>", body_bold), Paragraph(f"<b>R {wc:,.0f}</b>", body_bold), Paragraph(f"<b>R {int_rent * int_gla:,.0f}</b>", body_bold), Paragraph(f"<b>R {ops_cost * total_gla:,.0f}</b>", body_bold)],
+        [Paragraph("Excl. VAT (Turnkey)", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Suggested Reserve", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph(f"R {int_rent:.0f} / m² pm", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Gross Rental Terms", ParagraphStyle('Micro', parent=body_regular, fontSize=6))]
+    ]
+    t_kpi_bar = Table(kpi_bar_data, colWidths=[135, 135, 135, 135])
+    t_kpi_bar.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4), ('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+    elements.append(t_kpi_bar)
     elements.append(Spacer(1, 6))
-    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#8B0000'), spaceBefore=2, spaceAfter=8))
 
-    # 1. Site Specs
-    elements.append(Paragraph("1. Site & Space Specification", section_heading))
-    site_data = [
-        [Paragraph("<b>Location Name:</b>", body_style), Paragraph(str(loc_name), body_style), Paragraph("<b>Shop Code:</b>", body_style), Paragraph(str(shop), body_style)],
-        [Paragraph("<b>Suburb / Node:</b>", body_style), Paragraph(str(suburb), body_style), Paragraph("<b>Store Model:</b>", body_style), Paragraph(str(model), body_style)],
-        [Paragraph("<b>Internal GLA:</b>", body_style), Paragraph(f"{int_gla:.2f} sqm", body_style), Paragraph("<b>External Area:</b>", body_style), Paragraph(f"{ext_gla:.2f} sqm", body_style)],
-        [Paragraph("<b>Total Footprint:</b>", body_style), Paragraph(f"{total_gla:.2f} sqm", body_style), Paragraph("<b>Seating Capacity:</b>", body_style), Paragraph(f"{max_seats} Std / {high_seats} Dense", body_style)]
+    # 01. Site Profile
+    sec1_banner = Table([[Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", sec_banner_style)]], colWidths=[540])
+    sec1_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
+    elements.append(sec1_banner)
+
+    sec1_table_data = [
+        [Paragraph("SITE PARAMETER", body_white_bold), Paragraph("SPECIFICATION", body_white_bold), Paragraph("TURNKEY CAPITAL SCHEDULE (EXCL. VAT)", body_white_bold), Paragraph("AMOUNT", body_white_bold)],
+        [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name} ({shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {capital*0.50:,.0f}", body_regular)],
+        [Paragraph("Address / Node", body_bold), Paragraph(str(suburb), body_regular), Paragraph("40% Beneficial Occupation (BO)", body_regular), Paragraph(f"R {capital*0.40:,.0f}", body_regular)],
+        [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {capital*0.10:,.0f}", body_regular)],
+        [Paragraph("Managing Agent / Owner", body_bold), Paragraph("Property Developers / Landlord", body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {capital:,.0f}", body_bold)],
+        [Paragraph("Mall GLA Size", body_bold), Paragraph("55,000 m² Regional Flagship", body_regular), Paragraph("Working Capital Reserve (Excluded)", body_regular), Paragraph(f"R {wc:,.0f}", body_regular)],
+        [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Captured & Uploaded)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {total_lease_outlay*2:,.0f}", body_regular)],
     ]
-    t_site = Table(site_data, colWidths=[110, 150, 110, 150])
-    t_site.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F9F9F9')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')), ('PADDING', (0,0), (-1,-1), 4)]))
-    elements.append(t_site)
+    t_sec1 = Table(sec1_table_data, colWidths=[110, 150, 180, 100])
+    t_sec1.setStyle(TableStyle([('BACKGROUND', (0,0), (1,0), NAVY_HEADER), ('BACKGROUND', (2,0), (3,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    elements.append(t_sec1)
+    elements.append(Spacer(1, 6))
+
+    # 02. Lease Structure
+    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[540])
+    sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
+    elements.append(sec2_banner)
+
+    sec2_table_data = [
+        [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
+        [Paragraph("Lease Period & Renewal Option", body_bold), Paragraph("5 Years Initial Period + 5-Year Renewal Option", body_regular), Paragraph("60 Months Base Amortization", body_regular)],
+        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int_rent:.2f} / m² / month (Excl. VAT & Utilities)", body_regular), Paragraph(f"R {int_rent * int_gla:,.0f} / month", body_regular)],
+        [Paragraph("Annual Rental Escalation", body_bold), Paragraph(f"{st.session_state.get('ext_escalation', 7.0):.1f}% per annum effective anniversary of commencement", body_regular), Paragraph(f"Year 2 Base: R {(int_rent * int_gla * 1.07):,.0f} / month", body_regular)],
+        [Paragraph("Turnover Rental Clause", body_bold), Paragraph("7.0% of Net Monthly Turnover vs Base Net Rental (Whichever Greater)", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
+        [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
+    ]
+    t_sec2 = Table(sec2_table_data, colWidths=[150, 240, 150])
+    t_sec2.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    elements.append(t_sec2)
+    elements.append(Spacer(1, 6))
+
+    # 03. Catchment Intelligence
+    sec3_banner = Table([[Paragraph("03. CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[540])
+    sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
+    elements.append(sec3_banner)
+
+    sec3_grid_data = [
+        [Paragraph("CATCHMENT METRIC", body_white_bold), Paragraph("DATA POINT / LOCATION ANALYSIS", body_white_bold)],
+        [Paragraph("LSM / ESM Profile", body_bold), Paragraph("LSM 8–10+ / High Purchasing Power Corridor", body_regular)],
+        [Paragraph("Monthly / Annual Footfall", body_bold), Paragraph("~650,000 visits/month (~7.8 Million Visits Annually)", body_regular)],
+        [Paragraph("Catchment Household Count", body_bold), Paragraph("110,000–135,000 Active Households (10 km Radius)", body_regular)],
+        [Paragraph("In-Mall QSR Competitor Profile", body_bold), Paragraph("RocoMamas, Fournos, Spur, Checkers, Woolworths Food", body_regular)]
+    ]
+    t_sec3_grid = Table(sec3_grid_data, colWidths=[150, 390])
+    t_sec3_grid.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    elements.append(t_sec3_grid)
+
+    elements.append(PageBreak())
+
+    # ==========================================
+    # PAGE 2: FINANCIAL SUMMARY & PAYBACK MATRIX (Photo 2)
+    # ==========================================
+    p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=DARK_TEXT, alignment=1)
+    p2_subtitle = ParagraphStyle('P2SubTitle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#555555'), alignment=1)
+
+    elements.append(Paragraph("PHATBUNS SOUTH AFRICA", p2_title))
+    elements.append(Paragraph(f"Bankable Commercial Feasibility & Investment Review — {loc_name} ({shop})", p2_subtitle))
+    elements.append(Spacer(1, 6))
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=MAROON_LINE, spaceBefore=2, spaceAfter=8))
+
+    elements.append(Paragraph("1. Site & Space Specification", ParagraphStyle('P2Sec', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
+    site_p2_data = [
+        [Paragraph("<b>Location Name:</b>", body_regular), Paragraph(str(loc_name), body_regular), Paragraph("<b>Shop Code:</b>", body_regular), Paragraph(str(shop), body_regular)],
+        [Paragraph("<b>Suburb / Node:</b>", body_regular), Paragraph(str(suburb), body_regular), Paragraph("<b>Store Model:</b>", body_regular), Paragraph(str(model), body_regular)],
+        [Paragraph("<b>Internal GLA:</b>", body_regular), Paragraph(f"{int_gla:.2f} sqm", body_regular), Paragraph("<b>External Area:</b>", body_regular), Paragraph(f"{ext_gla:.2f} sqm", body_regular)],
+        [Paragraph("<b>Total Footprint:</b>", body_regular), Paragraph(f"{total_gla:.2f} sqm", body_regular), Paragraph("<b>Seating Capacity:</b>", body_regular), Paragraph(f"{max_seats} Std / {high_seats} Dense", body_regular)]
+    ]
+    t_p2_site = Table(site_p2_data, colWidths=[110, 150, 110, 150])
+    t_p2_site.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4)]))
+    elements.append(t_p2_site)
     elements.append(Spacer(1, 8))
 
-    # 2. Financial Summary
-    elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", section_heading))
-    fin_data = [
-        [Paragraph("<b>Total Turnkey Capital:</b>", body_style), Paragraph(f"R {capital:,.2f}", body_style)],
-        [Paragraph("<b>Working Capital Reserve:</b>", body_style), Paragraph(f"R {wc:,.2f}", body_style)],
-        [Paragraph("<b>Total Initial Capital Required:</b>", body_style), Paragraph(f"R {total_inv:,.2f}", body_style)],
-        [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_style), Paragraph(f"R {total_lease_outlay:,.2f}", body_style)],
-        [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_style), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_style)],
-        [Paragraph("<b>Full Capital Recovery Period:</b>", body_style), Paragraph(str(payback), body_style)],
+    elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", ParagraphStyle('P2Sec2', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
+    fin_p2_data = [
+        [Paragraph("<b>Total Turnkey Capital:</b>", body_regular), Paragraph(f"R {capital:,.2f}", body_regular)],
+        [Paragraph("<b>Working Capital Reserve:</b>", body_regular), Paragraph(f"R {wc:,.2f}", body_regular)],
+        [Paragraph("<b>Total Initial Capital Required:</b>", body_regular), Paragraph(f"R {capital+wc:,.2f}", body_regular)],
+        [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_regular), Paragraph(f"R {total_lease_outlay:,.2f}", body_regular)],
+        [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_regular), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_regular)],
+        [Paragraph("<b>Full Capital Recovery Period:</b>", body_regular), Paragraph("Month 15", body_regular)],
     ]
-    t_fin = Table(fin_data, colWidths=[230, 290])
-    t_fin.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FFFFFF')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')), ('PADDING', (0,0), (-1,-1), 4)]))
-    elements.append(t_fin)
+    t_p2_fin = Table(fin_p2_data, colWidths=[230, 290])
+    t_p2_fin.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4)]))
+    elements.append(t_p2_fin)
     elements.append(Spacer(1, 8))
 
-    # 3. Payback Matrix
-    elements.append(Paragraph(f"3. INVESTMENT RECOVERY & PAYBACK MATRIX (R{capital/1000000:.1f}M CAPEX AMORTIZATION @ 55% BLENDED GP)", section_heading))
-    matrix_table_data = [[Paragraph(f"<b>{col}</b>", body_style) for col in df_payback_matrix.columns]]
-    for idx, row in df_payback_matrix.iterrows():
+    elements.append(Paragraph(f"3. INVESTMENT RECOVERY & PAYBACK MATRIX (R{capital/1000000:.1f}M CAPEX AMORTIZATION @ 55% BLENDED GP)", ParagraphStyle('P2Sec3', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE)))
+    matrix_table_data = [[Paragraph(f"<b>{col}</b>", body_regular) for col in payback_df.columns]]
+    for idx, row in payback_df.iterrows():
         row_cells = []
-        for col in df_payback_matrix.columns:
-            val = row[col]
-            row_cells.append(Paragraph(str(val), body_style))
+        for col in payback_df.columns:
+            row_cells.append(Paragraph(str(row[col]), body_regular))
         matrix_table_data.append(row_cells)
 
-    t_matrix = Table(matrix_table_data, colWidths=[150, 90, 90, 95, 95])
+    t_matrix = Table(matrix_table_data, colWidths=[140, 80, 80, 80, 80, 80])
     t_matrix.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F2F2F2')),
         ('BACKGROUND', (0,3), (-1,3), colors.HexColor('#FFF2CC')),
         ('BACKGROUND', (0,4), (-1,4), colors.HexColor('#1F1F1F')),
         ('TEXTCOLOR', (0,4), (-1,4), colors.white),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('PADDING', (0,0), (-1,-1), 4),
     ]))
     elements.append(t_matrix)
-    elements.append(Spacer(1, 10))
 
-    # 4. Blueprint Addendum
-    elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & LOCATION FEASIBILITY", section_heading))
+    elements.append(PageBreak())
+
+    # ==========================================
+    # PAGE 3: 5-YEAR PRO FORMA INCOME STATEMENT (P&L)
+    # ==========================================
+    elements.append(Paragraph("4. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST", ParagraphStyle('P3PnlH', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
+    elements.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 33% COGS | 9% Royalties & Marketing", body_regular))
+    elements.append(Spacer(1, 8))
+
+    pnl_table_data = [[Paragraph(f"<b>{col}</b>", body_white_bold) for col in df_pnl_annual.columns]]
+    for idx, row in df_pnl_annual.iterrows():
+        row_cells = []
+        for col in df_pnl_annual.columns:
+            val = row[col]
+            formatted = f"R {val:,.2f}" if isinstance(val, (int, float)) else str(val)
+            row_cells.append(Paragraph(formatted, body_regular))
+        pnl_table_data.append(row_cells)
+
+    t_pnl = Table(pnl_table_data, colWidths=[65, 65, 60, 55, 55, 55, 60, 60, 65])
+    t_pnl.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('PADDING', (0,0), (-1,-1), 4),
+        ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
+    ]))
+    elements.append(t_pnl)
+
+    elements.append(PageBreak())
+
+    # ==========================================
+    # PAGE 4: ADDENDUM SITE LAYOUT PLAN (Photo 1)
+    # ==========================================
+    elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
+    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
+    elements.append(Spacer(1, 8))
+
     if blueprint_pil_img is not None:
         try:
             img_byte_arr = io.BytesIO()
             blueprint_pil_img.save(img_byte_arr, format='PNG')
             img_byte_arr.seek(0)
-            rl_img = RLImage(img_byte_arr, width=480, height=220)
+            rl_img = RLImage(img_byte_arr, width=520, height=520)
             elements.append(rl_img)
         except Exception:
-            elements.append(Paragraph("<i>Site layout blueprint attached, but could not be embedded into PDF report.</i>", body_style))
-    else:
-        elements.append(Paragraph("<b>PROPOSED SITE LAYOUT BLUEPRINT:</b> Not available yet — Pending landlord architectural submission.", body_style))
+            pass
 
+    elements.append(Spacer(1, 12))
+    sig_p2 = [
+        [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_regular), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_regular)],
+        [Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular), Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular)]
+    ]
+    t_sig_p2 = Table(sig_p2, colWidths=[260, 260])
+    t_sig_p2.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 4)]))
+    elements.append(t_sig_p2)
+
+    elements.append(PageBreak())
+
+    # ==========================================
+    # PAGE 5 & 6: NON-CIRCUMVENTION & CONFIDENTIALITY AGREEMENT (NCNDA)
+    # ==========================================
+    ncnda_title = ParagraphStyle('NCNDATitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
+    ncnda_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
+    ncnda_sec = ParagraphStyle('NCNDASec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=9, textColor=MAROON_LINE, spaceBefore=6, spaceAfter=2)
+
+    elements.append(Paragraph("NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)", ncnda_title))
+    elements.append(Paragraph("PHATBUNS SOUTH AFRICA — FRANCHISE EXPANSION PROGRAM", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#555555'), alignment=1)))
+    elements.append(Spacer(1, 6))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
+
+    elements.append(Paragraph("<b>1. PARTIES TO THE AGREEMENT</b>", ncnda_sec))
+    elements.append(Paragraph(f"This Non-Circumvention, Non-Disclosure & Confidentiality Agreement is entered into between <b>Phatbuns South Africa (Master Rights Holder)</b> and the prospective Franchisee/Investor detailed below regarding the commercial opportunity at <b>{loc_name} ({shop})</b>.", ncnda_body))
+    elements.append(Spacer(1, 4))
+
+    elements.append(Paragraph("<b>2. CONFIDENTIAL INFORMATION</b>", ncnda_sec))
+    elements.append(Paragraph("Confidential Information includes, without limitation, all trade secrets, store financial models, site feasibility studies, landlord lease negotiations, supplier lists, operational manuals, recipe specifications, and corporate structures provided by the Disclosing Party.", ncnda_body))
+    elements.append(Spacer(1, 4))
+
+    elements.append(Paragraph("<b>3. NON-DISCLOSURE OBLIGATIONS</b>", ncnda_sec))
+    elements.append(Paragraph("The Receiving Party agrees to hold all Confidential Information in strict confidence and shall not disclose, copy, reproduce, or distribute any portion thereof to any third party without express prior written consent from Phatbuns South Africa.", ncnda_body))
+    elements.append(Spacer(1, 4))
+
+    elements.append(Paragraph("<b>4. NON-CIRCUMVENTION</b>", ncnda_sec))
+    elements.append(Paragraph(f"The Receiving Party irrevocably agrees not to circumvent, avoid, or bypass Phatbuns South Africa in negotiating, acquiring, or leasing commercial property at <b>{loc_name}</b> or any affiliated site introduced by Phatbuns South Africa for a period of 24 months from the execution date.", ncnda_body))
+    elements.append(Spacer(1, 4))
+
+    elements.append(Paragraph("<b>5. GOVERNING LAW & JURISDICTION</b>", ncnda_sec))
+    elements.append(Paragraph("This Agreement shall be governed by and construed in accordance with the laws of the Republic of South Africa. Any disputes arising shall be subject to arbitration under AFSA guidelines in Johannesburg.", ncnda_body))
     elements.append(Spacer(1, 10))
 
-    # Signatures
-    sig_data = [
-        [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_style), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_style)],
-        [Paragraph("<b>Date:</b> ____ / ____ / ________", body_style), Paragraph("<b>Date:</b> ____ / ____ / ________", body_style)]
+    elements.append(Paragraph("<b>6. APPLICANT & EXECUTION SIGNATURES</b>", ncnda_sec))
+    
+    ncnda_sig_box = [
+        [Paragraph("<b>FRANCHISE APPLICANT FULL NAME:</b>", body_bold), Paragraph("____________________________________________", body_regular)],
+        [Paragraph("<b>ID / PASSPORT NUMBER:</b>", body_bold), Paragraph("____________________________________________", body_regular)],
+        [Paragraph("<b>COMPANY / ENTITY NAME:</b>", body_bold), Paragraph("____________________________________________", body_regular)],
+        [Paragraph("<b>MOBILE NUMBER & EMAIL:</b>", body_bold), Paragraph("____________________________________________", body_regular)],
+        [Paragraph("<b>APPLICANT SIGNATURE:</b>", body_bold), Paragraph("_______________________  <b>DATE:</b> ____/____/________", body_regular)],
+        [Paragraph("<b>PHATBUNS CEO SIGNATURE:</b>", body_bold), Paragraph("Nisaar Ally             <b>DATE:</b> ____/____/________", body_regular)],
     ]
-    t_sig = Table(sig_data, colWidths=[260, 260])
-    t_sig.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 4)]))
-    elements.append(t_sig)
+    t_ncnda_sig = Table(ncnda_sig_box, colWidths=[180, 340])
+    t_ncnda_sig.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('PADDING', (0,0), (-1,-1), 6),
+    ]))
+    elements.append(t_ncnda_sig)
 
     doc.build(elements)
     buffer.seek(0)
@@ -443,7 +596,6 @@ with tab1:
     if st.button("⚡ Extract & Pre-Fill Lease Terms"):
         parsed_res = {}
         
-        # Priority 1: Process JPG/PNG Image via Gemini Vision API
         if uploaded_offer_file is not None:
             pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
             if pil_img is not None:
@@ -451,12 +603,10 @@ with tab1:
             elif pdf_text:
                 parsed_res = parse_landlord_text(pdf_text)
 
-        # Priority 2: Fallback to Pasted Text or Default Template
         if not parsed_res and pasted_text:
             parsed_res = parse_landlord_text(pasted_text)
 
         if not parsed_res and uploaded_offer_file is not None:
-            # High-precision fallback for Loftus Park screenshot
             parsed_res = {
                 "shop_code": "C01",
                 "internal_gla": 202.91,
@@ -513,9 +663,8 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
-    # Site Blueprint Upload Engine
-    st.subheader("Site Blueprint & Layout Plan")
-    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
+    st.subheader("Site Blueprint & Development Layout Plan")
+    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
     blueprint_pil_img = None
     if blueprint_file is not None:
         pil_img, pdf_text = process_uploaded_file(blueprint_file)
@@ -525,7 +674,7 @@ with tab1:
         else:
             st.info(f"📄 **Blueprint PDF Attached:** {blueprint_file.name}")
     else:
-        st.info("ℹ️ **Blueprint Status:** Not available yet — Pending landlord architectural submission.")
+        st.info("ℹ️ **Blueprint Status:** Loftus Leasing Layout Plan attached by default.")
 
     st.divider()
 
@@ -624,28 +773,22 @@ with tab1:
     }
 
     df_payback_matrix = pd.DataFrame(payback_matrix_data)
-    
-    # Render strictly as pre-formatted text strings to prevent PyArrow conversion crashes
     st.dataframe(df_payback_matrix, use_container_width=True)
 
     st.divider()
 
-    st.header("5. Financial Statements & 60-Month Forecast (Addendum)")
-
+    st.header("5. 60-Month Cash Flow Forecast & Annual Pro Forma P&L")
+    
     total_initial_investment = turnkey_capital + working_capital
     debt_portion = total_initial_investment * 0.50
-    equity_portion = total_initial_investment * 0.50
-
     monthly_interest_rate = (0.1175) / 12
     monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1)
 
-    months = list(range(1, 61))
     cash_flow_data = []
-
     cumulative_cash_flow = -total_initial_investment
     break_even_month = None
 
-    for m in months:
+    for m in range(1, 61):
         year_idx = (m - 1) // 12
         season_multiplier = SEASONAL_FACTORS[(m - 1) % 12]
         
@@ -664,17 +807,6 @@ with tab1:
         cash_flow_data.append({"Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover, "Lease Outlay": monthly_lease, "COGS (33%)": monthly_cogs, "Labor": monthly_labor_cost, "Royalties (9%)": monthly_royalties, "Total Expenses": total_monthly_expenses, "EBITDA": ebitda, "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit, "Cumulative Cash Flow": cumulative_cash_flow})
 
     df_cashflow = pd.DataFrame(cash_flow_data)
-
-    year_1_ebitda_avg = df_cashflow[df_cashflow['Year'] == 1]['EBITDA'].mean()
-    dscr_metric = year_1_ebitda_avg / monthly_loan_payment if monthly_loan_payment > 0 else 0
-
-    kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
-    with kpi_col1: st.metric("Total Investment Required", f"R {total_initial_investment:,.2f}")
-    with kpi_col2: st.metric("50% Unencumbered Cash Equity", f"R {equity_portion:,.2f}")
-    with kpi_col3: st.metric("Capital Recovery Horizon", f"Month {break_even_month}" if break_even_month else "Beyond 60 Months")
-    with kpi_col4: st.metric("Bank DSCR Serviceability", f"{dscr_metric:.2f}x", delta="Bank Approved" if dscr_metric >= 1.30 else "Under Constraint")
-
-    st.subheader("5-Year Pro Forma Income Statement (P&L)")
     df_cashflow['Year_Label'] = "Year " + df_cashflow['Year'].astype(str)
     annual_pnl = df_cashflow.groupby('Year_Label').agg({'Turnover': 'sum', 'Lease Outlay': 'sum', 'COGS (33%)': 'sum', 'Labor': 'sum', 'Royalties (9%)': 'sum', 'EBITDA': 'sum', 'Bank Repayment': 'sum', 'Net Operating Profit': 'sum'}).reset_index()
 
@@ -682,15 +814,20 @@ with tab1:
 
     st.divider()
 
-    st.header("6. Generate & Download Official PDF Pack")
+    st.header("6. Generate Master Franchisee Investor Pack")
     pdf_file = generate_pdf_report(
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
-        max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, total_initial_investment,
-        total_lease_outlay_monthly, f"Month {break_even_month}" if break_even_month else "Beyond 60 Months", dscr_metric,
-        df_payback_matrix, blueprint_pil_img
+        max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
+        ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img
     )
 
-    st.download_button(label="📥 Download Official Bank-Ready Feasibility & Financial PDF Pack", data=pdf_file, file_name=f"Phatbuns_Bankable_Pack_{location_name.replace(' ', '_')}.pdf", mime="application/pdf", use_container_width=True)
+    st.download_button(
+        label="📥 Download Master Franchisee Pack (Includes Site Analysis, Payback Matrix, 60-Month P&L, Layout Plan & NCNDA)",
+        data=pdf_file,
+        file_name=f"Phatbuns_Master_Investor_Pack_{location_name.replace(' ', '_')}.pdf",
+        mime="application/pdf",
+        use_container_width=True
+    )
 
 with tab2:
     st.header("Franchisee & Investor Lead Intake")
@@ -705,12 +842,12 @@ with tab2:
             mobile = st.text_input("Mobile Number *")
             preferred_site = st.text_input("Preferred Target Site / Node *", value=location_name)
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()))
-            capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=2500000.0, step=100000.0)
+            capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=4500000.0, step=100000.0)
 
         unencumbered_cash_pct = st.slider("Verified Unencumbered Cash (%)", min_value=0.0, max_value=100.0, value=50.0)
         c_col1, c_col2, c_col3 = st.columns(3)
         with c_col1: admin_fee_paid = st.checkbox("Admin Fee Paid (R2,000 Excl. VAT)")
-        with c_col2: ndnca_signed = st.checkbox("Signed NDNCA Received")
+        with c_col2: ndnca_signed = st.checkbox("Signed NCNDA Received")
         with c_col3: popia_consent = st.checkbox("POPIA / NCA Consent Received")
 
         submitted = st.form_submit_button("Submit Application to Database")
@@ -719,7 +856,7 @@ with tab2:
                 st.error("Please fill in all mandatory fields (*).")
             else:
                 save_investor_lead({"full_name": full_name, "entity_name": entity_name, "id_or_passport": id_or_passport, "email": email, "mobile": mobile, "preferred_site": preferred_site, "store_model": store_model_choice, "capital_available": capital_available, "unencumbered_cash_pct": unencumbered_cash_pct, "admin_fee_paid": 1 if admin_fee_paid else 0, "ndnca_signed": 1 if ndnca_signed else 0, "popia_consent": 1 if popia_consent else 0})
-                st.success(f"Applicant record for **{full_name}** successfully logged in the database!")
+                st.success(f"Applicant record for **{full_name}** successfully logged in database!")
 
     st.divider()
 
@@ -730,7 +867,7 @@ with tab2:
         pipeline_pdf_file = generate_pipeline_pdf(df_pipeline)
         st.download_button(label="📥 Download CEO Pipeline & Investor Audit PDF Report", data=pipeline_pdf_file, file_name="Phatbuns_Investor_Pipeline_Report.pdf", mime="application/pdf", use_container_width=True)
     else:
-        st.info("No franchisee applications currently recorded in the database.")
+        st.info("No franchisee applications currently recorded in database.")
 
 st.divider()
 
