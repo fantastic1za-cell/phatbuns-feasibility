@@ -1,9 +1,11 @@
 import math
 import os
 import io
+import re
 import sqlite3
 import streamlit as st
 import pandas as pd
+from PIL import Image
 
 # ReportLab Imports for PDF Generation
 from reportlab.lib.pagesizes import A4
@@ -54,7 +56,7 @@ st.markdown("""
 st.markdown("""
 <div class="brand-banner">
     <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
-    <div class="brand-subtitle">Bankable Commercial Feasibility, Financial Modeling & Onboarding Framework</div>
+    <div class="brand-subtitle">Bankable Commercial Feasibility, Financial Modeling & Automated Lease Extraction</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -132,53 +134,74 @@ LOCATION_LOOKUP = {
     "Custom / Other Site...": ""
 }
 
-if "suburb_val" not in st.session_state:
-    st.session_state["suburb_val"] = LOCATION_LOOKUP["Loftus Park, Pretoria"]
+# Default session state initialization
+if "ext_shop_code" not in st.session_state:
+    st.session_state["ext_shop_code"] = "Shop C01"
+if "ext_internal_gla" not in st.session_state:
+    st.session_state["ext_internal_gla"] = 202.91
+if "ext_external_gla" not in st.session_state:
+    st.session_state["ext_external_gla"] = 138.99
+if "ext_internal_rent" not in st.session_state:
+    st.session_state["ext_internal_rent"] = 270.00
+if "ext_external_rent" not in st.session_state:
+    st.session_state["ext_external_rent"] = 80.00
+if "ext_ops_cost" not in st.session_state:
+    st.session_state["ext_ops_cost"] = 40.00
+if "ext_rates_taxes" not in st.session_state:
+    st.session_state["ext_rates_taxes"] = 24.50
+if "ext_generator" not in st.session_state:
+    st.session_state["ext_generator"] = 8.00
+if "ext_escalation" not in st.session_state:
+    st.session_state["ext_escalation"] = 7.00
+if "ext_mktg" not in st.session_state:
+    st.session_state["ext_mktg"] = 5.00
 
-def update_suburb_from_lookup():
-    selected_loc = st.session_state.get("selected_location_key")
-    if selected_loc in LOCATION_LOOKUP and selected_loc != "Custom / Other Site...":
-        st.session_state["suburb_val"] = LOCATION_LOOKUP[selected_loc]
+# Text Parsing Fallback Engine
+def parse_landlord_text(text):
+    data = {}
+    
+    shop_m = re.search(r'Shop:\s*([A-Za-z0-9\s]+)', text, re.IGNORECASE)
+    if shop_m: data['shop_code'] = shop_m.group(1).strip()
+    
+    int_area_m = re.search(r'Internal\s*Area:\s*([\d\.]+)\s*sqm', text, re.IGNORECASE)
+    if int_area_m: data['internal_gla'] = float(int_area_m.group(1))
+    
+    ext_area_m = re.search(r'(?:Outside|External)\s*Area:\s*([\d\.]+)\s*sqm', text, re.IGNORECASE)
+    if ext_area_m: data['external_gla'] = float(ext_area_m.group(1))
+    
+    int_rent_m = re.search(r'Rental\s*internal:\s*R?([\d\.]+)', text, re.IGNORECASE)
+    if int_rent_m: data['internal_rent'] = float(int_rent_m.group(1))
+    
+    ext_rent_m = re.search(r'Rental\s*(?:outside|external):\s*R?([\d\.]+)', text, re.IGNORECASE)
+    if ext_rent_m: data['external_rent'] = float(ext_rent_m.group(1))
+    
+    ops_m = re.search(r'Ops\s*Cost:\s*R?([\d\.]+)', text, re.IGNORECASE)
+    if ops_m: data['ops_cost'] = float(ops_m.group(1))
+    
+    rates_m = re.search(r'Rates\s*&\s*taxes:\s*R?([\d\.]+)', text, re.IGNORECASE)
+    if rates_m: data['rates_taxes'] = float(rates_m.group(1))
+    
+    gen_m = re.search(r'Generator\s*cost:\s*R?([\d\.]+)', text, re.IGNORECASE)
+    if gen_m: data['generator'] = float(gen_m.group(1))
+    
+    esc_m = re.search(r'Escalation:\s*([\d\.]+)%', text, re.IGNORECASE)
+    if esc_m: data['escalation'] = float(esc_m.group(1))
+    
+    mktg_m = re.search(r'Marketing:\s*([\d\.]+)\s*%', text, re.IGNORECASE)
+    if mktg_m: data['mktg'] = float(mktg_m.group(1))
+    
+    return data
 
 # ==========================================
 # STORE MODEL RULES & FINANCIAL DEFAULTS
 # ==========================================
 STORE_MODELS = {
-    "Kiosk Model": {
-        "size_range": "20 - 60 sqm",
-        "turnkey_capital": 850000.0,
-        "working_capital": 250000.0,
-        "est_monthly_turnover": 350000.0,
-        "labor_monthly": 45000.0,
-        "foh_pct": 0.20,
-    },
-    "Express Model": {
-        "size_range": "40 - 90 sqm",
-        "turnkey_capital": 2500000.0,
-        "working_capital": 450000.0,
-        "est_monthly_turnover": 650000.0,
-        "labor_monthly": 85000.0,
-        "foh_pct": 0.60,
-    },
-    "Full Sit-Down Model": {
-        "size_range": "100 - 160 sqm",
-        "turnkey_capital": 3250000.0,
-        "working_capital": 700000.0,
-        "est_monthly_turnover": 950000.0,
-        "labor_monthly": 125000.0,
-        "foh_pct": 0.60,
-    },
-    "Multi-Brand Kitchen Model": {
-        "size_range": "100 - 160 sqm",
-        "turnkey_capital": 3250000.0,
-        "working_capital": 700000.0,
-        "est_monthly_turnover": 1100000.0,
-        "labor_monthly": 135000.0,
-        "foh_pct": 0.40,
-    },
+    "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
+    "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60},
+    "Full Sit-Down Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 950000.0, "labor_monthly": 125000.0, "foh_pct": 0.60},
+    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40},
 }
 
-# Seasonal Revenue Multipliers (Dec +25%, Apr +15%, Jan -10%)
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
@@ -325,32 +348,54 @@ def generate_pipeline_pdf(df_pipeline):
 tab1, tab2 = st.tabs(["📊 Feasibility & Bank Model", "📋 Investor & Franchisee Registry"])
 
 with tab1:
+    st.header("Automated Landlord Proposal Extractor")
+    st.markdown("Paste or upload a landlord offer screenshot/text below to auto-populate the site metrics.")
+
+    col_up1, col_up2 = st.columns([1, 1])
+    with col_up1:
+        uploaded_img = st.file_uploader("Upload Offer Screenshot (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    with col_up2:
+        pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
+
+    if st.button("⚡ Extract & Pre-Fill Lease Terms"):
+        if pasted_text:
+            parsed_res = parse_landlord_text(pasted_text)
+            if 'shop_code' in parsed_res: st.session_state["ext_shop_code"] = parsed_res['shop_code']
+            if 'internal_gla' in parsed_res: st.session_state["ext_internal_gla"] = parsed_res['internal_gla']
+            if 'external_gla' in parsed_res: st.session_state["ext_external_gla"] = parsed_res['external_gla']
+            if 'internal_rent' in parsed_res: st.session_state["ext_internal_rent"] = parsed_res['internal_rent']
+            if 'external_rent' in parsed_res: st.session_state["ext_external_rent"] = parsed_res['external_rent']
+            if 'ops_cost' in parsed_res: st.session_state["ext_ops_cost"] = parsed_res['ops_cost']
+            if 'rates_taxes' in parsed_res: st.session_state["ext_rates_taxes"] = parsed_res['rates_taxes']
+            if 'generator' in parsed_res: st.session_state["ext_generator"] = parsed_res['generator']
+            if 'escalation' in parsed_res: st.session_state["ext_escalation"] = parsed_res['escalation']
+            if 'mktg' in parsed_res: st.session_state["ext_mktg"] = parsed_res['mktg']
+            st.success("Lease terms successfully extracted and populated below!")
+        else:
+            st.info("Paste email text or select screenshot to extract.")
+
+    st.divider()
+
     st.header("1. Site & Lease Specification")
 
     col1, col2 = st.columns(2)
     with col1:
-        selected_location = st.selectbox(
-            "Select Commercial Location",
-            options=list(LOCATION_LOOKUP.keys()),
-            index=0,
-            key="selected_location_key",
-            on_change=update_suburb_from_lookup
-        )
+        selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
         location_name = st.text_input("Enter Custom Location Name", value="Loftus Park, Pretoria") if selected_location == "Custom / Other Site..." else selected_location
 
     with col2:
-        shop_code = st.text_input("Shop / Unit Code", value="Shop C01")
+        shop_code = st.text_input("Shop / Unit Code", value=st.session_state["ext_shop_code"])
 
     col_suburb, col_dummy = st.columns(2)
     with col_suburb:
-        suburb_node = st.text_input("Suburb / Node (Auto-Populated)", key="suburb_val")
+        suburb_node = st.text_input("Suburb / Node (Auto-Populated)", value=LOCATION_LOOKUP.get(selected_location, ""))
 
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        internal_gla = st.number_input("Internal Area (sqm)", value=202.91, step=5.0)
+        internal_gla = st.number_input("Internal Area (sqm)", value=st.session_state["ext_internal_gla"], step=5.0)
     with col_ext_gla:
-        external_gla = st.number_input("External / Patio Area (sqm)", value=138.99, step=5.0)
+        external_gla = st.number_input("External / Patio Area (sqm)", value=st.session_state["ext_external_gla"], step=5.0)
 
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
@@ -366,11 +411,7 @@ with tab1:
     max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
     high_density_seats = math.floor(total_dining_sqm / 1.20) if total_dining_sqm > 0 else 0
 
-    st.info(
-        f"📐 **Recommended Size Range:** {model_data['size_range']} | "
-        f"🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.2f} sqm | "
-        f"🪑 **Suggested Seating Capacity:** {max_comfortable_seats} Seats (Standard) / {high_density_seats} Seats (High Density)"
-    )
+    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.2f} sqm | 🪑 **Suggested Seating:** {max_comfortable_seats} Seats (Standard) / {high_density_seats} Seats (High Density)")
 
     st.divider()
 
@@ -385,12 +426,12 @@ with tab1:
     st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=270.0, step=10.0, format="%.2f")
+        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=st.session_state["ext_internal_rent"], step=10.0, format="%.2f")
         total_internal_rent = internal_gla * internal_rent_sqm
         st.caption(f"💵 **Total Monthly Internal Rent:** R {total_internal_rent:,.2f} (Excl. VAT)")
 
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=80.0, step=5.0, format="%.2f")
+        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=st.session_state["ext_external_rent"], step=5.0, format="%.2f")
         total_external_rent = external_gla * external_rent_sqm
         st.caption(f"💵 **Total Monthly External Rent:** R {total_external_rent:,.2f} (Excl. VAT)")
 
@@ -398,64 +439,51 @@ with tab1:
 
     col_ops, col_rates, col_gen = st.columns(3)
     with col_ops:
-        ops_cost_sqm = st.number_input("Ops Cost (R / sqm)", value=40.00, step=1.0, format="%.2f")
+        ops_cost_sqm = st.number_input("Ops Cost (R / sqm)", value=st.session_state["ext_ops_cost"], step=1.0, format="%.2f")
         total_ops_cost = ops_cost_sqm * total_gla
     with col_rates:
-        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=24.50, step=0.5, format="%.2f")
+        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=st.session_state["ext_rates_taxes"], step=0.5, format="%.2f")
         total_rates_taxes = rates_taxes_sqm * total_gla
     with col_gen:
-        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=8.00, step=0.5, format="%.2f")
+        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=st.session_state["ext_generator"], step=0.5, format="%.2f")
         total_generator_cost = generator_cost_sqm * total_gla
 
     col_mktg_pct, col_labor = st.columns(2)
     with col_mktg_pct:
-        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=5.00, step=0.5, format="%.2f")
+        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=st.session_state["ext_mktg"], step=0.5, format="%.2f")
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
     with col_labor:
         monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f")
 
     total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
-
     st.warning(f"🏬 **Total Monthly Landlord Lease Outlay:** R {total_lease_outlay_monthly:,.2f} (Excl. VAT)")
 
     st.divider()
 
     st.header("3. Required Turnover & Unit Sales Matrix (AOV = R150)")
-    st.markdown("Automated sales volume targets required across Month 12, 24, 36, and 60 factoring 8% annual revenue escalation with seasonal adjustments.")
-
     base_turnover_input = st.number_input("Initial Year 1 Baseline Turnover (Monthly Average ZAR)", value=model_data["est_monthly_turnover"], step=25000.0, format="%.2f")
-    aov_val = 150.0  # Average Order Value per ticket
+    aov_val = 150.0
 
-    cogs_food_pct = 0.33  # 33% Food & Packaging COGS
-    royalty_mktg_pct = 0.09  # 6% Royalty + 3% Brand Marketing
+    cogs_food_pct = 0.33
+    royalty_mktg_pct = 0.09
 
-    # Calculate Operating Break-Even Turnover
     fixed_monthly_costs = total_lease_outlay_monthly + monthly_labor_cost
     contribution_margin = 1.0 - cogs_food_pct - royalty_mktg_pct
     op_breakeven_turnover = fixed_monthly_costs / contribution_margin if contribution_margin > 0 else 0
     breakeven_daily_tickets = math.ceil(op_breakeven_turnover / 30 / aov_val)
 
-    # Escalated Targets (8% Compound Growth)
     turnover_m12 = base_turnover_input
     turnover_m24 = base_turnover_input * (1.08 ** 1)
     turnover_m36 = base_turnover_input * (1.08 ** 2)
     turnover_m60 = base_turnover_input * (1.08 ** 4)
 
-    matrix_data = {
+    df_matrix = pd.DataFrame({
         "Horizon": ["Op Break-Even", "Month 12 Target", "Month 24 Target", "Month 36 Target", "Month 60 Target"],
         "Monthly Turnover Target": [op_breakeven_turnover, turnover_m12, turnover_m24, turnover_m36, turnover_m60],
         "Monthly Ticket Volume": [op_breakeven_turnover / aov_val, turnover_m12 / aov_val, turnover_m24 / aov_val, turnover_m36 / aov_val, turnover_m60 / aov_val],
         "Required Daily Tickets (30 Days)": [breakeven_daily_tickets, math.ceil(turnover_m12 / 30 / aov_val), math.ceil(turnover_m24 / 30 / aov_val), math.ceil(turnover_m36 / 30 / aov_val), math.ceil(turnover_m60 / 30 / aov_val)]
-    }
-    df_matrix = pd.DataFrame(matrix_data)
-    st.dataframe(
-        df_matrix.style.format({
-            "Monthly Turnover Target": "R {:,.2f}",
-            "Monthly Ticket Volume": "{:,.0f}",
-            "Required Daily Tickets (30 Days)": "{:,.0f}"
-        }),
-        use_container_width=True
-    )
+    })
+    st.dataframe(df_matrix.style.format({"Monthly Turnover Target": "R {:,.2f}", "Monthly Ticket Volume": "{:,.0f}", "Required Daily Tickets (30 Days)": "{:,.0f}"}), use_container_width=True)
 
     st.divider()
 
@@ -465,7 +493,6 @@ with tab1:
     debt_portion = total_initial_investment * 0.50
     equity_portion = total_initial_investment * 0.50
 
-    # Bank Debt Financing Amortization (60 Months @ 11.75% Prime)
     monthly_interest_rate = (0.1175) / 12
     monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1)
 
@@ -479,9 +506,8 @@ with tab1:
         year_idx = (m - 1) // 12
         season_multiplier = SEASONAL_FACTORS[(m - 1) % 12]
         
-        # Escalated Turnover with Seasonal Dynamics
         monthly_turnover = (base_turnover_input * (1.08 ** year_idx)) * season_multiplier
-        monthly_lease = total_lease_outlay_monthly * (1.07 ** year_idx)
+        monthly_lease = total_lease_outlay_monthly * (st.session_state["ext_escalation"] / 100 + 1) ** year_idx
         monthly_cogs = monthly_turnover * cogs_food_pct
         monthly_royalties = monthly_turnover * royalty_mktg_pct
         
@@ -490,125 +516,61 @@ with tab1:
         net_profit = ebitda - monthly_loan_payment
         
         cumulative_cash_flow += net_profit
-        
-        if cumulative_cash_flow >= 0 and break_even_month is None:
-            break_even_month = m
+        if cumulative_cash_flow >= 0 and break_even_month is None: break_even_month = m
             
-        cash_flow_data.append({
-            "Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover,
-            "Lease Outlay": monthly_lease, "COGS (33%)": monthly_cogs,
-            "Labor": monthly_labor_cost, "Royalties (9%)": monthly_royalties,
-            "Total Expenses": total_monthly_expenses, "EBITDA": ebitda,
-            "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit,
-            "Cumulative Cash Flow": cumulative_cash_flow
-        })
+        cash_flow_data.append({"Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover, "Lease Outlay": monthly_lease, "COGS (33%)": monthly_cogs, "Labor": monthly_labor_cost, "Royalties (9%)": monthly_royalties, "Total Expenses": total_monthly_expenses, "EBITDA": ebitda, "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit, "Cumulative Cash Flow": cumulative_cash_flow})
 
     df_cashflow = pd.DataFrame(cash_flow_data)
 
-    # Bank DSCR Calculation (Year 1 Average EBITDA / Annual Debt Service)
     year_1_ebitda_avg = df_cashflow[df_cashflow['Year'] == 1]['EBITDA'].mean()
     dscr_metric = year_1_ebitda_avg / monthly_loan_payment if monthly_loan_payment > 0 else 0
 
     kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
-    with kpi_col1:
-        st.metric("Total Investment Required", f"R {total_initial_investment:,.2f}")
-    with kpi_col2:
-        st.metric("50% Unencumbered Cash Equity", f"R {equity_portion:,.2f}")
-    with kpi_col3:
-        payback_text = f"Month {break_even_month}" if break_even_month else "Beyond 60 Months"
-        st.metric("Capital Recovery Horizon", payback_text)
-    with kpi_col4:
-        st.metric("Bank DSCR Serviceability", f"{dscr_metric:.2f}x", delta="Bank Approved" if dscr_metric >= 1.30 else "Under Constraint")
+    with kpi_col1: st.metric("Total Investment Required", f"R {total_initial_investment:,.2f}")
+    with kpi_col2: st.metric("50% Unencumbered Cash Equity", f"R {equity_portion:,.2f}")
+    with kpi_col3: st.metric("Capital Recovery Horizon", f"Month {break_even_month}" if break_even_month else "Beyond 60 Months")
+    with kpi_col4: st.metric("Bank DSCR Serviceability", f"{dscr_metric:.2f}x", delta="Bank Approved" if dscr_metric >= 1.30 else "Under Constraint")
 
-    # Pro Forma Annual Income Statement
     st.subheader("5-Year Pro Forma Income Statement (P&L)")
     df_cashflow['Year_Label'] = "Year " + df_cashflow['Year'].astype(str)
-    annual_pnl = df_cashflow.groupby('Year_Label').agg({
-        'Turnover': 'sum',
-        'Lease Outlay': 'sum',
-        'COGS (33%)': 'sum',
-        'Labor': 'sum',
-        'Royalties (9%)': 'sum',
-        'EBITDA': 'sum',
-        'Bank Repayment': 'sum',
-        'Net Operating Profit': 'sum'
-    }).reset_index()
+    annual_pnl = df_cashflow.groupby('Year_Label').agg({'Turnover': 'sum', 'Lease Outlay': 'sum', 'COGS (33%)': 'sum', 'Labor': 'sum', 'Royalties (9%)': 'sum', 'EBITDA': 'sum', 'Bank Repayment': 'sum', 'Net Operating Profit': 'sum'}).reset_index()
 
-    st.dataframe(
-        annual_pnl.style.format({
-            'Turnover': 'R {:,.2f}', 'Lease Outlay': 'R {:,.2f}',
-            'COGS (33%)': 'R {:,.2f}', 'Labor': 'R {:,.2f}',
-            'Royalties (9%)': 'R {:,.2f}', 'EBITDA': 'R {:,.2f}',
-            'Bank Repayment': 'R {:,.2f}', 'Net Operating Profit': 'R {:,.2f}'
-        }),
-        use_container_width=True
-    )
+    st.dataframe(annual_pnl.style.format({'Turnover': 'R {:,.2f}', 'Lease Outlay': 'R {:,.2f}', 'COGS (33%)': 'R {:,.2f}', 'Labor': 'R {:,.2f}', 'Royalties (9%)': 'R {:,.2f}', 'EBITDA': 'R {:,.2f}', 'Bank Repayment': 'R {:,.2f}', 'Net Operating Profit': 'R {:,.2f}'}), use_container_width=True)
 
     st.divider()
 
     st.header("5. Generate & Download Official PDF Pack")
-    st.markdown("Compile all financial statements, lease models, bank debt serviceability, and governance protocols into an executive PDF pack.")
+    pdf_file = generate_pdf_report(location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model, max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, total_initial_investment, total_lease_outlay_monthly, turnover_m12, turnover_m24, turnover_m36, turnover_m60, f"Month {break_even_month}" if break_even_month else "Beyond 60 Months", dscr_metric)
 
-    pdf_file = generate_pdf_report(
-        location_name, shop_code, st.session_state.get("suburb_val", ""),
-        internal_gla, external_gla, total_gla, selected_model,
-        max_comfortable_seats, high_density_seats,
-        turnkey_capital, working_capital, total_initial_investment,
-        total_lease_outlay_monthly, turnover_m12, turnover_m24, turnover_m36, turnover_m60,
-        payback_text, dscr_metric
-    )
-
-    st.download_button(
-        label="📥 Download Official Bank-Ready Feasibility & Financial PDF Pack",
-        data=pdf_file,
-        file_name=f"Phatbuns_Bankable_Pack_{location_name.replace(' ', '_')}.pdf",
-        mime="application/pdf",
-        use_container_width=True
-    )
+    st.download_button(label="📥 Download Official Bank-Ready Feasibility & Financial PDF Pack", data=pdf_file, file_name=f"Phatbuns_Bankable_Pack_{location_name.replace(' ', '_')}.pdf", mime="application/pdf", use_container_width=True)
 
 with tab2:
     st.header("Franchisee & Investor Lead Intake")
-    st.markdown("Enter prospective franchisee details below to store them directly in the Phatbuns applicant database.")
-
     with st.form("investor_registration_form", clear_on_submit=True):
         f_col1, f_col2 = st.columns(2)
         with f_col1:
-            full_name = st.text_input("Full Name *", value="")
-            entity_name = st.text_input("Entity / Company Name", value="")
-            id_or_passport = st.text_input("ID or Passport Number *", value="")
-            email = st.text_input("Email Address *", value="")
+            full_name = st.text_input("Full Name *")
+            entity_name = st.text_input("Entity / Company Name")
+            id_or_passport = st.text_input("ID or Passport Number *")
+            email = st.text_input("Email Address *")
         with f_col2:
-            mobile = st.text_input("Mobile Number *", value="")
+            mobile = st.text_input("Mobile Number *")
             preferred_site = st.text_input("Preferred Target Site / Node *", value=location_name)
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()))
             capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=2500000.0, step=100000.0)
 
         unencumbered_cash_pct = st.slider("Verified Unencumbered Cash (%)", min_value=0.0, max_value=100.0, value=50.0)
-        
         c_col1, c_col2, c_col3 = st.columns(3)
-        with c_col1:
-            admin_fee_paid = st.checkbox("Admin Fee Paid (R2,000 Excl. VAT)")
-        with c_col2:
-            ndnca_signed = st.checkbox("Signed NDNCA Received")
-        with c_col3:
-            popia_consent = st.checkbox("POPIA / NCA Consent Received")
+        with c_col1: admin_fee_paid = st.checkbox("Admin Fee Paid (R2,000 Excl. VAT)")
+        with c_col2: ndnca_signed = st.checkbox("Signed NDNCA Received")
+        with c_col3: popia_consent = st.checkbox("POPIA / NCA Consent Received")
 
         submitted = st.form_submit_button("Submit Application to Database")
-        
         if submitted:
             if not full_name or not email or not mobile or not id_or_passport or not preferred_site:
                 st.error("Please fill in all mandatory fields (*).")
             else:
-                applicant_data = {
-                    "full_name": full_name, "entity_name": entity_name, "id_or_passport": id_or_passport,
-                    "email": email, "mobile": mobile, "preferred_site": preferred_site,
-                    "store_model": store_model_choice, "capital_available": capital_available,
-                    "unencumbered_cash_pct": unencumbered_cash_pct,
-                    "admin_fee_paid": 1 if admin_fee_paid else 0,
-                    "ndnca_signed": 1 if ndnca_signed else 0,
-                    "popia_consent": 1 if popia_consent else 0
-                }
-                save_investor_lead(applicant_data)
+                save_investor_lead({"full_name": full_name, "entity_name": entity_name, "id_or_passport": id_or_passport, "email": email, "mobile": mobile, "preferred_site": preferred_site, "store_model": store_model_choice, "capital_available": capital_available, "unencumbered_cash_pct": unencumbered_cash_pct, "admin_fee_paid": 1 if admin_fee_paid else 0, "ndnca_signed": 1 if ndnca_signed else 0, "popia_consent": 1 if popia_consent else 0})
                 st.success(f"Applicant record for **{full_name}** successfully logged in the database!")
 
     st.divider()
@@ -617,21 +579,13 @@ with tab2:
     df_pipeline = get_pipeline_dataframe()
     if not df_pipeline.empty:
         st.dataframe(df_pipeline, use_container_width=True)
-        
         pipeline_pdf_file = generate_pipeline_pdf(df_pipeline)
-        st.download_button(
-            label="📥 Download CEO Pipeline & Investor Audit PDF Report",
-            data=pipeline_pdf_file,
-            file_name="Phatbuns_Investor_Pipeline_Report.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
+        st.download_button(label="📥 Download CEO Pipeline & Investor Audit PDF Report", data=pipeline_pdf_file, file_name="Phatbuns_Investor_Pipeline_Report.pdf", mime="application/pdf", use_container_width=True)
     else:
         st.info("No franchisee applications currently recorded in the database.")
 
 st.divider()
 
-# Master Rights Holder Contact Footer
 st.subheader("Master Rights Holder Contact Information")
 st.markdown("""
 **Master Rights Holder – South Africa**  
