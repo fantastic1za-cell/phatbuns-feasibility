@@ -5,7 +5,7 @@ import re
 import sqlite3
 import streamlit as st
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps
 
 # ReportLab Imports for PDF Generation
 from reportlab.lib.pagesizes import A4
@@ -20,7 +20,7 @@ try:
 except ImportError:
     HAS_PYPDF = False
 
-# Safe Import for OCR Engine
+# Safe Import for EasyOCR
 @st.cache_resource
 def load_ocr_reader():
     try:
@@ -29,17 +29,83 @@ def load_ocr_reader():
     except Exception:
         return None
 
-# Helper function to convert uploaded image/PDF bytes to PIL Image
-def process_uploaded_file_to_pil(uploaded_file):
+# ==========================================
+# RIGOROUS PARSING & OCR ENGINE
+# ==========================================
+def parse_landlord_text(text):
+    """
+    Ironclad Regex Parser calibrated specifically for South African Commercial Lease Offers.
+    Prevents truncation of trailing zeros (e.g. R270 -> 27 or R80 -> 8).
+    """
+    data = {}
+    
+    # Clean text line breaks and standardize spaces
+    text_clean = text.replace('\r', '\n')
+    
+    # 1. Shop Code (e.g. Shop: C01 or Shop C01)
+    shop_m = re.search(r'Shop(?:\s*code)?\s*[:\-]?\s*([A-Za-z0-9\s]+)', text_clean, re.IGNORECASE)
+    if shop_m:
+        shop_val = shop_m.group(1).split('\n')[0].strip()
+        if len(shop_val) < 15:
+            data['shop_code'] = shop_val
+
+    # 2. Internal Area (e.g. Internal Area: 202.91sqm)
+    int_area_m = re.search(r'Internal\s*Area\s*[:\-]?\s*([\d\.\,]+)\s*sqm', text_clean, re.IGNORECASE)
+    if int_area_m:
+        data['internal_gla'] = float(int_area_m.group(1).replace(',', '.'))
+
+    # 3. External Area (e.g. Outside Area: 138.99sqm)
+    ext_area_m = re.search(r'(?:Outside|External)\s*Area\s*[:\-]?\s*([\d\.\,]+)\s*sqm', text_clean, re.IGNORECASE)
+    if ext_area_m:
+        data['external_gla'] = float(ext_area_m.group(1).replace(',', '.'))
+
+    # 4. Rental Internal (e.g. Rental internal: R270/sqm)
+    int_rent_m = re.search(r'Rental\s*internal\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    if int_rent_m:
+        data['internal_rent'] = float(int_rent_m.group(1))
+
+    # 5. Rental Outside (e.g. Rental outside: R80/sqm)
+    ext_rent_m = re.search(r'Rental\s*(?:outside|external)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    if ext_rent_m:
+        data['external_rent'] = float(ext_rent_m.group(1))
+
+    # 6. Ops Cost (e.g. Ops Cost: R40/sqm)
+    ops_m = re.search(r'Ops\s*Cost\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    if ops_m:
+        data['ops_cost'] = float(ops_m.group(1))
+
+    # 7. Escalation (e.g. Escalation: 7%)
+    esc_m = re.search(r'Escalation\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
+    if esc_m:
+        data['escalation'] = float(esc_m.group(1))
+
+    # 8. Rates & Taxes (e.g. Rates & taxes: R24.50/sqm)
+    rates_m = re.search(r'Rates\s*(?:&|and)?\s*taxes\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    if rates_m:
+        data['rates_taxes'] = float(rates_m.group(1))
+
+    # 9. Marketing (e.g. Marketing: 5 % of basic rental)
+    mktg_m = re.search(r'Marketing\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%\s*(?:of\s*basic)?', text_clean, re.IGNORECASE)
+    if mktg_m:
+        data['mktg'] = float(mktg_m.group(1))
+
+    # 10. Generator Cost (e.g. Generator cost: R8/sqm)
+    gen_m = re.search(r'Generator\s*cost\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    if gen_m:
+        data['generator'] = float(gen_m.group(1))
+
+    return data
+
+def process_uploaded_file(uploaded_file):
+    """Processes uploaded images/PDFs with enhancement to maximize OCR contrast on dark screenshots."""
     if uploaded_file is None:
-        return None, None
-    
+        return None, ""
+
     file_bytes = uploaded_file.read()
-    uploaded_file.seek(0)  # Reset buffer pointer
+    uploaded_file.seek(0)
     file_type = uploaded_file.type
-    
+
     if "pdf" in file_type or uploaded_file.name.lower().endswith(".pdf"):
-        # Text extraction for landlord proposals from PDF
         pdf_text = ""
         if HAS_PYPDF:
             try:
@@ -50,10 +116,15 @@ def process_uploaded_file_to_pil(uploaded_file):
                 pass
         return None, pdf_text
     else:
-        # PNG / JPG processing
         try:
-            pil_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-            return pil_img, ""
+            # Load & Contrast Enhance for Dark Mode Mobile Screenshots
+            pil_img = Image.open(io.BytesIO(file_bytes)).convert("L")  # Grayscale
+            pil_img = ImageOps.invert(pil_img) # Invert if dark background
+            enhancer = ImageEnhance.Contrast(pil_img)
+            enhanced_img = enhancer.enhance(2.0)
+            
+            rgb_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+            return rgb_img, ""
         except Exception:
             return None, ""
 
@@ -189,40 +260,6 @@ if "ext_rates_taxes" not in st.session_state: st.session_state["ext_rates_taxes"
 if "ext_generator" not in st.session_state: st.session_state["ext_generator"] = 8.00
 if "ext_escalation" not in st.session_state: st.session_state["ext_escalation"] = 7.00
 if "ext_mktg" not in st.session_state: st.session_state["ext_mktg"] = 5.00
-
-def parse_landlord_text(text):
-    data = {}
-    shop_m = re.search(r'Shop:\s*([A-Za-z0-9\s]+)', text, re.IGNORECASE)
-    if shop_m: data['shop_code'] = shop_m.group(1).strip()
-    
-    int_area_m = re.search(r'Internal\s*Area:\s*([\d\.]+)\s*sqm', text, re.IGNORECASE)
-    if int_area_m: data['internal_gla'] = float(int_area_m.group(1))
-    
-    ext_area_m = re.search(r'(?:Outside|External)\s*Area:\s*([\d\.]+)\s*sqm', text, re.IGNORECASE)
-    if ext_area_m: data['external_gla'] = float(ext_area_m.group(1))
-    
-    int_rent_m = re.search(r'Rental\s*internal:\s*R?([\d\.]+)', text, re.IGNORECASE)
-    if int_rent_m: data['internal_rent'] = float(int_rent_m.group(1))
-    
-    ext_rent_m = re.search(r'Rental\s*(?:outside|external):\s*R?([\d\.]+)', text, re.IGNORECASE)
-    if ext_rent_m: data['external_rent'] = float(ext_rent_m.group(1))
-    
-    ops_m = re.search(r'Ops\s*Cost:\s*R?([\d\.]+)', text, re.IGNORECASE)
-    if ops_m: data['ops_cost'] = float(ops_m.group(1))
-    
-    rates_m = re.search(r'Rates\s*&\s*taxes:\s*R?([\d\.]+)', text, re.IGNORECASE)
-    if rates_m: data['rates_taxes'] = float(rates_m.group(1))
-    
-    gen_m = re.search(r'Generator\s*cost:\s*R?([\d\.]+)', text, re.IGNORECASE)
-    if gen_m: data['generator'] = float(gen_m.group(1))
-    
-    esc_m = re.search(r'Escalation:\s*([\d\.]+)%', text, re.IGNORECASE)
-    if esc_m: data['escalation'] = float(esc_m.group(1))
-    
-    mktg_m = re.search(r'Marketing:\s*([\d\.]+)\s*%', text, re.IGNORECASE)
-    if mktg_m: data['mktg'] = float(mktg_m.group(1))
-    
-    return data
 
 # ==========================================
 # STORE MODEL RULES & FINANCIAL DEFAULTS
@@ -398,7 +435,7 @@ with tab1:
         extracted_text = ""
         
         if uploaded_offer_file is not None:
-            pil_img, pdf_text = process_uploaded_file_to_pil(uploaded_offer_file)
+            pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
             if pdf_text:
                 extracted_text += "\n" + pdf_text
             elif pil_img is not None:
@@ -464,7 +501,7 @@ with tab1:
     blueprint_file = st.file_uploader(f"Upload Architectural Blueprint for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
     blueprint_pil_img = None
     if blueprint_file is not None:
-        pil_img, pdf_text = process_uploaded_file_to_pil(blueprint_file)
+        pil_img, pdf_text = process_uploaded_file(blueprint_file)
         if pil_img is not None:
             blueprint_pil_img = pil_img
             st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
