@@ -21,7 +21,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom Dark Mode Styling
 st.markdown("""
 <style>
 .stApp {
@@ -52,11 +51,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Top Brand Banner
 st.markdown("""
 <div class="brand-banner">
     <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
-    <div class="brand-subtitle">Commercial Feasibility, Location Intelligence & Onboarding Framework</div>
+    <div class="brand-subtitle">Bankable Commercial Feasibility, Financial Modeling & Onboarding Framework</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -135,7 +133,7 @@ LOCATION_LOOKUP = {
 }
 
 if "suburb_val" not in st.session_state:
-    st.session_state["suburb_val"] = LOCATION_LOOKUP["The Glen Shopping Centre"]
+    st.session_state["suburb_val"] = LOCATION_LOOKUP["Loftus Park, Pretoria"]
 
 def update_suburb_from_lookup():
     selected_loc = st.session_state.get("selected_location_key")
@@ -151,6 +149,7 @@ STORE_MODELS = {
         "turnkey_capital": 850000.0,
         "working_capital": 250000.0,
         "est_monthly_turnover": 350000.0,
+        "labor_monthly": 45000.0,
         "foh_pct": 0.20,
     },
     "Express Model": {
@@ -158,6 +157,7 @@ STORE_MODELS = {
         "turnkey_capital": 2500000.0,
         "working_capital": 450000.0,
         "est_monthly_turnover": 650000.0,
+        "labor_monthly": 85000.0,
         "foh_pct": 0.60,
     },
     "Full Sit-Down Model": {
@@ -165,6 +165,7 @@ STORE_MODELS = {
         "turnkey_capital": 3250000.0,
         "working_capital": 700000.0,
         "est_monthly_turnover": 950000.0,
+        "labor_monthly": 125000.0,
         "foh_pct": 0.60,
     },
     "Multi-Brand Kitchen Model": {
@@ -172,85 +173,100 @@ STORE_MODELS = {
         "turnkey_capital": 3250000.0,
         "working_capital": 700000.0,
         "est_monthly_turnover": 1100000.0,
+        "labor_monthly": 135000.0,
         "foh_pct": 0.40,
     },
 }
 
+# Seasonal Revenue Multipliers (Dec +25%, Apr +15%, Jan -10%)
+SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
+
 # ==========================================
 # REPORTLAB PDF GENERATION FUNCTIONS
 # ==========================================
-def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, int_rent, ext_rent, total_rent, turnover, breakeven, payback):
+def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, total_lease_outlay, m12_rev, m24_rev, m36_rev, m60_rev, payback, dscr):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     styles = getSampleStyleSheet()
     
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#111111'), leading=22, alignment=1)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#555555'), leading=14, alignment=1)
-    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=13, textColor=colors.HexColor('#8B0000'), leading=16, spaceBefore=10, spaceAfter=5)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=9, leading=12, textColor=colors.HexColor('#222222'))
+    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#8B0000'), leading=15, spaceBefore=8, spaceAfter=4)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=11, textColor=colors.HexColor('#222222'))
 
     elements = []
 
     elements.append(Paragraph("PHATBUNS SOUTH AFRICA", title_style))
-    elements.append(Paragraph("Commercial Feasibility & Location Intelligence Assessment", subtitle_style))
-    elements.append(Spacer(1, 10))
-    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#8B0000'), spaceBefore=5, spaceAfter=15))
+    elements.append(Paragraph("Bankable Feasibility & Financial Assessment Pack", subtitle_style))
+    elements.append(Spacer(1, 8))
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#8B0000'), spaceBefore=2, spaceAfter=10))
 
-    elements.append(Paragraph("1. Site & Lease Specification", section_heading))
+    elements.append(Paragraph("1. Site & Space Specification", section_heading))
     site_data = [
         [Paragraph("<b>Location Name:</b>", body_style), Paragraph(str(loc_name), body_style), Paragraph("<b>Shop Code:</b>", body_style), Paragraph(str(shop), body_style)],
         [Paragraph("<b>Suburb / Node:</b>", body_style), Paragraph(str(suburb), body_style), Paragraph("<b>Store Model:</b>", body_style), Paragraph(str(model), body_style)],
-        [Paragraph("<b>Internal GLA:</b>", body_style), Paragraph(f"{int_gla:.1f} sqm", body_style), Paragraph("<b>External Area:</b>", body_style), Paragraph(f"{ext_gla:.1f} sqm", body_style)],
-        [Paragraph("<b>Total Store Size:</b>", body_style), Paragraph(f"{total_gla:.1f} sqm", body_style), Paragraph("<b>Suggested Seating:</b>", body_style), Paragraph(f"{max_seats} Standard / {high_seats} Dense", body_style)]
+        [Paragraph("<b>Internal GLA:</b>", body_style), Paragraph(f"{int_gla:.2f} sqm", body_style), Paragraph("<b>External Area:</b>", body_style), Paragraph(f"{ext_gla:.2f} sqm", body_style)],
+        [Paragraph("<b>Total Footprint:</b>", body_style), Paragraph(f"{total_gla:.2f} sqm", body_style), Paragraph("<b>Seating Capacity:</b>", body_style), Paragraph(f"{max_seats} Std / {high_seats} Dense", body_style)]
     ]
     t_site = Table(site_data, colWidths=[110, 150, 110, 150])
     t_site.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F9F9F9')),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')),
-        ('PADDING', (0,0), (-1,-1), 6),
+        ('PADDING', (0,0), (-1,-1), 5),
     ]))
     elements.append(t_site)
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph("2. Financial & Rental Structure", section_heading))
+    elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", section_heading))
     fin_data = [
-        [Paragraph("<b>Turnkey Capital (Excl. VAT):</b>", body_style), Paragraph(f"R {capital:,.2f}", body_style)],
-        [Paragraph("<b>Working Capital:</b>", body_style), Paragraph(f"R {wc:,.2f}", body_style)],
-        [Paragraph("<b>Total Initial Capital Outlay:</b>", body_style), Paragraph(f"R {total_inv:,.2f}", body_style)],
-        [Paragraph("<b>Internal Base Rent (Monthly):</b>", body_style), Paragraph(f"R {int_rent:,.2f}", body_style)],
-        [Paragraph("<b>External Base Rent (Monthly):</b>", body_style), Paragraph(f"R {ext_rent:,.2f}", body_style)],
-        [Paragraph("<b>Total Combined Base Rent:</b>", body_style), Paragraph(f"R {total_rent:,.2f}", body_style)],
-        [Paragraph("<b>Projected Monthly Turnover:</b>", body_style), Paragraph(f"R {turnover:,.2f}", body_style)],
-        [Paragraph("<b>Monthly Op Break-Even Sales:</b>", body_style), Paragraph(f"R {breakeven:,.2f}", body_style)],
-        [Paragraph("<b>Full Capital Payback:</b>", body_style), Paragraph(str(payback), body_style)],
+        [Paragraph("<b>Total Turnkey Capital:</b>", body_style), Paragraph(f"R {capital:,.2f}", body_style)],
+        [Paragraph("<b>Working Capital Reserve:</b>", body_style), Paragraph(f"R {wc:,.2f}", body_style)],
+        [Paragraph("<b>Total Initial Capital Required:</b>", body_style), Paragraph(f"R {total_inv:,.2f}", body_style)],
+        [Paragraph("<b>50% Unencumbered Cash Equity:</b>", body_style), Paragraph(f"R {total_inv * 0.5:,.2f}", body_style)],
+        [Paragraph("<b>50% Debt Financing Balance:</b>", body_style), Paragraph(f"R {total_inv * 0.5:,.2f}", body_style)],
+        [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_style), Paragraph(f"R {total_lease_outlay:,.2f}", body_style)],
+        [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_style), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_style)],
+        [Paragraph("<b>Full Capital Recovery Period:</b>", body_style), Paragraph(str(payback), body_style)],
     ]
-    t_fin = Table(fin_data, colWidths=[220, 300])
+    t_fin = Table(fin_data, colWidths=[230, 290])
     t_fin.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FFFFFF')),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4),
     ]))
     elements.append(t_fin)
+    elements.append(Spacer(1, 10))
+
+    elements.append(Paragraph("3. Target Turnover & Sales Horizons", section_heading))
+    rev_data = [
+        [Paragraph("<b>Milestone</b>", body_style), Paragraph("<b>Monthly Revenue Target</b>", body_style), Paragraph("<b>Daily Unit Sales (AOV R150)</b>", body_style)],
+        [Paragraph("Month 12 Target", body_style), Paragraph(f"R {m12_rev:,.2f}", body_style), Paragraph(f"{int(m12_rev / 30 / 150)} tickets/day", body_style)],
+        [Paragraph("Month 24 Target", body_style), Paragraph(f"R {m24_rev:,.2f}", body_style), Paragraph(f"{int(m24_rev / 30 / 150)} tickets/day", body_style)],
+        [Paragraph("Month 36 Target", body_style), Paragraph(f"R {m36_rev:,.2f}", body_style), Paragraph(f"{int(m36_rev / 30 / 150)} tickets/day", body_style)],
+        [Paragraph("Month 60 Target", body_style), Paragraph(f"R {m60_rev:,.2f}", body_style), Paragraph(f"{int(m60_rev / 30 / 150)} tickets/day", body_style)],
+    ]
+    t_rev = Table(rev_data, colWidths=[150, 185, 185])
+    t_rev.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
+        ('PADDING', (0,0), (-1,-1), 4),
+    ]))
+    elements.append(t_rev)
     elements.append(Spacer(1, 15))
 
-    elements.append(Paragraph("3. Governance & Approval Sign-Off", section_heading))
+    elements.append(Paragraph("4. Governance & Executive Sign-Off", section_heading))
     gov_text = """
-    <b>Approval Pre-Requisites:</b><br/>
-    • Payment of R2,000 (Excl. VAT) non-refundable application fee.<br/>
-    • Proof of 50% unencumbered cash equity via 3-6 months bank statements.<br/>
-    • SANHA Halaal compliance & supply chain accreditation.<br/>
-    • Mandatory 4–6 week hands-on operational staff training.<br/>
-    • Final binding written approval by the CEO of Phatbuns South Africa.
+    <b>Pre-Requisites:</b> R2,000 (Excl. VAT) admin fee; proof of 50% unencumbered cash; SANHA Halaal compliance; 4-6 week operational staff training; final binding CEO sign-off.
     """
     elements.append(Paragraph(gov_text, body_style))
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 15))
 
     sig_data = [
         [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_style), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_style)],
         [Paragraph("<b>Date:</b> ____ / ____ / ________", body_style), Paragraph("<b>Date:</b> ____ / ____ / ________", body_style)]
     ]
     t_sig = Table(sig_data, colWidths=[260, 260])
-    t_sig.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 8)]))
+    t_sig.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 6)]))
     elements.append(t_sig)
 
     doc.build(elements)
@@ -306,7 +322,7 @@ def generate_pipeline_pdf(df_pipeline):
 # ==========================================
 # NAVIGATION TABS
 # ==========================================
-tab1, tab2 = st.tabs(["📊 Feasibility Engine", "📋 Investor & Franchisee Registry"])
+tab1, tab2 = st.tabs(["📊 Feasibility & Bank Model", "📋 Investor & Franchisee Registry"])
 
 with tab1:
     st.header("1. Site & Lease Specification")
@@ -316,7 +332,7 @@ with tab1:
         selected_location = st.selectbox(
             "Select Commercial Location",
             options=list(LOCATION_LOOKUP.keys()),
-            index=1,
+            index=0,
             key="selected_location_key",
             on_change=update_suburb_from_lookup
         )
@@ -332,12 +348,12 @@ with tab1:
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        internal_gla = st.number_input("Internal Area (sqm)", value=100.0, step=5.0)
+        internal_gla = st.number_input("Internal Area (sqm)", value=202.91, step=5.0)
     with col_ext_gla:
-        external_gla = st.number_input("External / Patio Area (sqm)", value=20.0, step=5.0)
+        external_gla = st.number_input("External / Patio Area (sqm)", value=138.99, step=5.0)
 
     total_gla = internal_gla + external_gla
-    st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.1f} sqm ({internal_gla:.1f} sqm Internal + {external_gla:.1f} sqm External)")
+    st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
     st.divider()
 
@@ -352,13 +368,13 @@ with tab1:
 
     st.info(
         f"📐 **Recommended Size Range:** {model_data['size_range']} | "
-        f"🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.1f} sqm | "
+        f"🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.2f} sqm | "
         f"🪑 **Suggested Seating Capacity:** {max_comfortable_seats} Seats (Standard) / {high_density_seats} Seats (High Density)"
     )
 
     st.divider()
 
-    st.subheader("2. Commercial Capital & Lease Setup")
+    st.subheader("2. Commercial Capital, Lease & Operational Cost Breakdown")
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
@@ -366,35 +382,93 @@ with tab1:
     with col_wc:
         working_capital = st.number_input("Suggested Working Capital Requirement", value=model_data["working_capital"], step=25000.0, format="%.2f")
 
-    st.subheader("Rental Structure (Per SQM)")
+    st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=350.0, step=10.0, format="%.2f")
+        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=270.0, step=10.0, format="%.2f")
         total_internal_rent = internal_gla * internal_rent_sqm
         st.caption(f"💵 **Total Monthly Internal Rent:** R {total_internal_rent:,.2f} (Excl. VAT)")
 
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=175.0, step=10.0, format="%.2f")
+        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=80.0, step=5.0, format="%.2f")
         total_external_rent = external_gla * external_rent_sqm
         st.caption(f"💵 **Total Monthly External Rent:** R {total_external_rent:,.2f} (Excl. VAT)")
 
-    base_rent_monthly = total_internal_rent + total_external_rent
-    blended_rate_sqm = base_rent_monthly / total_gla if total_gla > 0 else 0
+    total_base_rent_monthly = total_internal_rent + total_external_rent
 
-    st.success(f"📊 **Combined Base Monthly Rent:** R {base_rent_monthly:,.2f} (Excl. VAT) | **Blended Average Rate:** R {blended_rate_sqm:,.2f} / sqm")
+    col_ops, col_rates, col_gen = st.columns(3)
+    with col_ops:
+        ops_cost_sqm = st.number_input("Ops Cost (R / sqm)", value=40.00, step=1.0, format="%.2f")
+        total_ops_cost = ops_cost_sqm * total_gla
+    with col_rates:
+        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=24.50, step=0.5, format="%.2f")
+        total_rates_taxes = rates_taxes_sqm * total_gla
+    with col_gen:
+        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=8.00, step=0.5, format="%.2f")
+        total_generator_cost = generator_cost_sqm * total_gla
 
-    col_esc, col_cogs = st.columns(2)
-    with col_esc:
-        annual_escalation_pct = st.number_input("Annual Lease Escalation (%)", value=7.0, step=0.5)
-    with col_cogs:
-        projected_monthly_turnover = st.number_input("Projected Monthly Turnover", value=model_data["est_monthly_turnover"], step=25000.0, format="%.2f")
-        cogs_pct = st.number_input("COGS + Direct Operational Costs (%)", value=59.0, step=1.0)
+    col_mktg_pct, col_labor = st.columns(2)
+    with col_mktg_pct:
+        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=5.00, step=0.5, format="%.2f")
+        total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
+    with col_labor:
+        monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f")
+
+    total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
+
+    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay:** R {total_lease_outlay_monthly:,.2f} (Excl. VAT)")
 
     st.divider()
 
-    st.header("3. Addendum: 60-Month Cash Flow & Payback Model")
+    st.header("3. Required Turnover & Unit Sales Matrix (AOV = R150)")
+    st.markdown("Automated sales volume targets required across Month 12, 24, 36, and 60 factoring 8% annual revenue escalation with seasonal adjustments.")
+
+    base_turnover_input = st.number_input("Initial Year 1 Baseline Turnover (Monthly Average ZAR)", value=model_data["est_monthly_turnover"], step=25000.0, format="%.2f")
+    aov_val = 150.0  # Average Order Value per ticket
+
+    cogs_food_pct = 0.33  # 33% Food & Packaging COGS
+    royalty_mktg_pct = 0.09  # 6% Royalty + 3% Brand Marketing
+
+    # Calculate Operating Break-Even Turnover
+    fixed_monthly_costs = total_lease_outlay_monthly + monthly_labor_cost
+    contribution_margin = 1.0 - cogs_food_pct - royalty_mktg_pct
+    op_breakeven_turnover = fixed_monthly_costs / contribution_margin if contribution_margin > 0 else 0
+    breakeven_daily_tickets = math.ceil(op_breakeven_turnover / 30 / aov_val)
+
+    # Escalated Targets (8% Compound Growth)
+    turnover_m12 = base_turnover_input
+    turnover_m24 = base_turnover_input * (1.08 ** 1)
+    turnover_m36 = base_turnover_input * (1.08 ** 2)
+    turnover_m60 = base_turnover_input * (1.08 ** 4)
+
+    matrix_data = {
+        "Horizon": ["Op Break-Even", "Month 12 Target", "Month 24 Target", "Month 36 Target", "Month 60 Target"],
+        "Monthly Turnover Target": [op_breakeven_turnover, turnover_m12, turnover_m24, turnover_m36, turnover_m60],
+        "Monthly Ticket Volume": [op_breakeven_turnover / aov_val, turnover_m12 / aov_val, turnover_m24 / aov_val, turnover_m36 / aov_val, turnover_m60 / aov_val],
+        "Required Daily Tickets (30 Days)": [breakeven_daily_tickets, math.ceil(turnover_m12 / 30 / aov_val), math.ceil(turnover_m24 / 30 / aov_val), math.ceil(turnover_m36 / 30 / aov_val), math.ceil(turnover_m60 / 30 / aov_val)]
+    }
+    df_matrix = pd.DataFrame(matrix_data)
+    st.dataframe(
+        df_matrix.style.format({
+            "Monthly Turnover Target": "R {:,.2f}",
+            "Monthly Ticket Volume": "{:,.0f}",
+            "Required Daily Tickets (30 Days)": "{:,.0f}"
+        }),
+        use_container_width=True
+    )
+
+    st.divider()
+
+    st.header("4. Financial Statements & 60-Month Forecast (Addendum)")
 
     total_initial_investment = turnkey_capital + working_capital
+    debt_portion = total_initial_investment * 0.50
+    equity_portion = total_initial_investment * 0.50
+
+    # Bank Debt Financing Amortization (60 Months @ 11.75% Prime)
+    monthly_interest_rate = (0.1175) / 12
+    monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1)
+
     months = list(range(1, 61))
     cash_flow_data = []
 
@@ -403,54 +477,91 @@ with tab1:
 
     for m in months:
         year_idx = (m - 1) // 12
-        current_monthly_rent = base_rent_monthly * ((1 + (annual_escalation_pct / 100)) ** year_idx)
-        royalty_marketing_fee = projected_monthly_turnover * 0.09
-        monthly_cogs = projected_monthly_turnover * (cogs_pct / 100)
-        total_monthly_expenses = current_monthly_rent + monthly_cogs + royalty_marketing_fee
-        net_monthly_profit = projected_monthly_turnover - total_monthly_expenses
-        cumulative_cash_flow += net_monthly_profit
+        season_multiplier = SEASONAL_FACTORS[(m - 1) % 12]
+        
+        # Escalated Turnover with Seasonal Dynamics
+        monthly_turnover = (base_turnover_input * (1.08 ** year_idx)) * season_multiplier
+        monthly_lease = total_lease_outlay_monthly * (1.07 ** year_idx)
+        monthly_cogs = monthly_turnover * cogs_food_pct
+        monthly_royalties = monthly_turnover * royalty_mktg_pct
+        
+        total_monthly_expenses = monthly_lease + monthly_cogs + monthly_royalties + monthly_labor_cost
+        ebitda = monthly_turnover - total_monthly_expenses
+        net_profit = ebitda - monthly_loan_payment
+        
+        cumulative_cash_flow += net_profit
         
         if cumulative_cash_flow >= 0 and break_even_month is None:
             break_even_month = m
             
         cash_flow_data.append({
-            "Month": m, "Year": year_idx + 1, "Turnover": projected_monthly_turnover,
-            "Rent Expense": current_monthly_rent, "COGS & Ops": monthly_cogs,
-            "Royalties (9%)": royalty_marketing_fee, "Total Expenses": total_monthly_expenses,
-            "Net Profit": net_monthly_profit, "Cumulative Cash Flow": cumulative_cash_flow
+            "Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover,
+            "Lease Outlay": monthly_lease, "COGS (33%)": monthly_cogs,
+            "Labor": monthly_labor_cost, "Royalties (9%)": monthly_royalties,
+            "Total Expenses": total_monthly_expenses, "EBITDA": ebitda,
+            "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit,
+            "Cumulative Cash Flow": cumulative_cash_flow
         })
 
     df_cashflow = pd.DataFrame(cash_flow_data)
 
-    kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+    # Bank DSCR Calculation (Year 1 Average EBITDA / Annual Debt Service)
+    year_1_ebitda_avg = df_cashflow[df_cashflow['Year'] == 1]['EBITDA'].mean()
+    dscr_metric = year_1_ebitda_avg / monthly_loan_payment if monthly_loan_payment > 0 else 0
+
+    kpi_col1, kpi_col2, kpi_col3, kpi_col4 = st.columns(4)
     with kpi_col1:
-        st.metric("Total Initial Capital Outlay", f"R {total_initial_investment:,.2f}")
+        st.metric("Total Investment Required", f"R {total_initial_investment:,.2f}")
     with kpi_col2:
-        contribution_margin_pct = 1 - (cogs_pct / 100) - 0.09
-        op_breakeven_turnover = base_rent_monthly / contribution_margin_pct if contribution_margin_pct > 0 else 0
-        st.metric("Monthly Op Break-Even Sales", f"R {op_breakeven_turnover:,.2f}")
+        st.metric("50% Unencumbered Cash Equity", f"R {equity_portion:,.2f}")
     with kpi_col3:
         payback_text = f"Month {break_even_month}" if break_even_month else "Beyond 60 Months"
-        st.metric("Full Capital Payback", payback_text)
+        st.metric("Capital Recovery Horizon", payback_text)
+    with kpi_col4:
+        st.metric("Bank DSCR Serviceability", f"{dscr_metric:.2f}x", delta="Bank Approved" if dscr_metric >= 1.30 else "Under Constraint")
+
+    # Pro Forma Annual Income Statement
+    st.subheader("5-Year Pro Forma Income Statement (P&L)")
+    df_cashflow['Year_Label'] = "Year " + df_cashflow['Year'].astype(str)
+    annual_pnl = df_cashflow.groupby('Year_Label').agg({
+        'Turnover': 'sum',
+        'Lease Outlay': 'sum',
+        'COGS (33%)': 'sum',
+        'Labor': 'sum',
+        'Royalties (9%)': 'sum',
+        'EBITDA': 'sum',
+        'Bank Repayment': 'sum',
+        'Net Operating Profit': 'sum'
+    }).reset_index()
+
+    st.dataframe(
+        annual_pnl.style.format({
+            'Turnover': 'R {:,.2f}', 'Lease Outlay': 'R {:,.2f}',
+            'COGS (33%)': 'R {:,.2f}', 'Labor': 'R {:,.2f}',
+            'Royalties (9%)': 'R {:,.2f}', 'EBITDA': 'R {:,.2f}',
+            'Bank Repayment': 'R {:,.2f}', 'Net Operating Profit': 'R {:,.2f}'
+        }),
+        use_container_width=True
+    )
 
     st.divider()
 
-    st.header("4. Generate & Download Feasibility PDF Report")
-    st.markdown("Click the button below to compile all selected metrics, rental structures, and governance rules into a branded Phatbuns PDF report.")
+    st.header("5. Generate & Download Official PDF Pack")
+    st.markdown("Compile all financial statements, lease models, bank debt serviceability, and governance protocols into an executive PDF pack.")
 
     pdf_file = generate_pdf_report(
         location_name, shop_code, st.session_state.get("suburb_val", ""),
         internal_gla, external_gla, total_gla, selected_model,
         max_comfortable_seats, high_density_seats,
         turnkey_capital, working_capital, total_initial_investment,
-        total_internal_rent, total_external_rent, base_rent_monthly,
-        projected_monthly_turnover, op_breakeven_turnover, payback_text
+        total_lease_outlay_monthly, turnover_m12, turnover_m24, turnover_m36, turnover_m60,
+        payback_text, dscr_metric
     )
 
     st.download_button(
-        label="📥 Download Official Feasibility & Governance PDF Report",
+        label="📥 Download Official Bank-Ready Feasibility & Financial PDF Pack",
         data=pdf_file,
-        file_name=f"Phatbuns_Feasibility_{location_name.replace(' ', '_')}.pdf",
+        file_name=f"Phatbuns_Bankable_Pack_{location_name.replace(' ', '_')}.pdf",
         mime="application/pdf",
         use_container_width=True
     )
