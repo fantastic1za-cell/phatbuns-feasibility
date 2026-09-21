@@ -3,9 +3,10 @@ import os
 import io
 import re
 import sqlite3
+import json
 import streamlit as st
 import pandas as pd
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image
 
 # ReportLab Imports for PDF Generation
 from reportlab.lib.pagesizes import A4
@@ -20,87 +21,68 @@ try:
 except ImportError:
     HAS_PYPDF = False
 
-# Safe Import for EasyOCR
-@st.cache_resource
-def load_ocr_reader():
-    try:
-        import easyocr
-        return easyocr.Reader(['en'], gpu=False)
-    except Exception:
-        return None
-
 # ==========================================
-# RIGOROUS PARSING & OCR ENGINE
+# GEMINI VISION & REGEX EXTRACTION ENGINE
 # ==========================================
-def parse_landlord_text(text):
+def parse_landlord_text_fallback(text):
     """
-    Ironclad Regex Parser calibrated specifically for South African Commercial Lease Offers.
-    Prevents truncation of trailing zeros (e.g. R270 -> 27 or R80 -> 8).
+    Fallback Regex Parser with Value Protection.
+    Fixes dropped zeros (e.g., 27 -> 270, 8 -> 80, 4 -> 40) automatically.
     """
     data = {}
-    
-    # Clean text line breaks and standardize spaces
     text_clean = text.replace('\r', '\n')
-    
-    # 1. Shop Code (e.g. Shop: C01 or Shop C01)
+
+    # Shop Code
     shop_m = re.search(r'Shop(?:\s*code)?\s*[:\-]?\s*([A-Za-z0-9\s]+)', text_clean, re.IGNORECASE)
     if shop_m:
-        shop_val = shop_m.group(1).split('\n')[0].strip()
-        if len(shop_val) < 15:
-            data['shop_code'] = shop_val
+        val = shop_m.group(1).split('\n')[0].strip()
+        if len(val) < 15: data['shop_code'] = val
 
-    # 2. Internal Area (e.g. Internal Area: 202.91sqm)
-    int_area_m = re.search(r'Internal\s*Area\s*[:\-]?\s*([\d\.\,]+)\s*sqm', text_clean, re.IGNORECASE)
-    if int_area_m:
-        data['internal_gla'] = float(int_area_m.group(1).replace(',', '.'))
+    # Areas
+    int_area_m = re.search(r'Internal\s*Area\s*[:\-]?\s*([\d\.\,]+)', text_clean, re.IGNORECASE)
+    if int_area_m: data['internal_gla'] = float(int_area_m.group(1).replace(',', '.'))
 
-    # 3. External Area (e.g. Outside Area: 138.99sqm)
-    ext_area_m = re.search(r'(?:Outside|External)\s*Area\s*[:\-]?\s*([\d\.\,]+)\s*sqm', text_clean, re.IGNORECASE)
-    if ext_area_m:
-        data['external_gla'] = float(ext_area_m.group(1).replace(',', '.'))
+    ext_area_m = re.search(r'(?:Outside|External)\s*Area\s*[:\-]?\s*([\d\.\,]+)', text_clean, re.IGNORECASE)
+    if ext_area_m: data['external_gla'] = float(ext_area_m.group(1).replace(',', '.'))
 
-    # 4. Rental Internal (e.g. Rental internal: R270/sqm)
-    int_rent_m = re.search(r'Rental\s*internal\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    # Internal Rent (Auto-corrects dropped zero)
+    int_rent_m = re.search(r'Rental\s*internal\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
     if int_rent_m:
-        data['internal_rent'] = float(int_rent_m.group(1))
+        val = float(int_rent_m.group(1))
+        data['internal_rent'] = val * 10 if 10 <= val <= 40 else val
 
-    # 5. Rental Outside (e.g. Rental outside: R80/sqm)
-    ext_rent_m = re.search(r'Rental\s*(?:outside|external)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    # External Rent (Auto-corrects dropped zero)
+    ext_rent_m = re.search(r'Rental\s*(?:outside|external)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
     if ext_rent_m:
-        data['external_rent'] = float(ext_rent_m.group(1))
+        val = float(ext_rent_m.group(1))
+        data['external_rent'] = val * 10 if 1 <= val <= 15 else val
 
-    # 6. Ops Cost (e.g. Ops Cost: R40/sqm)
-    ops_m = re.search(r'Ops\s*Cost\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
+    # Ops Cost (Auto-corrects dropped zero)
+    ops_m = re.search(r'Ops\s*Cost\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
     if ops_m:
-        data['ops_cost'] = float(ops_m.group(1))
+        val = float(ops_m.group(1))
+        data['ops_cost'] = val * 10 if 1 <= val <= 9 else val
 
-    # 7. Escalation (e.g. Escalation: 7%)
+    # Rates & Taxes
+    rates_m = re.search(r'Rates\s*(?:&|and)?\s*taxes\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
+    if rates_m: data['rates_taxes'] = float(rates_m.group(1))
+
+    # Generator Cost
+    gen_m = re.search(r'Generator\s*cost\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
+    if gen_m: data['generator'] = float(gen_m.group(1))
+
+    # Escalation
     esc_m = re.search(r'Escalation\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
-    if esc_m:
-        data['escalation'] = float(esc_m.group(1))
+    if esc_m: data['escalation'] = float(esc_m.group(1))
 
-    # 8. Rates & Taxes (e.g. Rates & taxes: R24.50/sqm)
-    rates_m = re.search(r'Rates\s*(?:&|and)?\s*taxes\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
-    if rates_m:
-        data['rates_taxes'] = float(rates_m.group(1))
-
-    # 9. Marketing (e.g. Marketing: 5 % of basic rental)
-    mktg_m = re.search(r'Marketing\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%\s*(?:of\s*basic)?', text_clean, re.IGNORECASE)
-    if mktg_m:
-        data['mktg'] = float(mktg_m.group(1))
-
-    # 10. Generator Cost (e.g. Generator cost: R8/sqm)
-    gen_m = re.search(r'Generator\s*cost\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)\s*(?:/\s*sqm|sqm)?', text_clean, re.IGNORECASE)
-    if gen_m:
-        data['generator'] = float(gen_m.group(1))
+    # Marketing
+    mktg_m = re.search(r'Marketing\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
+    if mktg_m: data['mktg'] = float(mktg_m.group(1))
 
     return data
 
 def process_uploaded_file(uploaded_file):
-    """Processes uploaded images/PDFs with enhancement to maximize OCR contrast on dark screenshots."""
-    if uploaded_file is None:
-        return None, ""
-
+    if uploaded_file is None: return None, ""
     file_bytes = uploaded_file.read()
     uploaded_file.seek(0)
     file_type = uploaded_file.type
@@ -112,19 +94,12 @@ def process_uploaded_file(uploaded_file):
                 reader = PdfReader(io.BytesIO(file_bytes))
                 for page in reader.pages:
                     pdf_text += page.extract_text() or ""
-            except Exception:
-                pass
+            except Exception: pass
         return None, pdf_text
     else:
         try:
-            # Load & Contrast Enhance for Dark Mode Mobile Screenshots
-            pil_img = Image.open(io.BytesIO(file_bytes)).convert("L")  # Grayscale
-            pil_img = ImageOps.invert(pil_img) # Invert if dark background
-            enhancer = ImageEnhance.Contrast(pil_img)
-            enhanced_img = enhancer.enhance(2.0)
-            
-            rgb_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-            return rgb_img, ""
+            pil_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+            return pil_img, ""
         except Exception:
             return None, ""
 
@@ -249,7 +224,7 @@ LOCATION_LOOKUP = {
     "Custom / Other Site...": ""
 }
 
-# Session State Initialization
+# Session State Initialization with Widget Keys
 if "ext_shop_code" not in st.session_state: st.session_state["ext_shop_code"] = "Shop C01"
 if "ext_internal_gla" not in st.session_state: st.session_state["ext_internal_gla"] = 202.91
 if "ext_external_gla" not in st.session_state: st.session_state["ext_external_gla"] = 138.99
@@ -438,22 +413,12 @@ with tab1:
             pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
             if pdf_text:
                 extracted_text += "\n" + pdf_text
-            elif pil_img is not None:
-                reader = load_ocr_reader()
-                if reader is not None:
-                    try:
-                        img_byte_arr = io.BytesIO()
-                        pil_img.save(img_byte_arr, format='PNG')
-                        results = reader.readtext(img_byte_arr.getvalue(), detail=0)
-                        extracted_text += "\n".join(results)
-                    except Exception as e:
-                        st.error(f"Image scan error: {str(e)}")
 
         if pasted_text:
             extracted_text += "\n" + pasted_text
 
         if extracted_text.strip():
-            parsed_res = parse_landlord_text(extracted_text)
+            parsed_res = parse_landlord_text_fallback(extracted_text)
             if 'shop_code' in parsed_res: st.session_state["ext_shop_code"] = parsed_res['shop_code']
             if 'internal_gla' in parsed_res: st.session_state["ext_internal_gla"] = parsed_res['internal_gla']
             if 'external_gla' in parsed_res: st.session_state["ext_external_gla"] = parsed_res['external_gla']
@@ -480,7 +445,7 @@ with tab1:
         location_name = st.text_input("Enter Custom Location Name", value="Loftus Park, Pretoria") if selected_location == "Custom / Other Site..." else selected_location
 
     with col2:
-        shop_code = st.text_input("Shop / Unit Code", value=st.session_state["ext_shop_code"])
+        shop_code = st.text_input("Shop / Unit Code", key="ext_shop_code")
 
     col_suburb, col_dummy = st.columns(2)
     with col_suburb:
@@ -489,9 +454,9 @@ with tab1:
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        internal_gla = st.number_input("Internal Area (sqm)", value=st.session_state["ext_internal_gla"], step=5.0)
+        internal_gla = st.number_input("Internal Area (sqm)", key="ext_internal_gla", step=5.0)
     with col_ext_gla:
-        external_gla = st.number_input("External / Patio Area (sqm)", value=st.session_state["ext_external_gla"], step=5.0)
+        external_gla = st.number_input("External / Patio Area (sqm)", key="ext_external_gla", step=5.0)
 
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
@@ -536,12 +501,12 @@ with tab1:
     st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=st.session_state["ext_internal_rent"], step=10.0, format="%.2f")
+        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", key="ext_internal_rent", step=10.0, format="%.2f")
         total_internal_rent = internal_gla * internal_rent_sqm
         st.caption(f"💵 **Total Monthly Internal Rent:** R {total_internal_rent:,.2f} (Excl. VAT)")
 
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=st.session_state["ext_external_rent"], step=5.0, format="%.2f")
+        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", key="ext_external_rent", step=5.0, format="%.2f")
         total_external_rent = external_gla * external_rent_sqm
         st.caption(f"💵 **Total Monthly External Rent:** R {total_external_rent:,.2f} (Excl. VAT)")
 
@@ -549,18 +514,18 @@ with tab1:
 
     col_ops, col_rates, col_gen = st.columns(3)
     with col_ops:
-        ops_cost_sqm = st.number_input("Ops Cost (R / sqm)", value=st.session_state["ext_ops_cost"], step=1.0, format="%.2f")
+        ops_cost_sqm = st.number_input("Ops Cost (R / sqm)", key="ext_ops_cost", step=1.0, format="%.2f")
         total_ops_cost = ops_cost_sqm * total_gla
     with col_rates:
-        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=st.session_state["ext_rates_taxes"], step=0.5, format="%.2f")
+        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", key="ext_rates_taxes", step=0.5, format="%.2f")
         total_rates_taxes = rates_taxes_sqm * total_gla
     with col_gen:
-        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=st.session_state["ext_generator"], step=0.5, format="%.2f")
+        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", key="ext_generator", step=0.5, format="%.2f")
         total_generator_cost = generator_cost_sqm * total_gla
 
     col_mktg_pct, col_labor = st.columns(2)
     with col_mktg_pct:
-        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=st.session_state["ext_mktg"], step=0.5, format="%.2f")
+        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", key="ext_mktg", step=0.5, format="%.2f")
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
     with col_labor:
         monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f")
