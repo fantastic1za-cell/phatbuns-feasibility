@@ -10,7 +10,7 @@ from PIL import Image
 # ReportLab Imports for PDF Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # ==========================================
@@ -134,32 +134,20 @@ LOCATION_LOOKUP = {
     "Custom / Other Site...": ""
 }
 
-# Default session state initialization
-if "ext_shop_code" not in st.session_state:
-    st.session_state["ext_shop_code"] = "Shop C01"
-if "ext_internal_gla" not in st.session_state:
-    st.session_state["ext_internal_gla"] = 202.91
-if "ext_external_gla" not in st.session_state:
-    st.session_state["ext_external_gla"] = 138.99
-if "ext_internal_rent" not in st.session_state:
-    st.session_state["ext_internal_rent"] = 270.00
-if "ext_external_rent" not in st.session_state:
-    st.session_state["ext_external_rent"] = 80.00
-if "ext_ops_cost" not in st.session_state:
-    st.session_state["ext_ops_cost"] = 40.00
-if "ext_rates_taxes" not in st.session_state:
-    st.session_state["ext_rates_taxes"] = 24.50
-if "ext_generator" not in st.session_state:
-    st.session_state["ext_generator"] = 8.00
-if "ext_escalation" not in st.session_state:
-    st.session_state["ext_escalation"] = 7.00
-if "ext_mktg" not in st.session_state:
-    st.session_state["ext_mktg"] = 5.00
+# Session State Initialization
+if "ext_shop_code" not in st.session_state: st.session_state["ext_shop_code"] = "Shop C01"
+if "ext_internal_gla" not in st.session_state: st.session_state["ext_internal_gla"] = 202.91
+if "ext_external_gla" not in st.session_state: st.session_state["ext_external_gla"] = 138.99
+if "ext_internal_rent" not in st.session_state: st.session_state["ext_internal_rent"] = 270.00
+if "ext_external_rent" not in st.session_state: st.session_state["ext_external_rent"] = 80.00
+if "ext_ops_cost" not in st.session_state: st.session_state["ext_ops_cost"] = 40.00
+if "ext_rates_taxes" not in st.session_state: st.session_state["ext_rates_taxes"] = 24.50
+if "ext_generator" not in st.session_state: st.session_state["ext_generator"] = 8.00
+if "ext_escalation" not in st.session_state: st.session_state["ext_escalation"] = 7.00
+if "ext_mktg" not in st.session_state: st.session_state["ext_mktg"] = 5.00
 
-# Text Parsing Fallback Engine
 def parse_landlord_text(text):
     data = {}
-    
     shop_m = re.search(r'Shop:\s*([A-Za-z0-9\s]+)', text, re.IGNORECASE)
     if shop_m: data['shop_code'] = shop_m.group(1).strip()
     
@@ -205,25 +193,26 @@ STORE_MODELS = {
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# REPORTLAB PDF GENERATION FUNCTIONS
+# REPORTLAB PDF GENERATION ENGINE
 # ==========================================
-def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, total_lease_outlay, m12_rev, m24_rev, m36_rev, m60_rev, payback, dscr):
+def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, total_lease_outlay, payback, dscr, df_payback_matrix, blueprint_img_bytes):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     styles = getSampleStyleSheet()
     
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=colors.HexColor('#111111'), leading=22, alignment=1)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#555555'), leading=14, alignment=1)
-    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=colors.HexColor('#8B0000'), leading=15, spaceBefore=8, spaceAfter=4)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=11, textColor=colors.HexColor('#222222'))
+    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#8B0000'), leading=14, spaceBefore=8, spaceAfter=4)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#222222'))
 
     elements = []
 
     elements.append(Paragraph("PHATBUNS SOUTH AFRICA", title_style))
-    elements.append(Paragraph("Bankable Feasibility & Financial Assessment Pack", subtitle_style))
-    elements.append(Spacer(1, 8))
-    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#8B0000'), spaceBefore=2, spaceAfter=10))
+    elements.append(Paragraph(f"Bankable Commercial Feasibility & Investment Review — {loc_name} ({shop})", subtitle_style))
+    elements.append(Spacer(1, 6))
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#8B0000'), spaceBefore=2, spaceAfter=8))
 
+    # 1. Site Specs
     elements.append(Paragraph("1. Site & Space Specification", section_heading))
     site_data = [
         [Paragraph("<b>Location Name:</b>", body_style), Paragraph(str(loc_name), body_style), Paragraph("<b>Shop Code:</b>", body_style), Paragraph(str(shop), body_style)],
@@ -232,64 +221,70 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("<b>Total Footprint:</b>", body_style), Paragraph(f"{total_gla:.2f} sqm", body_style), Paragraph("<b>Seating Capacity:</b>", body_style), Paragraph(f"{max_seats} Std / {high_seats} Dense", body_style)]
     ]
     t_site = Table(site_data, colWidths=[110, 150, 110, 150])
-    t_site.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F9F9F9')),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')),
-        ('PADDING', (0,0), (-1,-1), 5),
-    ]))
+    t_site.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F9F9F9')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')), ('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(t_site)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 8))
 
+    # 2. Financial Summary
     elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", section_heading))
     fin_data = [
         [Paragraph("<b>Total Turnkey Capital:</b>", body_style), Paragraph(f"R {capital:,.2f}", body_style)],
         [Paragraph("<b>Working Capital Reserve:</b>", body_style), Paragraph(f"R {wc:,.2f}", body_style)],
         [Paragraph("<b>Total Initial Capital Required:</b>", body_style), Paragraph(f"R {total_inv:,.2f}", body_style)],
-        [Paragraph("<b>50% Unencumbered Cash Equity:</b>", body_style), Paragraph(f"R {total_inv * 0.5:,.2f}", body_style)],
-        [Paragraph("<b>50% Debt Financing Balance:</b>", body_style), Paragraph(f"R {total_inv * 0.5:,.2f}", body_style)],
         [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_style), Paragraph(f"R {total_lease_outlay:,.2f}", body_style)],
         [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_style), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_style)],
         [Paragraph("<b>Full Capital Recovery Period:</b>", body_style), Paragraph(str(payback), body_style)],
     ]
     t_fin = Table(fin_data, colWidths=[230, 290])
-    t_fin.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FFFFFF')),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
+    t_fin.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#FFFFFF')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#DDDDDD')), ('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(t_fin)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 8))
 
-    elements.append(Paragraph("3. Target Turnover & Sales Horizons", section_heading))
-    rev_data = [
-        [Paragraph("<b>Milestone</b>", body_style), Paragraph("<b>Monthly Revenue Target</b>", body_style), Paragraph("<b>Daily Unit Sales (AOV R150)</b>", body_style)],
-        [Paragraph("Month 12 Target", body_style), Paragraph(f"R {m12_rev:,.2f}", body_style), Paragraph(f"{int(m12_rev / 30 / 150)} tickets/day", body_style)],
-        [Paragraph("Month 24 Target", body_style), Paragraph(f"R {m24_rev:,.2f}", body_style), Paragraph(f"{int(m24_rev / 30 / 150)} tickets/day", body_style)],
-        [Paragraph("Month 36 Target", body_style), Paragraph(f"R {m36_rev:,.2f}", body_style), Paragraph(f"{int(m36_rev / 30 / 150)} tickets/day", body_style)],
-        [Paragraph("Month 60 Target", body_style), Paragraph(f"R {m60_rev:,.2f}", body_style), Paragraph(f"{int(m60_rev / 30 / 150)} tickets/day", body_style)],
-    ]
-    t_rev = Table(rev_data, colWidths=[150, 185, 185])
-    t_rev.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')),
+    # 3. Payback Matrix (Reference Photo 2 Format)
+    elements.append(Paragraph(f"3. INVESTMENT RECOVERY & PAYBACK MATRIX (R{capital/1000000:.1f}M CAPEX AMORTIZATION @ 55% BLENDED GP)", section_heading))
+    matrix_table_data = [[Paragraph(f"<b>{col}</b>", body_style) for col in df_payback_matrix.columns]]
+    for idx, row in df_payback_matrix.iterrows():
+        row_cells = []
+        for col in df_payback_matrix.columns:
+            val = row[col]
+            if isinstance(val, float): formatted = f"R {val:,.2f}"
+            else: formatted = str(val)
+            row_cells.append(Paragraph(formatted, body_style))
+        matrix_table_data.append(row_cells)
+
+    t_matrix = Table(matrix_table_data, colWidths=[150, 90, 90, 95, 95])
+    t_matrix.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F2F2F2')),
+        ('BACKGROUND', (0,3), (-1,3), colors.HexColor('#FFF2CC')), # Highlight Required Monthly Turnover
+        ('BACKGROUND', (0,4), (-1,4), colors.HexColor('#1F1F1F')), # Dark row for Daily Orders Needed
+        ('TEXTCOLOR', (0,4), (-1,4), colors.white),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
         ('PADDING', (0,0), (-1,-1), 4),
     ]))
-    elements.append(t_rev)
-    elements.append(Spacer(1, 15))
+    elements.append(t_matrix)
+    elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph("4. Governance & Executive Sign-Off", section_heading))
-    gov_text = """
-    <b>Pre-Requisites:</b> R2,000 (Excl. VAT) admin fee; proof of 50% unencumbered cash; SANHA Halaal compliance; 4-6 week operational staff training; final binding CEO sign-off.
-    """
-    elements.append(Paragraph(gov_text, body_style))
-    elements.append(Spacer(1, 15))
+    # 4. Blueprint & Architectural Layout Addendum
+    elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & LOCATION FEASIBILITY", section_heading))
+    if blueprint_img_bytes is not None:
+        try:
+            img_stream = io.BytesIO(blueprint_img_bytes)
+            rl_img = RLImage(img_stream, width=480, height=220)
+            elements.append(rl_img)
+        except Exception:
+            elements.append(Paragraph("<i>Site layout blueprint uploaded, but could not be embedded into PDF output.</i>", body_style))
+    else:
+        elements.append(Paragraph("<b>PROPOSED SITE LAYOUT BLUEPRINT:</b> Not available yet — Pending landlord architectural submission.", body_style))
 
+    elements.append(Spacer(1, 10))
+
+    # Signatures
     sig_data = [
         [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_style), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_style)],
         [Paragraph("<b>Date:</b> ____ / ____ / ________", body_style), Paragraph("<b>Date:</b> ____ / ____ / ________", body_style)]
     ]
     t_sig = Table(sig_data, colWidths=[260, 260])
-    t_sig.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 6)]))
+    t_sig.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(t_sig)
 
     doc.build(elements)
@@ -329,11 +324,7 @@ def generate_pipeline_pdf(df_pipeline):
             ])
 
         t_pipe = Table(table_data, colWidths=[25, 100, 110, 85, 90, 65, 65])
-        t_pipe.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')),
-            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
-            ('PADDING', (0,0), (-1,-1), 4),
-        ]))
+        t_pipe.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')), ('PADDING', (0,0), (-1,-1), 4)]))
         elements.append(t_pipe)
     else:
         elements.append(Paragraph("No applicant records available in database.", body_style))
@@ -349,13 +340,9 @@ tab1, tab2 = st.tabs(["📊 Feasibility & Bank Model", "📋 Investor & Franchis
 
 with tab1:
     st.header("Automated Landlord Proposal Extractor")
-    st.markdown("Paste or upload a landlord offer screenshot/text below to auto-populate the site metrics.")
+    st.markdown("Paste landlord offer text below to auto-populate site parameters.")
 
-    col_up1, col_up2 = st.columns([1, 1])
-    with col_up1:
-        uploaded_img = st.file_uploader("Upload Offer Screenshot (PNG/JPG)", type=["png", "jpg", "jpeg"])
-    with col_up2:
-        pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
+    pasted_text = st.text_area("Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
 
     if st.button("⚡ Extract & Pre-Fill Lease Terms"):
         if pasted_text:
@@ -371,8 +358,6 @@ with tab1:
             if 'escalation' in parsed_res: st.session_state["ext_escalation"] = parsed_res['escalation']
             if 'mktg' in parsed_res: st.session_state["ext_mktg"] = parsed_res['mktg']
             st.success("Lease terms successfully extracted and populated below!")
-        else:
-            st.info("Paste email text or select screenshot to extract.")
 
     st.divider()
 
@@ -399,6 +384,16 @@ with tab1:
 
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
+
+    # Site Blueprint Upload Engine (Matching Photo 3)
+    st.subheader("Site Blueprint & Layout Plan")
+    blueprint_file = st.file_uploader(f"Upload Architectural Layout Blueprint for {location_name} ({shop_code})", type=["png", "jpg", "jpeg"])
+    blueprint_img_bytes = None
+    if blueprint_file is not None:
+        blueprint_img_bytes = blueprint_file.read()
+        st.image(blueprint_img_bytes, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_column_width=True)
+    else:
+        st.info("ℹ️ **Blueprint Status:** Not available yet — Pending landlord architectural submission.")
 
     st.divider()
 
@@ -460,34 +455,64 @@ with tab1:
 
     st.divider()
 
-    st.header("3. Required Turnover & Unit Sales Matrix (AOV = R150)")
-    base_turnover_input = st.number_input("Initial Year 1 Baseline Turnover (Monthly Average ZAR)", value=model_data["est_monthly_turnover"], step=25000.0, format="%.2f")
-    aov_val = 150.0
+    # ==========================================
+    # 4. INVESTMENT RECOVERY & PAYBACK MATRIX (PHOTO 2 FORMAT)
+    # ==========================================
+    st.header("4. Investment Recovery & Payback Matrix (@ 55% Blended GP)")
+    st.markdown("Detailed breakdown of Monthly CapEx Amortization, Total Monthly Cash Outflows, Required Monthly Turnover, and Daily Orders Needed.")
 
-    cogs_food_pct = 0.33
-    royalty_mktg_pct = 0.09
+    gp_margin = 0.55  # 55% Blended Gross Profit Margin
+    aov_ticket = 150.0  # R150 Average Order Value
 
-    fixed_monthly_costs = total_lease_outlay_monthly + monthly_labor_cost
-    contribution_margin = 1.0 - cogs_food_pct - royalty_mktg_pct
-    op_breakeven_turnover = fixed_monthly_costs / contribution_margin if contribution_margin > 0 else 0
-    breakeven_daily_tickets = math.ceil(op_breakeven_turnover / 30 / aov_val)
+    # Matrix Calculations
+    capex_12 = turnkey_capital / 12
+    capex_24 = turnkey_capital / 24
+    capex_36 = turnkey_capital / 36
+    capex_60 = turnkey_capital / 60
 
-    turnover_m12 = base_turnover_input
-    turnover_m24 = base_turnover_input * (1.08 ** 1)
-    turnover_m36 = base_turnover_input * (1.08 ** 2)
-    turnover_m60 = base_turnover_input * (1.08 ** 4)
+    outflow_breakeven = total_lease_outlay_monthly + monthly_labor_cost
+    outflow_12 = outflow_breakeven + capex_12
+    outflow_24 = outflow_breakeven + capex_24
+    outflow_36 = outflow_breakeven + capex_36
+    outflow_60 = outflow_breakeven + capex_60
 
-    df_matrix = pd.DataFrame({
-        "Horizon": ["Op Break-Even", "Month 12 Target", "Month 24 Target", "Month 36 Target", "Month 60 Target"],
-        "Monthly Turnover Target": [op_breakeven_turnover, turnover_m12, turnover_m24, turnover_m36, turnover_m60],
-        "Monthly Ticket Volume": [op_breakeven_turnover / aov_val, turnover_m12 / aov_val, turnover_m24 / aov_val, turnover_m36 / aov_val, turnover_m60 / aov_val],
-        "Required Daily Tickets (30 Days)": [breakeven_daily_tickets, math.ceil(turnover_m12 / 30 / aov_val), math.ceil(turnover_m24 / 30 / aov_val), math.ceil(turnover_m36 / 30 / aov_val), math.ceil(turnover_m60 / 30 / aov_val)]
-    })
-    st.dataframe(df_matrix.style.format({"Monthly Turnover Target": "R {:,.2f}", "Monthly Ticket Volume": "{:,.0f}", "Required Daily Tickets (30 Days)": "{:,.0f}"}), use_container_width=True)
+    turnover_req_be = outflow_breakeven / gp_margin
+    turnover_req_12 = outflow_12 / gp_margin
+    turnover_req_24 = outflow_24 / gp_margin
+    turnover_req_36 = outflow_36 / gp_margin
+    turnover_req_60 = outflow_60 / gp_margin
+
+    daily_orders_be = f"{math.ceil(turnover_req_be / 30 / aov_ticket)} Orders/Day"
+    daily_orders_12 = f"{math.ceil(turnover_req_12 / 30 / aov_ticket)} Orders/Day"
+    daily_orders_24 = f"{math.ceil(turnover_req_24 / 30 / aov_ticket)} Orders/Day"
+    daily_orders_36 = f"{math.ceil(turnover_req_36 / 30 / aov_ticket)} Orders/Day"
+    daily_orders_60 = f"{math.ceil(turnover_req_60 / 30 / aov_ticket)} Orders/Day"
+
+    payback_matrix_data = {
+        "FINANCIAL METRIC": ["Monthly CapEx Amortization", "Total Monthly Cash Outflow", "Required Monthly Turnover", "Daily Orders Needed (R150 Avg Ticket)"],
+        "OPERATIONAL BREAKEVEN": [0.00, outflow_breakeven, turnover_req_be, daily_orders_be],
+        "12-MONTH PAYBACK": [capex_12, outflow_12, turnover_req_12, daily_orders_12],
+        "24-MONTH PAYBACK": [capex_24, outflow_24, turnover_req_24, daily_orders_24],
+        "36-MONTH PAYBACK": [capex_36, outflow_36, turnover_req_36, daily_orders_36],
+        "60-MONTH LEASE TERM": [capex_60, outflow_60, turnover_req_60, daily_orders_60]
+    }
+
+    df_payback_matrix = pd.DataFrame(payback_matrix_data)
+    
+    st.dataframe(
+        df_payback_matrix.style.format({
+            "OPERATIONAL BREAKEVEN": lambda x: f"R {x:,.2f}" if isinstance(x, (int, float)) else str(x),
+            "12-MONTH PAYBACK": lambda x: f"R {x:,.2f}" if isinstance(x, (int, float)) else str(x),
+            "24-MONTH PAYBACK": lambda x: f"R {x:,.2f}" if isinstance(x, (int, float)) else str(x),
+            "36-MONTH PAYBACK": lambda x: f"R {x:,.2f}" if isinstance(x, (int, float)) else str(x),
+            "60-MONTH LEASE TERM": lambda x: f"R {x:,.2f}" if isinstance(x, (int, float)) else str(x)
+        }),
+        use_container_width=True
+    )
 
     st.divider()
 
-    st.header("4. Financial Statements & 60-Month Forecast (Addendum)")
+    st.header("5. Financial Statements & 60-Month Forecast (Addendum)")
 
     total_initial_investment = turnkey_capital + working_capital
     debt_portion = total_initial_investment * 0.50
@@ -506,10 +531,10 @@ with tab1:
         year_idx = (m - 1) // 12
         season_multiplier = SEASONAL_FACTORS[(m - 1) % 12]
         
-        monthly_turnover = (base_turnover_input * (1.08 ** year_idx)) * season_multiplier
+        monthly_turnover = (turnover_req_12 * (1.08 ** year_idx)) * season_multiplier
         monthly_lease = total_lease_outlay_monthly * (st.session_state["ext_escalation"] / 100 + 1) ** year_idx
-        monthly_cogs = monthly_turnover * cogs_food_pct
-        monthly_royalties = monthly_turnover * royalty_mktg_pct
+        monthly_cogs = monthly_turnover * 0.33
+        monthly_royalties = monthly_turnover * 0.09
         
         total_monthly_expenses = monthly_lease + monthly_cogs + monthly_royalties + monthly_labor_cost
         ebitda = monthly_turnover - total_monthly_expenses
@@ -539,8 +564,13 @@ with tab1:
 
     st.divider()
 
-    st.header("5. Generate & Download Official PDF Pack")
-    pdf_file = generate_pdf_report(location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model, max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, total_initial_investment, total_lease_outlay_monthly, turnover_m12, turnover_m24, turnover_m36, turnover_m60, f"Month {break_even_month}" if break_even_month else "Beyond 60 Months", dscr_metric)
+    st.header("6. Generate & Download Official PDF Pack")
+    pdf_file = generate_pdf_report(
+        location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
+        max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, total_initial_investment,
+        total_lease_outlay_monthly, f"Month {break_even_month}" if break_even_month else "Beyond 60 Months", dscr_metric,
+        df_payback_matrix, blueprint_img_bytes
+    )
 
     st.download_button(label="📥 Download Official Bank-Ready Feasibility & Financial PDF Pack", data=pdf_file, file_name=f"Phatbuns_Bankable_Pack_{location_name.replace(' ', '_')}.pdf", mime="application/pdf", use_container_width=True)
 
