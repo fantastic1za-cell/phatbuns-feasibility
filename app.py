@@ -13,12 +13,14 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-# Optional OCR Engine Import
-try:
-    import pytesseract
-    HAS_TESSERACT = True
-except ImportError:
-    HAS_TESSERACT = False
+# Safe Import for OCR Engine
+@st.cache_resource
+def load_ocr_reader():
+    try:
+        import easyocr
+        return easyocr.Reader(['en'], gpu=False)
+    except Exception:
+        return None
 
 # ==========================================
 # STREAMLIT PAGE CONFIG & BRAND STYLING
@@ -357,16 +359,21 @@ with tab1:
 
     if st.button("⚡ Extract & Pre-Fill Lease Terms"):
         extracted_text = ""
-        if uploaded_offer_img is not None:
-            try:
-                img = Image.open(uploaded_offer_img)
-                if HAS_TESSERACT:
-                    extracted_text = pytesseract.image_to_string(img)
-                else:
-                    st.warning("OCR library not detected; using text parser. Paste offer text on the right if needed.")
-            except Exception as e:
-                st.error(f"Error reading image: {str(e)}")
         
+        # Method 1: Image Processing with EasyOCR
+        if uploaded_offer_img is not None:
+            reader = load_ocr_reader()
+            if reader is not None:
+                try:
+                    img_bytes = uploaded_offer_img.read()
+                    results = reader.readtext(img_bytes, detail=0)
+                    extracted_text += "\n".join(results)
+                except Exception as e:
+                    st.error(f"Image scan error: {str(e)}")
+            else:
+                st.info("Direct OCR model initializing. You can also paste offer text on the right.")
+
+        # Method 2: Direct Text Fallback
         if pasted_text:
             extracted_text += "\n" + pasted_text
 
@@ -382,9 +389,11 @@ with tab1:
             if 'generator' in parsed_res: st.session_state["ext_generator"] = parsed_res['generator']
             if 'escalation' in parsed_res: st.session_state["ext_escalation"] = parsed_res['escalation']
             if 'mktg' in parsed_res: st.session_state["ext_mktg"] = parsed_res['mktg']
+            
             st.success("Lease terms successfully extracted and populated below!")
+            st.rerun()
         else:
-            st.info("Please upload a screenshot or paste offer text to extract.")
+            st.warning("Please upload an offer screenshot or paste text above.")
 
     st.divider()
 
