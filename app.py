@@ -158,12 +158,27 @@ st.warning(
 st.divider()
 
 # ==========================================
-# MASTER RIGHTS HOLDER CONTACT FOOTER
+# MASTER RIGHTS HOLDER CONTACT FOOTER & LINKS
 # ==========================================
 st.subheader("Master Rights Holder Contact Information")
+
+# Clickable Markdown for On-Screen Streamlit App
 st.markdown("""
 **Master Rights Holder – South Africa**  
-📧 **Email:** nisaar@fantastic1.com | fantastic1za@gmail.com  
-💬 **WhatsApp:** +27 82 786 7712  
-📲 **Mobile:** +27 68 710 1939 | +27 68 727 4731  
+📧 **Email:** [nisaar@fantastic1.com](mailto:nisaar@fantastic1.com) | [fantastic1za@gmail.com](mailto:fantastic1za@gmail.com)  
+💬 **WhatsApp:** [+27 82 786 7712](https://wa.me/27827867712)  
+📲 **Mobile:** [+27 68 710 1939](tel:+27687101939) | [+27 68 727 4731](tel:+27687274731)  
 """)
+
+# ==========================================
+# REPORTLAB PDF CONTACT BLOCK HELPER
+# ==========================================
+def get_pdf_contact_paragraph_style(styles):
+    """Returns formatted clickable HTML text for ReportLab PDF compilation."""
+    contact_pdf_html = """
+    <b>Master Rights Holder – South Africa</b><br/>
+    📧 <b>Email:</b> <a href="mailto:nisaar@fantastic1.com" color="#0066CC"><u>nisaar@fantastic1.com</u></a> | <a href="mailto:fantastic1za@gmail.com" color="#0066CC"><u>fantastic1za@gmail.com</u></a><br/>
+    💬 <b>WhatsApp:</b> <a href="https://wa.me/27827867712" color="#0066CC"><u>+27 82 786 7712</u></a><br/>
+    📲 <b>Mobile:</b> <a href="tel:+27687101939" color="#0066CC"><u>+27 68 710 1939</u></a> | <a href="tel:+27687274731" color="#0066CC"><u>+27 68 727 4731</u></a>
+    """
+    return Paragraph(contact_pdf_html, styles['Normal'])
