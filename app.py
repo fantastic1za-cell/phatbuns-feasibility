@@ -13,6 +13,13 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+# Optional PDF Processing Engine
+try:
+    from pypdf import PdfReader
+    HAS_PYPDF = True
+except ImportError:
+    HAS_PYPDF = False
+
 # Safe Import for OCR Engine
 @st.cache_resource
 def load_ocr_reader():
@@ -21,6 +28,34 @@ def load_ocr_reader():
         return easyocr.Reader(['en'], gpu=False)
     except Exception:
         return None
+
+# Helper function to convert uploaded image/PDF bytes to PIL Image
+def process_uploaded_file_to_pil(uploaded_file):
+    if uploaded_file is None:
+        return None, None
+    
+    file_bytes = uploaded_file.read()
+    uploaded_file.seek(0)  # Reset buffer pointer
+    file_type = uploaded_file.type
+    
+    if "pdf" in file_type or uploaded_file.name.lower().endswith(".pdf"):
+        # Text extraction for landlord proposals from PDF
+        pdf_text = ""
+        if HAS_PYPDF:
+            try:
+                reader = PdfReader(io.BytesIO(file_bytes))
+                for page in reader.pages:
+                    pdf_text += page.extract_text() or ""
+            except Exception:
+                pass
+        return None, pdf_text
+    else:
+        # PNG / JPG processing
+        try:
+            pil_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+            return pil_img, ""
+        except Exception:
+            return None, ""
 
 # ==========================================
 # STREAMLIT PAGE CONFIG & BRAND STYLING
@@ -204,7 +239,7 @@ SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 
 # ==========================================
 # REPORTLAB PDF GENERATION ENGINE
 # ==========================================
-def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, total_lease_outlay, payback, dscr, df_payback_matrix, blueprint_img_bytes):
+def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, total_inv, total_lease_outlay, payback, dscr, df_payback_matrix, blueprint_pil_img):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     styles = getSampleStyleSheet()
@@ -275,13 +310,15 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     # 4. Blueprint Addendum
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & LOCATION FEASIBILITY", section_heading))
-    if blueprint_img_bytes is not None:
+    if blueprint_pil_img is not None:
         try:
-            img_stream = io.BytesIO(blueprint_img_bytes)
-            rl_img = RLImage(img_stream, width=480, height=220)
+            img_byte_arr = io.BytesIO()
+            blueprint_pil_img.save(img_byte_arr, format='PNG')
+            img_byte_arr.seek(0)
+            rl_img = RLImage(img_byte_arr, width=480, height=220)
             elements.append(rl_img)
         except Exception:
-            elements.append(Paragraph("<i>Site layout blueprint uploaded, but could not be embedded into PDF output.</i>", body_style))
+            elements.append(Paragraph("<i>Site layout blueprint attached, but could not be embedded into PDF report.</i>", body_style))
     else:
         elements.append(Paragraph("<b>PROPOSED SITE LAYOUT BLUEPRINT:</b> Not available yet — Pending landlord architectural submission.", body_style))
 
@@ -349,31 +386,32 @@ tab1, tab2 = st.tabs(["📊 Feasibility & Bank Model", "📋 Investor & Franchis
 
 with tab1:
     st.header("Automated Landlord Proposal Extractor")
-    st.markdown("Upload a landlord proposal screenshot or paste the offer text below to auto-populate site parameters.")
+    st.markdown("Upload a landlord proposal (PDF, PNG, JPG) or paste offer text below to auto-populate site parameters.")
 
     col_up1, col_up2 = st.columns(2)
     with col_up1:
-        uploaded_offer_img = st.file_uploader("Upload Offer Screenshot (PNG/JPG)", type=["png", "jpg", "jpeg"])
+        uploaded_offer_file = st.file_uploader("Upload Offer File (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
     with col_up2:
         pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
 
     if st.button("⚡ Extract & Pre-Fill Lease Terms"):
         extracted_text = ""
         
-        # Method 1: Image Processing with EasyOCR
-        if uploaded_offer_img is not None:
-            reader = load_ocr_reader()
-            if reader is not None:
-                try:
-                    img_bytes = uploaded_offer_img.read()
-                    results = reader.readtext(img_bytes, detail=0)
-                    extracted_text += "\n".join(results)
-                except Exception as e:
-                    st.error(f"Image scan error: {str(e)}")
-            else:
-                st.info("Direct OCR model initializing. You can also paste offer text on the right.")
+        if uploaded_offer_file is not None:
+            pil_img, pdf_text = process_uploaded_file_to_pil(uploaded_offer_file)
+            if pdf_text:
+                extracted_text += "\n" + pdf_text
+            elif pil_img is not None:
+                reader = load_ocr_reader()
+                if reader is not None:
+                    try:
+                        img_byte_arr = io.BytesIO()
+                        pil_img.save(img_byte_arr, format='PNG')
+                        results = reader.readtext(img_byte_arr.getvalue(), detail=0)
+                        extracted_text += "\n".join(results)
+                    except Exception as e:
+                        st.error(f"Image scan error: {str(e)}")
 
-        # Method 2: Direct Text Fallback
         if pasted_text:
             extracted_text += "\n" + pasted_text
 
@@ -393,7 +431,7 @@ with tab1:
             st.success("Lease terms successfully extracted and populated below!")
             st.rerun()
         else:
-            st.warning("Please upload an offer screenshot or paste text above.")
+            st.warning("Please upload an offer document or paste text above.")
 
     st.divider()
 
@@ -421,13 +459,17 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
-    # Site Blueprint Upload Engine
+    # Site Blueprint Upload Engine (Supports PDF & PNG/JPG)
     st.subheader("Site Blueprint & Layout Plan")
-    blueprint_file = st.file_uploader(f"Upload Architectural Layout Blueprint for {location_name} ({shop_code})", type=["png", "jpg", "jpeg"])
-    blueprint_img_bytes = None
+    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
+    blueprint_pil_img = None
     if blueprint_file is not None:
-        blueprint_img_bytes = blueprint_file.read()
-        st.image(blueprint_img_bytes, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_column_width=True)
+        pil_img, pdf_text = process_uploaded_file_to_pil(blueprint_file)
+        if pil_img is not None:
+            blueprint_pil_img = pil_img
+            st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
+        else:
+            st.info(f"📄 **Blueprint PDF Attached:** {blueprint_file.name}")
     else:
         st.info("ℹ️ **Blueprint Status:** Not available yet — Pending landlord architectural submission.")
 
@@ -599,7 +641,7 @@ with tab1:
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
         max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, total_initial_investment,
         total_lease_outlay_monthly, f"Month {break_even_month}" if break_even_month else "Beyond 60 Months", dscr_metric,
-        df_payback_matrix, blueprint_img_bytes
+        df_payback_matrix, blueprint_pil_img
     )
 
     st.download_button(label="📥 Download Official Bank-Ready Feasibility & Financial PDF Pack", data=pdf_file, file_name=f"Phatbuns_Bankable_Pack_{location_name.replace(' ', '_')}.pdf", mime="application/pdf", use_container_width=True)
