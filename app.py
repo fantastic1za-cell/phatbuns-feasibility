@@ -13,6 +13,13 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+# Optional OCR Engine Import
+try:
+    import pytesseract
+    HAS_TESSERACT = True
+except ImportError:
+    HAS_TESSERACT = False
+
 # ==========================================
 # STREAMLIT PAGE CONFIG & BRAND STYLING
 # ==========================================
@@ -240,7 +247,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_fin)
     elements.append(Spacer(1, 8))
 
-    # 3. Payback Matrix (Reference Photo 2 Format)
+    # 3. Payback Matrix
     elements.append(Paragraph(f"3. INVESTMENT RECOVERY & PAYBACK MATRIX (R{capital/1000000:.1f}M CAPEX AMORTIZATION @ 55% BLENDED GP)", section_heading))
     matrix_table_data = [[Paragraph(f"<b>{col}</b>", body_style) for col in df_payback_matrix.columns]]
     for idx, row in df_payback_matrix.iterrows():
@@ -255,8 +262,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     t_matrix = Table(matrix_table_data, colWidths=[150, 90, 90, 95, 95])
     t_matrix.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F2F2F2')),
-        ('BACKGROUND', (0,3), (-1,3), colors.HexColor('#FFF2CC')), # Highlight Required Monthly Turnover
-        ('BACKGROUND', (0,4), (-1,4), colors.HexColor('#1F1F1F')), # Dark row for Daily Orders Needed
+        ('BACKGROUND', (0,3), (-1,3), colors.HexColor('#FFF2CC')),
+        ('BACKGROUND', (0,4), (-1,4), colors.HexColor('#1F1F1F')),
         ('TEXTCOLOR', (0,4), (-1,4), colors.white),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
         ('PADDING', (0,0), (-1,-1), 4),
@@ -264,7 +271,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_matrix)
     elements.append(Spacer(1, 10))
 
-    # 4. Blueprint & Architectural Layout Addendum
+    # 4. Blueprint Addendum
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & LOCATION FEASIBILITY", section_heading))
     if blueprint_img_bytes is not None:
         try:
@@ -340,13 +347,31 @@ tab1, tab2 = st.tabs(["📊 Feasibility & Bank Model", "📋 Investor & Franchis
 
 with tab1:
     st.header("Automated Landlord Proposal Extractor")
-    st.markdown("Paste landlord offer text below to auto-populate site parameters.")
+    st.markdown("Upload a landlord proposal screenshot or paste the offer text below to auto-populate site parameters.")
 
-    pasted_text = st.text_area("Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
+    col_up1, col_up2 = st.columns(2)
+    with col_up1:
+        uploaded_offer_img = st.file_uploader("Upload Offer Screenshot (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    with col_up2:
+        pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
 
     if st.button("⚡ Extract & Pre-Fill Lease Terms"):
+        extracted_text = ""
+        if uploaded_offer_img is not None:
+            try:
+                img = Image.open(uploaded_offer_img)
+                if HAS_TESSERACT:
+                    extracted_text = pytesseract.image_to_string(img)
+                else:
+                    st.warning("OCR library not detected; using text parser. Paste offer text on the right if needed.")
+            except Exception as e:
+                st.error(f"Error reading image: {str(e)}")
+        
         if pasted_text:
-            parsed_res = parse_landlord_text(pasted_text)
+            extracted_text += "\n" + pasted_text
+
+        if extracted_text.strip():
+            parsed_res = parse_landlord_text(extracted_text)
             if 'shop_code' in parsed_res: st.session_state["ext_shop_code"] = parsed_res['shop_code']
             if 'internal_gla' in parsed_res: st.session_state["ext_internal_gla"] = parsed_res['internal_gla']
             if 'external_gla' in parsed_res: st.session_state["ext_external_gla"] = parsed_res['external_gla']
@@ -358,6 +383,8 @@ with tab1:
             if 'escalation' in parsed_res: st.session_state["ext_escalation"] = parsed_res['escalation']
             if 'mktg' in parsed_res: st.session_state["ext_mktg"] = parsed_res['mktg']
             st.success("Lease terms successfully extracted and populated below!")
+        else:
+            st.info("Please upload a screenshot or paste offer text to extract.")
 
     st.divider()
 
@@ -385,7 +412,7 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
-    # Site Blueprint Upload Engine (Matching Photo 3)
+    # Site Blueprint Upload Engine
     st.subheader("Site Blueprint & Layout Plan")
     blueprint_file = st.file_uploader(f"Upload Architectural Layout Blueprint for {location_name} ({shop_code})", type=["png", "jpg", "jpeg"])
     blueprint_img_bytes = None
@@ -455,16 +482,10 @@ with tab1:
 
     st.divider()
 
-    # ==========================================
-    # 4. INVESTMENT RECOVERY & PAYBACK MATRIX (PHOTO 2 FORMAT)
-    # ==========================================
     st.header("4. Investment Recovery & Payback Matrix (@ 55% Blended GP)")
-    st.markdown("Detailed breakdown of Monthly CapEx Amortization, Total Monthly Cash Outflows, Required Monthly Turnover, and Daily Orders Needed.")
+    gp_margin = 0.55
+    aov_ticket = 150.0
 
-    gp_margin = 0.55  # 55% Blended Gross Profit Margin
-    aov_ticket = 150.0  # R150 Average Order Value
-
-    # Matrix Calculations
     capex_12 = turnkey_capital / 12
     capex_24 = turnkey_capital / 24
     capex_36 = turnkey_capital / 36
