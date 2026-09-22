@@ -299,13 +299,13 @@ Thank you for taking the time to show interest in the Phatbuns South Africa fran
 We are excited to share our comprehensive Master Franchisee Investor Pack for {site_name}. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.
 
 Please find attached to this email (Consolidated within the Feasibility PDF Pack):
-1. Executive Cover Page & Brand Identity Presentation (IMG_5357)
-2. Site Evaluation & Commercial Investment Analysis ({site_name})
-3. Financial Outlay & Debt Serviceability Breakdown
-4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
+1. Executive Cover Page & Brand Identity Presentation (IMG_5357)[span_2](start_span)[span_2](end_span)
+2. Site Evaluation & Commercial Investment Analysis ({site_name})[span_3](start_span)[span_3](end_span)
+3. Financial Outlay & Debt Serviceability Breakdown[span_4](start_span)[span_4](end_span)
+4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)[span_5](start_span)[span_5](end_span)
 5. Development Layout & Leasing Site Plan (Rendered)
-6. Addendum — Menus & Brand Concept Guides
-7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
+6. Addendum — Menus & Brand Concept Guides (Embedded with Clickable Catalog Links)
+7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)[span_6](start_span)[span_6](end_span)
 
 Next Steps:
 Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.
@@ -554,7 +554,7 @@ STORE_MODELS = {
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# MASTER PDF GENERATION ENGINE WITH BLUEPRINT FIX
+# MASTER PDF GENERATION ENGINE WITH EMBEDDED HYPERLINKS & GREEN TEXT
 # ==========================================
 def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img, selected_menus=[]):
     buffer = io.BytesIO()
@@ -678,13 +678,17 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Spacer(1, 8))
 
     elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", ParagraphStyle('P2Sec2', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
+    
+    # Styled green text and turnover next to it
+    green_recovery_style = ParagraphStyle('GreenRecovery', parent=body_regular, textColor=colors.HexColor('#008000'), fontName='Helvetica-Bold')
+    
     fin_p2_data = [
         [Paragraph("<b>Total Turnkey Capital:</b>", body_regular), Paragraph(f"R {int(round(capital)):,}", body_regular)],
         [Paragraph("<b>Working Capital Reserve:</b>", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
         [Paragraph("<b>Total Initial Capital Required:</b>", body_regular), Paragraph(f"R {int(round(capital+wc)):,}", body_regular)],
         [Paragraph("<b>Total Monthly Lease Outlay:</b>", body_regular), Paragraph(f"R {int(round(total_lease_outlay)):,}", body_regular)],
         [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_regular), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_regular)],
-        [Paragraph("<b>Full Capital Recovery Period:</b>", body_regular), Paragraph("Month 15", body_regular)],
+        [Paragraph("<b>Full Capital Recovery Period:</b>", body_regular), Paragraph("<b>Month 15 (Avg. Required Monthly Turnover: R 1,098,160)</b>", green_recovery_style)],
     ]
     t_p2_fin = Table(fin_p2_data, colWidths=[230, 290])
     t_p2_fin.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4)]))
@@ -745,7 +749,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 8))
 
-    # Robust Blueprint PIL Image Rendering
     if blueprint_pil_img is not None:
         try:
             bp_byte_arr = io.BytesIO()
@@ -769,10 +772,11 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: ADDENDUM — MENUS (EMBEDDED BRAND MENU CATALOGUE)
+    # PAGE 5: ADDENDUM — MENUS (EMBEDDED BRAND MENU CATALOGUE WITH CLICKABLE HYPERLINKS)
     menu_title = ParagraphStyle('MenuTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
     menu_sec = ParagraphStyle('MenuSec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE, spaceBefore=8, spaceAfter=4)
     menu_body = ParagraphStyle('MenuBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=12, textColor=DARK_TEXT)
+    menu_link_style = ParagraphStyle('MenuLink', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, textColor=colors.HexColor('#0066CC'))
 
     elements.append(Paragraph("ADDENDUM — MENUS & BRAND CONCEPT GUIDES", menu_title))
     elements.append(Paragraph("PHATBUNS SOUTH AFRICA — APPROVED PRODUCT & MENU SPECIFICATIONS", ParagraphStyle('MenuSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#555555'), alignment=1)))
@@ -780,18 +784,20 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
 
     elements.append(Paragraph("<b>1. OFFICIAL BRAND MENU ATTACHMENTS & SPECIFICATIONS</b>", menu_sec))
-    elements.append(Paragraph("The following brand menus, proprietary product formulations, and concept guides form an integral part of this Franchise Feasibility and Investor Pack. All approved franchisees must adhere strictly to these product specifications and pricing guidelines.", menu_body))
+    elements.append(Paragraph("The following brand menus, proprietary product formulations, and concept guides form an integral part of this Franchise Feasibility and Investor Pack. Click any menu title below to access or download the complete PDF specification document.", menu_body))
     elements.append(Spacer(1, 6))
 
     if selected_menus:
-        menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Operational Status</b>", body_white_bold)]]
+        menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Interactive Download Link</b>", body_white_bold)]]
         for idx, m_file in enumerate(selected_menus, 1):
+            file_encoded = urllib.parse.quote(m_file)
+            menu_link_html = f'<a href="file:///{m_file}" color="#0066CC"><b>📥 Open / Download {m_file}</b></a>'
             menu_table_data.append([
                 Paragraph(str(idx), body_regular),
                 Paragraph(f"<b>{m_file}</b>", body_bold),
-                Paragraph("Approved Core Offering / Standard Specification", body_regular)
+                Paragraph(menu_link_html, menu_link_style)
             ])
-        t_menus = Table(menu_table_data, colWidths=[30, 310, 200])
+        t_menus = Table(menu_table_data, colWidths=[30, 240, 270])
         t_menus.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
             ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
