@@ -57,7 +57,7 @@ def find_file_in_assets(target_names):
                     return os.path.join(d, file)
                 for t in targets_clean:
                     t_stem = t.split('.')[0]
-                    if t_stem in file_lower and file_lower.endswith(('.png', '.jpg', '.jpeg')):
+                    if t_stem in file_lower and file_lower.endswith(('.png', '.jpg', '.jpeg', '.pdf')):
                         return os.path.join(d, file)
     return None
 
@@ -69,7 +69,7 @@ def find_site_blueprint(loc_name):
             for root, dirs, files in os.walk(d):
                 for f in files:
                     f_lower = f.lower()
-                    if f_lower.endswith(('.png', '.jpg', '.jpeg', '.pdf')) and ('dev' in f_lower or 'plan' in f_lower or 'layout' in f_lower or 'blueprint' in f_lower or clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)):
+                    if f_lower.endswith(('.png', '.jpg', '.jpeg')) and ('dev' in f_lower or 'plan' in f_lower or 'layout' in f_lower or 'blueprint' in f_lower or clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)):
                         return os.path.join(root, f)
     return None
 
@@ -157,9 +157,9 @@ def find_existing_site_file(loc_name):
     return None, None
 
 # ==========================================
-# COVER PAGE COMPOSITOR USING PHOTO 2 (IMG_5357.jpeg) - CRISP FULL BLEED
+# COVER PAGE COMPOSITOR (PHOTO 2 EXACT FULL BLEED)
 # ==========================================
-def create_cover_page_image(loc_name, shop_code):
+def create_cover_page_image():
     asset_map = get_asset_images_map()
     bg_path = asset_map.get("cover_bg")
 
@@ -172,7 +172,6 @@ def create_cover_page_image(loc_name, shop_code):
         bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
     img_byte_arr = io.BytesIO()
-    # Save clean, undistorted high-resolution image matching Photo 2 exact standards
     bg_img.save(img_byte_arr, format='JPEG', quality=95)
     img_byte_arr.seek(0)
     return img_byte_arr
@@ -579,9 +578,9 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements = []
 
-    # PAGE 0: COVER / INTRODUCTION PAGE (PHOTO 2: IMG_5357.jpeg)
-    cover_img_bytes = create_cover_page_image(loc_name, shop)
-    rl_cover_img = RLImage(cover_img_bytes, width=545, height=770)
+    # PAGE 0: FULL-BLEED CRISP COVER PAGE (PHOTO 2 EXACT STANDARD: 595.27 x 841.89 points)
+    cover_img_bytes = create_cover_page_image()
+    rl_cover_img = RLImage(cover_img_bytes, width=595.27, height=841.89)
     elements.append(rl_cover_img)
     elements.append(PageBreak())
 
@@ -744,7 +743,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 4: DEVELOPMENT PLAN & RENDERED BLUEPRINT (WITH AUTO SITE BLUEPRINT FINDER & BOLD FALLBACK)
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (ROBUSTLY RENDERED OR BOLD FALLBACK)
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 8))
@@ -754,15 +753,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         auto_bp_path = find_site_blueprint(loc_name)
         if auto_bp_path and os.path.exists(auto_bp_path):
             try:
-                if auto_bp_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
+                effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
             except Exception:
                 pass
 
     if effective_blueprint_img is not None:
         try:
             bp_byte_arr = io.BytesIO()
-            effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=90)
+            effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
             rl_blueprint = RLImage(bp_byte_arr, width=520, height=360)
             elements.append(rl_blueprint)
@@ -782,7 +780,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: ADDENDUM — MENUS (EMBEDDED BRAND MENU CATALOGUE WITH CLICKABLE HYPERLINKS)
+    # PAGE 5: ADDENDUM — MENUS & INTERACTIVE CLICKABLE CATALOGUE LINKS
     menu_title = ParagraphStyle('MenuTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
     menu_sec = ParagraphStyle('MenuSec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE, spaceBefore=8, spaceAfter=4)
     menu_body = ParagraphStyle('MenuBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=12, textColor=DARK_TEXT)
@@ -802,7 +800,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Interactive Download Link</b>", body_white_bold)]]
     for idx, m_file in enumerate(selected_menus, 1):
-        menu_link_html = f'<a href="file:///{m_file}" color="#0066CC"><b>📥 Open / Download {m_file}</b></a>'
+        file_abs_path = os.path.abspath(os.path.join(MENUS_DIR, m_file))
+        if not os.path.exists(file_abs_path):
+            file_abs_path = os.path.abspath(os.path.join(ASSETS_DIR, m_file))
+        file_uri = f"file:///{file_abs_path.replace(os.sep, '/')}"
+        
+        menu_link_html = f'<a href="{file_uri}" color="#0066CC"><b>📥 Download / Open {m_file}</b></a>'
         menu_table_data.append([
             Paragraph(str(idx), body_regular),
             Paragraph(f"<b>{m_file}</b>", body_bold),
@@ -1020,7 +1023,7 @@ with tab1:
     if blueprint_pil_img is not None:
         st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
     else:
-        st.info("ℹ️ **Blueprint Status:** No blueprint uploaded for this site yet. The document will indicate **Not Available Yet**.")
+        st.info("ℹ️ **Blueprint Status:** No blueprint uploaded for this site yet. The document will scan site subfolders or indicate **Not Available Yet**.")
 
     st.divider()
 
@@ -1161,7 +1164,7 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: STRICT DE-DUPLICATION SITE PACK DISPATCH & AUTO-LOGGING
+    # SECTION 6: STRICT SUBFOLDER AUTO-CREATION & SITE PACK DISPATCH
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
     st.markdown("Select an existing site feasibility pack or generate a new one inside its dedicated site subfolder under `./Locations/`.")
@@ -1179,7 +1182,6 @@ with tab1:
 
     selected_menus = st.session_state.get("selected_brand_menus", [])
 
-    # Automatically auto-log any entered lead details into the database registry
     if target_applicant_name and target_applicant_email:
         save_investor_lead({
             "full_name": target_applicant_name,
@@ -1196,13 +1198,13 @@ with tab1:
             "popia_consent": 1
         })
 
-    # STRICT DE-DUPLICATION FILE RESOLUTION LOGIC
+    # AUTOMATIC SUBFOLDER CREATION & FILE RESOLUTION LOGIC
     if selected_pack_choice != "Create New Pack for Active Site...":
         chosen_path = existing_packs_map[selected_pack_choice]
         pdf_filename = os.path.basename(chosen_path)
         with open(chosen_path, "rb") as f:
             pdf_bytes = f.read()
-        st.info(f"📁 **Reusing Existing Pack (No Duplication):** `{selected_pack_choice}`")
+        st.info(f"📁 **Reusing Existing Pack:** `{selected_pack_choice}`")
     else:
         found_file_path, found_folder_path = find_existing_site_file(location_name)
         
@@ -1210,8 +1212,9 @@ with tab1:
             pdf_filename = os.path.basename(found_file_path)
             with open(found_file_path, "rb") as f:
                 pdf_bytes = f.read()
-            st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from folder `{os.path.basename(found_folder_path)}` without re-creating.")
+            st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from folder `{os.path.basename(found_folder_path)}`.")
         else:
+            # Create subfolder inside Locations for the active site
             clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
             site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
             os.makedirs(site_subfolder_path, exist_ok=True)
@@ -1229,9 +1232,8 @@ with tab1:
             with open(target_local_path, "wb") as f:
                 f.write(pdf_bytes)
             pdf_filename = default_pdf_filename
-            st.success(f"📁 **New Site Folder Created & Output PDF Saved:** `{target_local_path}`")
+            st.success(f"📁 **Dedicated Site Subfolder Created & Output PDF Saved:** `{target_local_path}`")
 
-    # Action Row
     btn_col1, btn_col2 = st.columns(2)
     
     with btn_col1:
