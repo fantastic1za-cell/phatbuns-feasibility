@@ -45,44 +45,47 @@ LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
 os.makedirs(MENUS_DIR, exist_ok=True)
 os.makedirs(LOCATIONS_DIR, exist_ok=True)
 
-def resolve_asset_file(key_keywords):
-    if not os.path.exists(ASSETS_DIR):
-        return None
-    files = os.listdir(ASSETS_DIR)
-    # First pass: look for exact matches containing keywords
-    for f in files:
-        f_lower = f.lower()
-        if any(kw in f_lower for kw in key_keywords):
-            return os.path.join(ASSETS_DIR, f)
+def resolve_exact_asset(file_names):
+    """
+    Scans assets subfolders for exact filenames as organized in Google Drive.
+    """
+    search_dirs = [
+        ASSETS_DIR,
+        os.path.join(ASSETS_DIR, "Logo"),
+        os.path.join(os.getcwd(), "Logo"),
+        os.getcwd()
+    ]
+    
+    for d in search_dirs:
+        if os.path.exists(d):
+            files = os.listdir(d)
+            for fname in file_names:
+                for f in files:
+                    if f.lower() == fname.lower():
+                        return os.path.join(d, f)
+    
+    # Partial fallback pass
+    for d in search_dirs:
+        if os.path.exists(d):
+            files = os.listdir(d)
+            for fname in file_names:
+                clean_target = fname.split('.')[0].lower()
+                for f in files:
+                    if clean_target in f.lower() and f.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        return os.path.join(d, f)
     return None
 
 def get_asset_images_map():
     asset_map = {
-        "phatbuns_sa": resolve_asset_file(["phatbuns_sa", "sa_logo", "south_africa", "speech_bubble"]),
-        "phatville": resolve_asset_file(["phatville"]),
-        "phatbuns": resolve_asset_file(["phatbuns_logo", "phatbuns."]),
-        "butter_brulee": resolve_asset_file(["butter", "brulee"]),
-        "doorstep": resolve_asset_file(["doorstep", "dessert"]),
-        "cover_bg": resolve_asset_file(["cover", "bg", "background", "spread"])
+        "phatbuns_sa": resolve_exact_asset(["Phatbuns_SA.PNG", "Phatbuns_SA.png"]),
+        "phatville": resolve_exact_asset(["Phatville.PNG", "Phatville.png"]),
+        "phatbuns": resolve_exact_asset(["Phatbuns.PNG", "Phatbuns.png"]),
+        "butter_brulee": resolve_exact_asset(["ButterBruleeLogo.PNG", "ButterBrulee.PNG", "ButterBruleeLogo.png"]),
+        "doorstep": resolve_exact_asset(["Doorstep Logo.PNG", "Doorstep.PNG", "Doorstep Logo.png"]),
+        "adega": resolve_exact_asset(["Adega.PNG", "Adega.png"]),
+        "sa_flag": resolve_exact_asset(["SAFlag.PNG", "SAFlag.png"]),
+        "cover_bg": resolve_exact_asset(["cover.jpg", "cover_bg.jpg", "background.jpg"])
     }
-
-    if os.path.exists(ASSETS_DIR):
-        all_imgs = [os.path.join(ASSETS_DIR, f) for f in os.listdir(ASSETS_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        all_imgs.sort()
-        
-        # Explicit fallback only if keyword lookup fails
-        if not asset_map["phatbuns_sa"]:
-            sa_matches = [img for img in all_imgs if "sa" in os.path.basename(img).lower() or "south" in os.path.basename(img).lower()]
-            if sa_matches:
-                asset_map["phatbuns_sa"] = sa_matches[0]
-
-        if not asset_map["cover_bg"]:
-            jpgs = [img for img in all_imgs if img.lower().endswith(('.jpg', '.jpeg'))]
-            if jpgs:
-                asset_map["cover_bg"] = jpgs[0]
-            elif all_imgs:
-                asset_map["cover_bg"] = all_imgs[-1]
-
     return asset_map
 
 def get_image_base64(file_path):
