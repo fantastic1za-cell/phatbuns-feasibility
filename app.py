@@ -436,12 +436,38 @@ st.markdown("""
     text-decoration: none;
     margin-top: 5px;
 }
+/* STRICT MOBILE & DESKTOP FLEXBOX LOCK */
+.logo-row-locked {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 10px 0 !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+}
+.logo-item-locked {
+    height: 45px !important;
+    max-height: 45px !important;
+    width: auto !important;
+    max-width: 18% !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # LOAD LOGO MAP FOR BANNER & FOOTER
 logo_map = get_asset_images_map()
+
 b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
+b64_ds = get_image_base64(logo_map.get("doorstep"))
+b64_bb = get_image_base64(logo_map.get("butter_brulee"))
+b64_pv = get_image_base64(logo_map.get("phatville"))
+b64_pb = get_image_base64(logo_map.get("phatbuns"))
 
 # Speech Bubble Phatbuns SA Logo for Header Title
 banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
@@ -459,20 +485,17 @@ st.markdown(f"""
 
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# Native 5-Column Streamlit Logo Display Row from ./assets/
-logo_cols = st.columns(5)
-brand_display = [
-    ("Doorstep", logo_map.get("doorstep")),
-    ("Butter Brulee", logo_map.get("butter_brulee")),
-    ("Phatville", logo_map.get("phatville")),
-    ("Phatbuns SA", logo_map.get("phatbuns_sa")),
-    ("Phatbuns", logo_map.get("phatbuns"))
-]
-
-for idx, (label, fpath) in enumerate(brand_display):
-    with logo_cols[idx]:
-        if fpath and os.path.exists(fpath):
-            st.image(fpath, use_container_width=True)
+# LOCKED HORIZONTAL FLEXBOX ROW (Prevents vertical mobile stacking)
+locked_logos_html = f"""
+<div class="logo-row-locked">
+    {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item-locked"/>' if b64_ds else ''}
+    {'<img src="data:image/png;base64,' + b64_bb + '" class="logo-item-locked"/>' if b64_bb else ''}
+    {'<img src="data:image/png;base64,' + b64_pv + '" class="logo-item-locked"/>' if b64_pv else ''}
+    {'<img src="data:image/png;base64,' + b64_sa + '" class="logo-item-locked"/>' if b64_sa else ''}
+    {'<img src="data:image/png;base64,' + b64_pb + '" class="logo-item-locked"/>' if b64_pb else ''}
+</div>
+"""
+st.markdown(locked_logos_html, unsafe_allow_html=True)
 
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
