@@ -131,31 +131,6 @@ def get_available_brand_menus():
 
     return sorted(menu_files)
 
-def get_existing_site_packs():
-    pdf_map = {}
-    if os.path.exists(LOCATIONS_DIR):
-        for root, dirs, files in os.walk(LOCATIONS_DIR):
-            for f in files:
-                if f.lower().endswith(".pdf"):
-                    rel_path = os.path.relpath(os.path.join(root, f), LOCATIONS_DIR)
-                    pdf_map[rel_path] = os.path.join(root, f)
-    return pdf_map
-
-def find_existing_site_file(loc_name):
-    clean_target = re.sub(r'[^a-zA-Z0-9]', '', loc_name.lower())
-    if not os.path.exists(LOCATIONS_DIR):
-        return None, None
-
-    for root, dirs, files in os.walk(LOCATIONS_DIR):
-        for f in files:
-            if f.lower().endswith(".pdf"):
-                clean_file = re.sub(r'[^a-zA-Z0-9]', '', f.lower())
-                clean_dir = re.sub(r'[^a-zA-Z0-9]', '', os.path.basename(root).lower())
-                if clean_target in clean_file or clean_target in clean_dir:
-                    return os.path.join(root, f), root
-
-    return None, None
-
 # ==========================================
 # COVER PAGE COMPOSITOR
 # ==========================================
@@ -178,11 +153,11 @@ def create_cover_page_image():
 
 def extract_lease_from_jpg(pil_img):
     if not HAS_GENAI:
-        return parse_landlord_text(ocr_image_fallback(pil_img))
+        return parse_landlord_text("")
     
     api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
     if not api_key:
-        return parse_landlord_text(ocr_image_fallback(pil_img))
+        return parse_landlord_text("")
 
     try:
         client = genai.Client(api_key=api_key)
@@ -212,17 +187,12 @@ def extract_lease_from_jpg(pil_img):
             return data
     except Exception:
         pass
-    return parse_landlord_text(ocr_image_fallback(pil_img))
-
-def ocr_image_fallback(pil_img):
-    # Fallback text extractor if genai isn't configured
-    return ""
+    return parse_landlord_text("")
 
 def parse_landlord_text(text):
     data = {}
     text_clean = text.replace('\r', '\n')
 
-    # Enhanced multi-pattern regex matching for emails & formal schedules
     shop_m = re.search(r'(?:Shop|Premises)(?:\s*code)?\s*[:\-]?\s*([A-Za-z0-9\s]+)', text_clean, re.IGNORECASE)
     if shop_m:
         val = shop_m.group(1).split('\n')[0].strip()
@@ -534,19 +504,6 @@ LOCATION_LOOKUP = {
     "Custom / Other Site...": ""
 }
 
-if "ext_shop_code" not in st.session_state: st.session_state["ext_shop_code"] = "U55"
-if "ext_internal_gla" not in st.session_state: st.session_state["ext_internal_gla"] = 78.0
-if "ext_external_gla" not in st.session_state: st.session_state["ext_external_gla"] = 0.0
-if "ext_internal_rent" not in st.session_state: st.session_state["ext_internal_rent"] = 300.00
-if "ext_external_rent" not in st.session_state: st.session_state["ext_external_rent"] = 0.00
-if "ext_ops_cost" not in st.session_state: st.session_state["ext_ops_cost"] = 33.51
-if "ext_rates_taxes" not in st.session_state: st.session_state["ext_rates_taxes"] = 0.00
-if "ext_generator" not in st.session_state: st.session_state["ext_generator"] = 0.00
-if "ext_escalation" not in st.session_state: st.session_state["ext_escalation"] = 7.00
-if "ext_mktg" not in st.session_state: st.session_state["ext_mktg"] = 5.00
-if "uploaded_blueprint_img" not in st.session_state: st.session_state["uploaded_blueprint_img"] = None
-if "selected_brand_menus" not in st.session_state: st.session_state["selected_brand_menus"] = get_available_brand_menus()
-
 STORE_MODELS = {
     "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
     "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60},
@@ -633,7 +590,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
         [Paragraph("Lease Period & Renewal Option", body_bold), Paragraph("5 Years Initial Period + 5-Year Renewal Option", body_regular), Paragraph("60 Months Base Amortization", body_regular)],
         [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int(round(int_rent)):,} / m² / month (Excl. VAT & Utilities)", body_regular), Paragraph(f"R {int(round(int_rent * int_gla)):,} / month", body_regular)],
-        [Paragraph("Annual Rental Escalation", body_bold), Paragraph(f"{st.session_state.get('ext_escalation', 7.0):.1f}% per annum effective anniversary", body_regular), Paragraph(f"Year 2 Base: R {int(round(int_rent * int_gla * 1.07)):,} / month", body_regular)],
+        [Paragraph("Annual Rental Escalation", body_bold), Paragraph("7.0% per annum effective anniversary", body_regular), Paragraph(f"Year 2 Base: R {int(round(int_rent * int_gla * 1.07)):,} / month", body_regular)],
         [Paragraph("Turnover Rental Clause", body_bold), Paragraph("8.0% of Net Monthly Turnover vs Base Net Rental", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
     ]
@@ -746,7 +703,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (GUARANTEED RENDER)
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (STRICTLY ISOLATED)
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 6))
@@ -770,12 +727,10 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=11)))
     else:
-        # Fallback placeholder visual box if no blueprint uploaded
         placeholder_img = Image.new("RGB", (800, 450), color=(240, 240, 240))
         draw = ImageDraw.Draw(placeholder_img)
         draw.rectangle([10, 10, 790, 440], outline=(100, 100, 100), width=3)
         try:
-            font = ImageFont.load_default()
             draw.text((300, 210), f"LAYOUT PLAN: {loc_name} ({shop})", fill=(50, 50, 50))
         except Exception:
             pass
@@ -796,7 +751,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: ADDENDUM — MENUS & INTERACTIVE CLICKABLE CATALOGUE LINKS (GUARANTEED INCLUDED)
+    # PAGE 5: ADDENDUM — MENUS & INTERACTIVE CLICKABLE CATALOGUE LINKS
     menu_title = ParagraphStyle('MenuTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, textColor=NAVY_HEADER, alignment=1)
     menu_sec = ParagraphStyle('MenuSec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=9.5, textColor=MAROON_LINE, spaceBefore=6, spaceAfter=3)
     menu_body = ParagraphStyle('MenuBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
@@ -956,49 +911,17 @@ with tab1:
     with col_up2:
         pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
 
+    extracted_parsed_res = {}
     if st.button("⚡ Extract & Pre-Fill Lease Terms"):
-        parsed_res = {}
-        
         if uploaded_offer_file is not None:
             pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
             if pil_img is not None:
-                parsed_res = extract_lease_from_jpg(pil_img)
+                extracted_parsed_res = extract_lease_from_jpg(pil_img)
             elif pdf_text:
-                parsed_res = parse_landlord_text(pdf_text)
+                extracted_parsed_res = parse_landlord_text(pdf_text)
 
-        if not parsed_res and pasted_text:
-            parsed_res = parse_landlord_text(pasted_text)
-
-        if not parsed_res and uploaded_offer_file is not None:
-            parsed_res = {
-                "shop_code": "U55",
-                "internal_gla": 78.0,
-                "external_gla": 0.0,
-                "internal_rent": 300.0,
-                "external_rent": 0.0,
-                "ops_cost": 33.51,
-                "rates_taxes": 0.0,
-                "escalation": 7.0,
-                "mktg": 5.0,
-                "generator": 0.0
-            }
-
-        if parsed_res:
-            if 'shop_code' in parsed_res: st.session_state["ext_shop_code"] = str(parsed_res['shop_code'])
-            if 'internal_gla' in parsed_res: st.session_state["ext_internal_gla"] = float(parsed_res['internal_gla'])
-            if 'external_gla' in parsed_res: st.session_state["ext_external_gla"] = float(parsed_res['external_gla'])
-            if 'internal_rent' in parsed_res: st.session_state["ext_internal_rent"] = float(parsed_res['internal_rent'])
-            if 'external_rent' in parsed_res: st.session_state["ext_external_rent"] = float(parsed_res['external_rent'])
-            if 'ops_cost' in parsed_res: st.session_state["ext_ops_cost"] = float(parsed_res['ops_cost'])
-            if 'rates_taxes' in parsed_res: st.session_state["ext_rates_taxes"] = float(parsed_res['rates_taxes'])
-            if 'generator' in parsed_res: st.session_state["ext_generator"] = float(parsed_res['generator'])
-            if 'escalation' in parsed_res: st.session_state["ext_escalation"] = float(parsed_res['escalation'])
-            if 'mktg' in parsed_res: st.session_state["ext_mktg"] = float(parsed_res['mktg'])
-            
-            st.success("Lease terms successfully extracted and populated below!")
-            st.rerun()
-        else:
-            st.warning("Please upload an offer file or paste text above.")
+        if not extracted_parsed_res and pasted_text:
+            extracted_parsed_res = parse_landlord_text(pasted_text)
 
     st.divider()
 
@@ -1009,8 +932,37 @@ with tab1:
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
         location_name = st.text_input("Enter Custom Location Name", value="Bedford Centre") if selected_location == "Custom / Other Site..." else selected_location
 
+    # ISOLATED SESSION STATE NAMESPACE PER SITE TO PREVENT DATA MIXING
+    site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower())
+    
+    def get_site_state(key, default_val):
+        full_key = f"{site_key}_{key}"
+        if full_key not in st.session_state:
+            st.session_state[full_key] = default_val
+        return st.session_state[full_key]
+
+    def set_site_state(key, val):
+        full_key = f"{site_key}_{key}"
+        st.session_state[full_key] = val
+
+    # Apply extracted values directly to this specific site's isolated state if available
+    if extracted_parsed_res:
+        if 'shop_code' in extracted_parsed_res: set_site_state("shop_code", str(extracted_parsed_res['shop_code']))
+        if 'internal_gla' in extracted_parsed_res: set_site_state("internal_gla", float(extracted_parsed_res['internal_gla']))
+        if 'external_gla' in extracted_parsed_res: set_site_state("external_gla", float(extracted_parsed_res['external_gla']))
+        if 'internal_rent' in extracted_parsed_res: set_site_state("internal_rent", float(extracted_parsed_res['internal_rent']))
+        if 'external_rent' in extracted_parsed_res: set_site_state("external_rent", float(extracted_parsed_res['external_rent']))
+        if 'ops_cost' in extracted_parsed_res: set_site_state("ops_cost", float(extracted_parsed_res['ops_cost']))
+        if 'rates_taxes' in extracted_parsed_res: set_site_state("rates_taxes", float(extracted_parsed_res['rates_taxes']))
+        if 'generator' in extracted_parsed_res: set_site_state("generator", float(extracted_parsed_res['generator']))
+        if 'escalation' in extracted_parsed_res: set_site_state("escalation", float(extracted_parsed_res['escalation']))
+        if 'mktg' in extracted_parsed_res: set_site_state("mktg", float(extracted_parsed_res['mktg']))
+        st.success(f"Lease terms successfully extracted and isolated for {location_name}!")
+
     with col2:
-        shop_code = st.text_input("Shop / Unit Code", key="ext_shop_code")
+        default_shop = get_site_state("shop_code", "U55")
+        shop_code = st.text_input("Shop / Unit Code", value=default_shop, key=f"{site_key}_shop_input")
+        set_site_state("shop_code", shop_code)
 
     col_suburb, col_dummy = st.columns(2)
     with col_suburb:
@@ -1019,32 +971,36 @@ with tab1:
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        internal_gla = st.number_input("Internal Area (sqm)", key="ext_internal_gla", step=1.0)
+        def_int_gla = get_site_state("internal_gla", 78.0)
+        internal_gla = st.number_input("Internal Area (sqm)", value=def_int_gla, step=1.0, key=f"{site_key}_int_gla_input")
+        set_site_state("internal_gla", internal_gla)
     with col_ext_gla:
-        external_gla = st.number_input("External / Patio Area (sqm)", key="ext_external_gla", step=1.0)
+        def_ext_gla = get_site_state("external_gla", 0.0)
+        external_gla = st.number_input("External / Patio Area (sqm)", value=def_ext_gla, step=1.0, key=f"{site_key}_ext_gla_input")
+        set_site_state("external_gla", external_gla)
 
     total_gla = internal_gla + external_gla
-    st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
+    st.caption(f"📐 **Total Combined Store Footprint ({location_name}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
     st.subheader("Site Blueprint & Development Layout Plan")
-    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
+    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
     
     if blueprint_file is not None:
         pil_img, pdf_text = process_uploaded_file(blueprint_file)
         if pil_img is not None:
-            st.session_state["uploaded_blueprint_img"] = pil_img
+            set_site_state("blueprint_img", pil_img)
 
-    blueprint_pil_img = st.session_state.get("uploaded_blueprint_img", None)
+    blueprint_pil_img = get_site_state("blueprint_img", None)
     
     if blueprint_pil_img is not None:
         st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
     else:
-        st.info("ℹ️ **Blueprint Status:** No custom blueprint uploaded. A standardized professional layout schematic will be automatically generated and embedded.")
+        st.info(f"ℹ️ **Blueprint Status:** No custom blueprint uploaded for {location_name}. A standardized professional layout schematic will be automatically generated and embedded.")
 
     st.divider()
 
     st.subheader("Store Model Type")
-    selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True)
+    selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True, key=f"{site_key}_model_radio")
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
     internal_foh_sqm = internal_gla * model_data["foh_pct"]
@@ -1060,19 +1016,23 @@ with tab1:
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
-        turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", value=model_data["turnkey_capital"], step=50000.0, format="%.2f")
+        turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", value=model_data["turnkey_capital"], step=50000.0, format="%.2f", key=f"{site_key}_capex")
     with col_wc:
-        working_capital = st.number_input("Suggested Working Capital Requirement", value=model_data["working_capital"], step=25000.0, format="%.2f")
+        working_capital = st.number_input("Suggested Working Capital Requirement", value=model_data["working_capital"], step=25000.0, format="%.2f", key=f"{site_key}_wc")
 
     st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", key="ext_internal_rent", step=10.0, format="%.2f")
+        def_int_rent = get_site_state("internal_rent", 300.00)
+        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=def_int_rent, step=10.0, format="%.2f", key=f"{site_key}_int_rent_input")
+        set_site_state("internal_rent", internal_rent_sqm)
         total_internal_rent = internal_gla * internal_rent_sqm
         st.caption(f"💵 **Total Monthly Internal Rent:** R {int(round(total_internal_rent)):,} (Excl. VAT)")
 
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", key="ext_external_rent", step=5.0, format="%.2f")
+        def_ext_rent = get_site_state("external_rent", 0.00)
+        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=def_ext_rent, step=5.0, format="%.2f", key=f"{site_key}_ext_rent_input")
+        set_site_state("external_rent", external_rent_sqm)
         total_external_rent = external_gla * external_rent_sqm
         st.caption(f"💵 **Total Monthly External Rent:** R {int(round(total_external_rent)):,} (Excl. VAT)")
 
@@ -1080,24 +1040,32 @@ with tab1:
 
     col_ops, col_rates, col_gen = st.columns(3)
     with col_ops:
-        ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", key="ext_ops_cost", step=1.0, format="%.2f")
+        def_ops = get_site_state("ops_cost", 33.51)
+        ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=def_ops, step=1.0, format="%.2f", key=f"{site_key}_ops_input")
+        set_site_state("ops_cost", ops_cost_sqm)
         total_ops_cost = ops_cost_sqm * total_gla
     with col_rates:
-        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", key="ext_rates_taxes", step=0.5, format="%.2f")
+        def_rates = get_site_state("rates_taxes", 0.00)
+        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=def_rates, step=0.5, format="%.2f", key=f"{site_key}_rates_input")
+        set_site_state("rates_taxes", rates_taxes_sqm)
         total_rates_taxes = rates_taxes_sqm * total_gla
     with col_gen:
-        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", key="ext_generator", step=0.5, format="%.2f")
+        def_gen = get_site_state("generator", 0.00)
+        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=def_gen, step=0.5, format="%.2f", key=f"{site_key}_gen_input")
+        set_site_state("generator", generator_cost_sqm)
         total_generator_cost = generator_cost_sqm * total_gla
 
     col_mktg_pct, col_labor = st.columns(2)
     with col_mktg_pct:
-        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", key="ext_mktg", step=0.5, format="%.2f")
+        def_mktg = get_site_state("mktg", 5.00)
+        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=def_mktg, step=0.5, format="%.2f", key=f"{site_key}_mktg_input")
+        set_site_state("mktg", landlord_marketing_pct)
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
     with col_labor:
-        monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f")
+        monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
 
     total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
-    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay:** R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)")
+    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay ({location_name}):** R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)")
 
     st.divider()
 
@@ -1158,7 +1126,7 @@ with tab1:
         season_multiplier = SEASONAL_FACTORS[(m - 1) % 12]
         
         monthly_turnover = (turnover_req_12 * (1.08 ** year_idx)) * season_multiplier
-        monthly_lease = total_lease_outlay_monthly * (st.session_state["ext_escalation"] / 100 + 1) ** year_idx
+        monthly_lease = total_lease_outlay_monthly * (0.07 + 1) ** year_idx
         monthly_cogs = monthly_turnover * 0.35
         monthly_royalties = monthly_turnover * 0.09
         
@@ -1180,21 +1148,17 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: STRICT SUBFOLDER AUTO-CREATION & SITE PACK DISPATCH
+    # SECTION 6: MANDATORY SUBFOLDER CREATION & AUTOMATIC SAVING
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
-    st.markdown("Select an existing site feasibility pack or generate a new one inside its dedicated site subfolder under `./Locations/`.")
-
-    existing_packs_map = get_existing_site_packs()
-    pack_options = ["Create New Pack for Active Site..."] + list(existing_packs_map.keys())
-    selected_pack_choice = st.selectbox("Select Feasibility Pack Source", options=pack_options)
+    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `./Locations/{location_name}/` and saves the exact site PDF inside it.")
 
     col_inv1, col_inv2 = st.columns(2)
     with col_inv1:
-        target_applicant_name = st.text_input("Prospective Franchisee Full Name", value="", placeholder="e.g. John Doe")
-        target_applicant_email = st.text_input("Prospective Franchisee Email Address", value="", placeholder="e.g. applicant@domain.com")
+        target_applicant_name = st.text_input("Prospective Franchisee Full Name", value="", placeholder="e.g. John Doe", key=f"{site_key}_app_name")
+        target_applicant_email = st.text_input("Prospective Franchisee Email Address", value="", placeholder="e.g. applicant@domain.com", key=f"{site_key}_app_email")
     with col_inv2:
-        target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. 0827867712 or +27827867712")
+        target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. 0827867712 or +27827867712", key=f"{site_key}_app_mobile")
 
     selected_menus = st.session_state.get("selected_brand_menus", get_available_brand_menus())
 
@@ -1214,40 +1178,26 @@ with tab1:
             "popia_consent": 1
         })
 
-    # AUTOMATIC SUBFOLDER CREATION & FILE RESOLUTION LOGIC
-    if selected_pack_choice != "Create New Pack for Active Site...":
-        chosen_path = existing_packs_map[selected_pack_choice]
-        pdf_filename = os.path.basename(chosen_path)
-        with open(chosen_path, "rb") as f:
-            pdf_bytes = f.read()
-        st.info(f"📁 **Reusing Existing Pack:** `{selected_pack_choice}`")
-    else:
-        found_file_path, found_folder_path = find_existing_site_file(location_name)
-        
-        if found_file_path and os.path.exists(found_file_path):
-            pdf_filename = os.path.basename(found_file_path)
-            with open(found_file_path, "rb") as f:
-                pdf_bytes = f.read()
-            st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from folder `{os.path.basename(found_folder_path)}`.")
-        else:
-            clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
-            site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
-            os.makedirs(site_subfolder_path, exist_ok=True)
+    # ALWAYS CREATE DEDICATED SUBFOLDER & SAVE GENERATED PDF ON DEMAND
+    clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
+    site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
+    os.makedirs(site_subfolder_path, exist_ok=True)
 
-            clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
-            default_pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
-            target_local_path = os.path.join(site_subfolder_path, default_pdf_filename)
+    clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
+    pdf_filename = f"{clean_site_slug}_{shop_code}_Phatbuns_Master_Investor_Pack.pdf"
+    target_local_path = os.path.join(site_subfolder_path, pdf_filename)
 
-            pdf_buffer = generate_pdf_report(
-                location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
-                max_comfortable_seats, high_seats=high_density_seats, capital=turnkey_capital, wc=working_capital, int_rent=internal_rent_sqm,
-                ops_cost=ops_cost_sqm, total_lease_outlay=total_lease_outlay_monthly, dscr=7.42, payback_df=df_payback_matrix, df_pnl_annual=annual_pnl, blueprint_pil_img=blueprint_pil_img, selected_menus=selected_menus
-            )
-            pdf_bytes = pdf_buffer.getvalue()
-            with open(target_local_path, "wb") as f:
-                f.write(pdf_bytes)
-            pdf_filename = default_pdf_filename
-            st.success(f"📁 **Dedicated Site Subfolder Created & Output PDF Saved:** `{target_local_path}`")
+    pdf_buffer = generate_pdf_report(
+        location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
+        max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
+        ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img, selected_menus=selected_menus
+    )
+    pdf_bytes = pdf_buffer.getvalue()
+
+    with open(target_local_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    st.success(f"📁 **Dedicated Subfolder Created & PDF Saved:** `Locations/{clean_site_folder_name}/{pdf_filename}`")
 
     btn_col1, btn_col2 = st.columns(2)
     
@@ -1257,7 +1207,7 @@ with tab1:
         st.markdown(dl_link_html, unsafe_allow_html=True)
 
     with btn_col2:
-        if st.button("📧 Dispatch via Email (with Read Receipt)"):
+        if st.button("📧 Dispatch via Email (with Read Receipt)", key=f"{site_key}_email_btn"):
             if not target_applicant_email:
                 st.error("Please enter a valid Franchisee Email Address above.")
             else:
@@ -1294,7 +1244,7 @@ with tab2:
     
     selected_menus = []
     for menu in available_menus:
-        is_checked = st.checkbox(f"📄 {menu}", value=True)
+        is_checked = st.checkbox(f"📄 {menu}", value=True, key=f"menu_{menu}")
         if is_checked:
             selected_menus.append(menu)
 
@@ -1305,7 +1255,7 @@ with tab2:
     st.divider()
 
     st.subheader("Upload Additional Brand Menus to System")
-    uploaded_menu_files = st.file_uploader("Upload new Brand Menu PDF files", type=["pdf"], accept_multiple_files=True)
+    uploaded_menu_files = st.file_uploader("Upload new Brand Menu PDF files", type=["pdf"], accept_multiple_files=True, key="menu_uploader")
     if uploaded_menu_files:
         for u_file in uploaded_menu_files:
             save_path = os.path.join(MENUS_DIR, u_file.name)
@@ -1327,7 +1277,7 @@ with tab3:
             email = st.text_input("Email Address *")
         with f_col2:
             mobile = st.text_input("Mobile / WhatsApp Number *")
-            preferred_site = st.text_input("Preferred Target Site / Node *", value=location_name)
+            preferred_site = st.text_input("Preferred Target Site / Node *", value="Bedford Centre")
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()))
             capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=2500000.0, step=100000.0)
 
