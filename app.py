@@ -598,10 +598,10 @@ LOCATION_LOOKUP = {
 }
 
 STORE_MODELS = {
-    "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
-    "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60},
-    "Full Sit-Down Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 950000.0, "labor_monthly": 125000.0, "foh_pct": 0.60},
-    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3500000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40},
+    "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20, "default_gla": 40.0},
+    "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60, "default_gla": 70.0},
+    "Full Sit-Down Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 950000.0, "labor_monthly": 125000.0, "foh_pct": 0.60, "default_gla": 120.0},
+    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3500000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40, "default_gla": 130.0},
 }
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
@@ -797,7 +797,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(PageBreak())
 
     # ==========================================
-    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (EXACTLY FITTED TO PORTRAIT A4 WITH BOLD HEADERS)
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN
     # ==========================================
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=ORANGE_BRAND, alignment=1)
@@ -1031,7 +1031,7 @@ with tab1:
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
         location_name = st.text_input("Enter Custom Location Name", value="New Store Site") if selected_location == "Custom / Other Site..." else selected_location
 
-    # ISOLATED SESSION STATE NAMESPACE PER SITE TO ENSURE ZERO DATA SPILLOVER
+    # ISOLATED SESSION STATE NAMESPACE PER SITE
     site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower())
     
     def get_site_state(key, default_val):
@@ -1066,12 +1066,33 @@ with tab1:
     with col_suburb:
         suburb_node = st.text_input("Suburb / Node (Auto-Populated)", value=LOCATION_LOOKUP.get(selected_location, ""))
 
+    st.subheader("Store Model Type")
+
+    # DEFINE MODEL CHANGE CALLBACK TO ENSURE STATE SYNCHRONIZATION
+    def on_model_changed():
+        m_choice = st.session_state.get(f"{site_key}_model_radio", "Express Model")
+        m_info = STORE_MODELS.get(m_choice, STORE_MODELS["Express Model"])
+        st.session_state[f"{site_key}_capex_input"] = m_info["turnkey_capital"]
+        st.session_state[f"{site_key}_wc_input"] = m_info["working_capital"]
+        if st.session_state.get(f"{site_key}_int_gla_input", 0.0) == 0.0:
+            st.session_state[f"{site_key}_int_gla_input"] = m_info["default_gla"]
+
+    selected_model = st.radio(
+        "Select Model Type",
+        options=list(STORE_MODELS.keys()),
+        index=1,
+        horizontal=True,
+        key=f"{site_key}_model_radio",
+        on_change=on_model_changed
+    )
+    model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
+
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        def_int_gla = get_site_state("internal_gla", 0.0)
+        def_int_gla = get_site_state("int_gla_input", model_data["default_gla"])
         internal_gla = st.number_input("Internal Area (sqm)", value=def_int_gla, step=1.0, key=f"{site_key}_int_gla_input")
-        set_site_state("internal_gla", internal_gla)
+        set_site_state("int_gla_input", internal_gla)
     with col_ext_gla:
         def_ext_gla = get_site_state("external_gla", 0.0)
         external_gla = st.number_input("External / Patio Area (sqm)", value=def_ext_gla, step=1.0, key=f"{site_key}_ext_gla_input")
@@ -1079,6 +1100,13 @@ with tab1:
 
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint ({location_name}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
+
+    internal_foh_sqm = internal_gla * model_data["foh_pct"]
+    total_dining_sqm = internal_foh_sqm + external_gla
+    max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
+    high_density_seats = math.floor(total_dining_sqm / 1.20) if total_dining_sqm > 0 else 0
+
+    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.2f} sqm | 🪑 **Suggested Seating:** {max_comfortable_seats} Seats (Standard) / {high_density_seats} Seats (High Density)")
 
     st.subheader("Site Blueprint & Development Layout Plan")
     blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
@@ -1097,39 +1125,19 @@ with tab1:
 
     st.divider()
 
-    st.subheader("Store Model Type")
-    selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True, key=f"{site_key}_model_radio")
-    model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
-
-    # DYNAMICALLY FORCE UPDATE CAPITAL STATE UPON MODEL CHANGE
-    prev_selected_model = get_site_state("last_selected_model", selected_model)
-    if prev_selected_model != selected_model:
-        set_site_state("last_selected_model", selected_model)
-        set_site_state("capex", model_data["turnkey_capital"])
-        set_site_state("wc", model_data["working_capital"])
-        st.rerun()
-
-    default_turnkey_capital = get_site_state("capex", model_data["turnkey_capital"])
-    default_working_capital = get_site_state("wc", model_data["working_capital"])
-
-    internal_foh_sqm = internal_gla * model_data["foh_pct"]
-    total_dining_sqm = internal_foh_sqm + external_gla
-    max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
-    high_density_seats = math.floor(total_dining_sqm / 1.20) if total_dining_sqm > 0 else 0
-
-    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.2f} sqm | 🪑 **Suggested Seating:** {max_comfortable_seats} Seats (Standard) / {high_density_seats} Seats (High Density)")
-
-    st.divider()
-
     st.subheader("2. Commercial Capital, Lease & Operational Cost Breakdown")
+
+    # INITIALIZE STATE FOR NUMBER INPUTS IF NOT ALREADY PRESENT
+    if f"{site_key}_capex_input" not in st.session_state:
+        st.session_state[f"{site_key}_capex_input"] = model_data["turnkey_capital"]
+    if f"{site_key}_wc_input" not in st.session_state:
+        st.session_state[f"{site_key}_wc_input"] = model_data["working_capital"]
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
-        turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", value=default_turnkey_capital, step=50000.0, format="%.2f", key=f"{site_key}_capex_input")
-        set_site_state("capex", turnkey_capital)
+        turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", step=50000.0, format="%.2f", key=f"{site_key}_capex_input")
     with col_wc:
-        working_capital = st.number_input("Suggested Working Capital Requirement", value=default_working_capital, step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
-        set_site_state("wc", working_capital)
+        working_capital = st.number_input("Suggested Working Capital Requirement", step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
 
     st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
