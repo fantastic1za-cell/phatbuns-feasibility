@@ -91,7 +91,7 @@ def get_asset_images_map():
         "doorstep": find_file_in_assets(["Doorstep Logo.PNG", "doorstep.png"]),
         "adega": find_file_in_assets(["Adega.PNG", "adega.png"]),
         "sa_flag": find_file_in_assets(["SAFlag.PNG", "saflag.png"]),
-        "cover_bg": find_file_in_assets(["coverSA.jpg", "coversa.jpg", "cover.jpg", "IMG_5357.jpeg", "img_5357.jpeg"])
+        "cover_bg": find_file_in_assets(["coverSA.JPG", "coversa.jpg", "cover.jpg", "Cover.JPG", "IMG_5357.jpeg", "img_5357.jpeg"])
     }
     return asset_map
 
@@ -225,9 +225,6 @@ def create_cover_page_image():
     return img_byte_arr
 
 def extract_lease_from_source(source_input):
-    """
-    Extract commercial lease offer details from either a PIL image or text/PDF text string.
-    """
     if not HAS_GENAI:
         if isinstance(source_input, str):
             return parse_landlord_text(source_input)
@@ -516,7 +513,7 @@ st.markdown(locked_logos_html, unsafe_allow_html=True)
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
 # ==========================================
-# REFRESH BUTTON (EXACTLY AS INDICATED IN PHOTO 5)
+# REFRESH BUTTON (PLACED EXACTLY AS REQUESTED)
 # ==========================================
 c_ref1, c_ref2 = st.columns([4, 1])
 with c_ref2:
@@ -584,7 +581,7 @@ def get_pipeline_dataframe():
     conn.close()
     return df
 
-# Custom / Other Site placed at the TOP of the dictionary/dropdown options as requested
+# Custom / Other Site strictly at the TOP of the dictionary/dropdown options
 LOCATION_LOOKUP = {
     "Custom / Other Site...": "",
     "Bedford Centre": "Bedfordview, Johannesburg",
@@ -800,7 +797,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(PageBreak())
 
     # ==========================================
-    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (EXACTLY FITTED TO PORTRAIT A4)
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (EXACTLY FITTED TO PORTRAIT A4 WITH BOLD HEADERS)
     # ==========================================
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=ORANGE_BRAND, alignment=1)
@@ -824,7 +821,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            # Fits neatly in portrait A4 page dimensions
+            # Fits neatly in portrait A4 dimensions
             rl_blueprint = RLImage(bp_byte_arr, width=500, height=580)
             elements.append(rl_blueprint)
         except Exception:
@@ -1370,7 +1367,7 @@ with tab2:
     if uploaded_menu_files:
         for u_file in uploaded_menu_files:
             save_path = os.path.join(MENUS_DIR, u_file.name)
-            with open(save_path, "wb":
+            with open(save_path, "wb") as f:
                 f.write(u_file.read())
         st.success("New brand menu PDFs saved successfully!")
         st.rerun()
@@ -1388,7 +1385,7 @@ with tab3:
             email = st.text_input("Email Address *")
         with f_col2:
             mobile = st.text_input("Mobile / WhatsApp Number *")
-            preferred_site = st.text_input("Preferred Target Site / Node *", value="Bedford Centre")
+            preferred_site = st.text_input("Preferred Target Site / Node *", value="New Store Site")
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()))
             capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=2500000.0, step=100000.0)
 
