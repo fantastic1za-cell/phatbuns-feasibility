@@ -86,6 +86,22 @@ def get_image_base64(file_path):
     except Exception:
         return ""
 
+def format_sa_mobile_number(raw_mobile):
+    """
+    Converts local South African mobile numbers (e.g., 0827867712, 0687101939, +2782...)
+    into clean international format (27827867712) for WhatsApp API links.
+    """
+    if not raw_mobile:
+        return ""
+    digits = re.sub(r'[^0-9]', '', str(raw_mobile))
+    if digits.startswith("0") and len(digits) == 10:
+        return "27" + digits[1:]
+    elif digits.startswith("27") and len(digits) == 11:
+        return digits
+    elif len(digits) == 9:
+        return "27" + digits
+    return digits
+
 def get_available_brand_menus():
     menu_files = []
     search_dirs = [MENUS_DIR, ASSETS_DIR]
@@ -286,14 +302,13 @@ def process_uploaded_file(uploaded_file):
             return None, ""
 
 # ==========================================
-# EMAIL DISPATCH ENGINE WITH UI PASSWORD FALLBACK
+# EMAIL DISPATCH ENGINE (HARDCODED APP PASSWORD)
 # ==========================================
-def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[], custom_app_password=""):
+def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[]):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
-    sender_password = custom_app_password or st.secrets.get("GMAIL_APP_PASSWORD", "")
     
-    if not sender_password:
-        return False, "Gmail App Password missing. Please enter your 16-character App Password below or configure `GMAIL_APP_PASSWORD` in Streamlit Secrets."
+    # Hardcoded App Password generated from your Google Account
+    sender_password = "ehyjsvzhffmbvuaf"
 
     try:
         msg = MIMEMultipart()
@@ -363,7 +378,7 @@ Mobile: +27 68 710 1939 | +27 68 727 4731
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        return True, f"Email sent with Feasibility Pack and {len(selected_menus)} Brand Menu attachments!"
+        return True, f"Email sent successfully with Feasibility Pack and {len(selected_menus)} Brand Menu attachments!"
     except Exception as e:
         return False, str(e)
 
@@ -436,7 +451,7 @@ st.markdown("""
     text-decoration: none;
     margin-top: 5px;
 }
-/* STRICT MOBILE & DESKTOP FLEXBOX LOCK */
+/* STRICT MOBILE & DESKTOP FLEXBOX LOCK (FORCES HORIZONTAL ALIGNMENT & PREVENTS STACKING) */
 .logo-row-locked {
     display: flex !important;
     flex-direction: row !important;
@@ -485,7 +500,7 @@ st.markdown(f"""
 
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# LOCKED HORIZONTAL FLEXBOX ROW (Prevents vertical mobile stacking)
+# LOCKED HORIZONTAL FLEXBOX ROW (Guaranteed side-by-side alignment across mobile & desktop)
 locked_logos_html = f"""
 <div class="logo-row-locked">
     {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item-locked"/>' if b64_ds else ''}
@@ -652,7 +667,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name} ({shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {int(round(capital*0.50)):,}", body_regular)],
         [Paragraph("Address / Node", body_bold), Paragraph(str(suburb), body_regular), Paragraph("40% Beneficial Occupation (BO)", body_regular), Paragraph(f"R {int(round(capital*0.40)):,}", body_regular)],
         [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {int(round(capital*0.10)):,}", body_regular)],
-        [Paragraph("Managing Agent / Owner", body_bold), Paragraph("Property Developers / Landlord", body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {int(round(capital)):,}", body_bold)],
+        [Paragraph("Managing Agent / Owner", body_bold), Paragraph("Property Developers / Landlord", body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {int(round(capital)):,}", body_regular)],
         [Paragraph("Mall GLA Size", body_bold), Paragraph("55,000 m² Regional Flagship", body_regular), Paragraph("Working Capital Reserve (Excluded)", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
         [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Captured & Uploaded)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {int(round(total_lease_outlay*2)):,}", body_regular)],
     ]
@@ -1157,7 +1172,7 @@ with tab1:
         target_applicant_name = st.text_input("Prospective Franchisee Full Name", value="", placeholder="e.g. John Doe")
         target_applicant_email = st.text_input("Prospective Franchisee Email Address", value="", placeholder="e.g. applicant@domain.com")
     with col_inv2:
-        target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. +27821234567")
+        target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. 0827867712 or +27827867712")
 
     # STRICT DE-DUPLICATION FILE RESOLUTION LOGIC
     if selected_pack_choice != "Create New Pack for Active Site...":
@@ -1203,17 +1218,13 @@ with tab1:
         st.markdown(dl_link_html, unsafe_allow_html=True)
 
     with btn_col2:
-        gmail_pw = ""
-        if not st.secrets.get("GMAIL_APP_PASSWORD"):
-            gmail_pw = st.text_input("Enter Gmail App Password (16 Chars)", type="password", key="app_pw_input", help="Generated from your Google Account Security settings.")
-            
         if st.button("📧 Dispatch via Email (with Read Receipt)"):
             if not target_applicant_email:
                 st.error("Please enter a valid Franchisee Email Address above.")
             else:
                 selected_menus = st.session_state.get("selected_brand_menus", [])
                 sent_ok, send_msg = send_franchisee_email_pack(
-                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename, selected_menus, custom_app_password=gmail_pw
+                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename, selected_menus
                 )
                 if sent_ok:
                     st.success(f"✅ {send_msg}")
@@ -1221,15 +1232,15 @@ with tab1:
                     st.error(f"❌ Email Failed: {send_msg}")
 
     if target_applicant_mobile:
-        clean_mobile = re.sub(r'[^0-9]', '', target_applicant_mobile)
+        formatted_wa_mobile = format_sa_mobile_number(target_applicant_mobile)
         wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, thank you for showing interest in Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name} to your email ({target_applicant_email}). Please review the attached pack, brand menus, and NCNDA."
         encoded_wa_text = urllib.parse.quote(wa_text)
-        wa_url = f"https://api.whatsapp.com/send?phone={clean_mobile}&text={encoded_wa_text}"
+        wa_url = f"https://api.whatsapp.com/send?phone={formatted_wa_mobile}&text={encoded_wa_text}"
 
         st.markdown(f"""
         <a href="{wa_url}" target="_blank" style="text-decoration:none;">
             <div style="background-color:#25D366; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; font-size:15px; margin-top:10px;">
-                💬 Launch WhatsApp Direct Chat with {target_applicant_name} ({clean_mobile})
+                💬 Launch WhatsApp Direct Chat with {target_applicant_name} (+{formatted_wa_mobile})
             </div>
         </a>
         """, unsafe_allow_html=True)
