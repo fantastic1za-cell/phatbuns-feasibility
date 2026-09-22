@@ -39,6 +39,8 @@ except ImportError:
 # ASSET FILE RESOLVER & BASE64 CONVERTER
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
+MENUS_DIR = os.path.join(ASSETS_DIR, "menus")
+os.makedirs(MENUS_DIR, exist_ok=True)
 
 def resolve_asset_file(key_keywords):
     if not os.path.exists(ASSETS_DIR):
@@ -87,6 +89,33 @@ def get_image_base64(file_path):
         return base64.b64encode(data).decode('utf-8')
     except Exception:
         return ""
+
+def get_available_brand_menus():
+    """
+    Scans ./assets/menus/ and ./assets/ for menu PDF files matching Google Drive files.
+    """
+    menu_files = []
+    search_dirs = [MENUS_DIR, ASSETS_DIR]
+    for d in search_dirs:
+        if os.path.exists(d):
+            for f in os.listdir(d):
+                if f.lower().endswith(".pdf") and f not in menu_files:
+                    menu_files.append(f)
+    
+    # Pre-defined menu standard defaults if folder is empty
+    default_menus = [
+        "SMALL_Build your own burger 148.pdf",
+        "SMALL_NEW MENU DESIGN - Frozen.pdf",
+        "Seasonal - cookie caviar tiramisu.pdf",
+        "Doorstep Menu Individual Pages 2025 - New.pdf",
+        "classic and exclusive cookies.pdf",
+        "Signature drinks etc.pdf"
+    ]
+    for dm in default_menus:
+        if dm not in menu_files:
+            menu_files.append(dm)
+
+    return sorted(menu_files)
 
 # ==========================================
 # COVER PAGE IMAGE COMPOSITOR
@@ -238,9 +267,9 @@ def process_uploaded_file(uploaded_file):
             return None, ""
 
 # ==========================================
-# GMAIL & DISPATCH ENGINE
+# ENHANCED EMAIL DISPATCH ENGINE WITH MENUS
 # ==========================================
-def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename):
+def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[]):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
     sender_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
     
@@ -251,44 +280,71 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
         msg = MIMEMultipart()
         msg['From'] = f"Phatbuns SA Master Rights <{sender_email}>"
         msg['To'] = recipient_email
-        msg['Subject'] = f"Phatbuns SA — Executive Franchisee & Feasibility Pack ({site_name})"
+        msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Brand Menus ({site_name})"
         
         msg['Disposition-Notification-To'] = sender_email
         msg['Return-Receipt-To'] = sender_email
         msg['X-Confirm-Reading-To'] = sender_email
 
-        body_text = f"""Dear {recipient_name if recipient_name else 'Investor'},
+        menu_bullet_list = ""
+        if selected_menus:
+            menu_bullet_list = "\nAttached Brand Menus & Concept Guides:\n" + "\n".join([f" • {m}" for m in selected_menus])
 
-Thank you for your interest in the Phatbuns South Africa franchise expansion program.
+        body_text = f"""Dear {recipient_name if recipient_name else 'Valued Prospective Franchisee'},
 
-Please find attached the complete Master Franchisee Investor Pack for {site_name}, including:
-1. Executive Cover Page & Brand Identity
-2. Executive Site Evaluation & Investment Analysis
+Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.
+
+We are excited to share our comprehensive Master Franchisee Investor Pack for {site_name}. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.
+
+Please find attached to this email:
+1. Executive Cover Page & Brand Identity Presentation
+2. Site Evaluation & Commercial Investment Analysis ({site_name})
 3. Financial Outlay & Debt Serviceability Breakdown
-4. 5-Year Pro Forma Income Statement & 60-Month P&L Projections (35% COGS)
+4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
 5. Development Layout & Leasing Site Plan
-6. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
+6. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA){menu_bullet_list}
 
-Please review, sign the NCNDA section, and return a copy to proceed.
+Next Steps:
+Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.
 
-Best regards,
+Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.
+
+Warm regards,
+
 Nisaar Ally
 Master Rights Holder — Phatbuns South Africa
 Email: nisaar@fantastic1.com | fantastic1za@gmail.com
 WhatsApp: +27 82 786 7712
+Mobile: +27 68 710 1939 | +27 68 727 4731
 """
         msg.attach(MIMEText(body_text, 'plain'))
 
+        # Attach Primary Feasibility PDF Pack
         part = MIMEApplication(pdf_bytes, Name=pdf_filename)
         part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
         msg.attach(part)
+
+        # Attach Selected Brand Menus
+        for menu_file in selected_menus:
+            possible_paths = [
+                os.path.join(MENUS_DIR, menu_file),
+                os.path.join(ASSETS_DIR, menu_file)
+            ]
+            for m_path in possible_paths:
+                if os.path.exists(m_path):
+                    with open(m_path, "rb") as mf:
+                        m_bytes = mf.read()
+                    m_part = MIMEApplication(m_bytes, Name=menu_file)
+                    m_part['Content-Disposition'] = f'attachment; filename="{menu_file}"'
+                    msg.attach(m_part)
+                    break
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        return True, "Email sent with delivery & read receipts requested!"
+        return True, f"Email sent with Feasibility Pack and {len(selected_menus)} Brand Menu attachments!"
     except Exception as e:
         return False, str(e)
 
@@ -485,6 +541,7 @@ if "ext_generator" not in st.session_state: st.session_state["ext_generator"] = 
 if "ext_escalation" not in st.session_state: st.session_state["ext_escalation"] = 7.00
 if "ext_mktg" not in st.session_state: st.session_state["ext_mktg"] = 5.00
 if "uploaded_blueprint_img" not in st.session_state: st.session_state["uploaded_blueprint_img"] = None
+if "selected_brand_menus" not in st.session_state: st.session_state["selected_brand_menus"] = []
 
 STORE_MODELS = {
     "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
@@ -810,10 +867,15 @@ def generate_pipeline_pdf(df_pipeline):
     return buffer
 
 # ==========================================
-# NAVIGATION TABS
+# NAVIGATION TABS (ADDED TAB FOR BRAND MENUS)
 # ==========================================
-tab1, tab2 = st.tabs(["📊 Feasibility & Bank Model", "📋 Investor & Franchisee Registry"])
+tab1, tab2, tab3 = st.tabs([
+    "📊 Feasibility & Bank Model",
+    "📖 Brand Menus & Attachments",
+    "📋 Investor & Franchisee Registry"
+])
 
+# TAB 1: FEASIBILITY & BANK MODEL
 with tab1:
     st.header("Automated Landlord Proposal Extractor")
     st.markdown("Upload a landlord proposal (JPG, PNG, PDF) or paste offer text below to auto-populate site parameters.")
@@ -1105,8 +1167,9 @@ with tab1:
             if not target_applicant_email:
                 st.error("Please enter a valid Franchisee Email Address above.")
             else:
+                selected_menus = st.session_state.get("selected_brand_menus", [])
                 sent_ok, send_msg = send_franchisee_email_pack(
-                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename
+                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename, selected_menus
                 )
                 if sent_ok:
                     st.success(f"✅ {send_msg}")
@@ -1115,7 +1178,7 @@ with tab1:
 
     if target_applicant_mobile:
         clean_mobile = re.sub(r'[^0-9]', '', target_applicant_mobile)
-        wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, this is Nisaar Ally from Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name} to your email ({target_applicant_email}). Please review the attached feasibility pack and NCNDA."
+        wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, thank you for showing interest in Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name} to your email ({target_applicant_email}). Please review the attached pack, brand menus, and NCNDA."
         encoded_wa_text = urllib.parse.quote(wa_text)
         wa_url = f"https://api.whatsapp.com/send?phone={clean_mobile}&text={encoded_wa_text}"
 
@@ -1127,7 +1190,39 @@ with tab1:
         </a>
         """, unsafe_allow_html=True)
 
+# TAB 2: BRAND MENUS & ATTACHMENTS
 with tab2:
+    st.header("📖 Brand Menus & Concept Collateral Selector")
+    st.markdown("Select which brand menu PDF files from your **Phatbuns Menu** collection should be attached to the franchisee dispatch email.")
+
+    available_menus = get_available_brand_menus()
+
+    st.subheader("Select Menus to Include in Investor Email Pack:")
+    
+    selected_menus = []
+    for menu in available_menus:
+        is_checked = st.checkbox(f"📄 {menu}", value=True if ("burger" in menu.lower() or "frozen" in menu.lower()) else False)
+        if is_checked:
+            selected_menus.append(menu)
+
+    st.session_state["selected_brand_menus"] = selected_menus
+
+    st.info(f"📋 **Selected Attachments:** {len(selected_menus)} Brand Menu(s) queued to be emailed.")
+
+    st.divider()
+
+    st.subheader("Upload Additional Brand Menus to System")
+    uploaded_menu_files = st.file_uploader("Upload new Brand Menu PDF files", type=["pdf"], accept_multiple_files=True)
+    if uploaded_menu_files:
+        for u_file in uploaded_menu_files:
+            save_path = os.path.join(MENUS_DIR, u_file.name)
+            with open(save_path, "wb") as f:
+                f.write(u_file.read())
+        st.success("New brand menu PDFs saved successfully!")
+        st.rerun()
+
+# TAB 3: INVESTOR & FRANCHISEE REGISTRY
+with tab3:
     st.header("Franchisee & Investor Lead Intake & Database")
     
     with st.form("investor_registration_form", clear_on_submit=False):
