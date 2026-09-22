@@ -601,7 +601,7 @@ STORE_MODELS = {
     "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20},
     "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60},
     "Full Sit-Down Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 700000.0, "est_monthly_turnover": 950000.0, "labor_monthly": 125000.0, "foh_pct": 0.60},
-    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 4500000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40},
+    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3500000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40},
 }
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
@@ -821,7 +821,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            # Fits neatly in portrait A4 dimensions
             rl_blueprint = RLImage(bp_byte_arr, width=500, height=580)
             elements.append(rl_blueprint)
         except Exception:
@@ -1102,9 +1101,16 @@ with tab1:
     selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True, key=f"{site_key}_model_radio")
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
-    # AUTOMATED COMMERCIAL CAPITAL MAPPING BASED ON STORE MODEL TYPE (WITH FULL MANUAL OVERRIDE SUPPORT)
-    default_turnkey_capital = get_site_state(f"capex_{selected_model}", model_data["turnkey_capital"])
-    default_working_capital = get_site_state(f"wc_{selected_model}", model_data["working_capital"])
+    # DYNAMICALLY FORCE UPDATE CAPITAL STATE UPON MODEL CHANGE
+    prev_selected_model = get_site_state("last_selected_model", selected_model)
+    if prev_selected_model != selected_model:
+        set_site_state("last_selected_model", selected_model)
+        set_site_state("capex", model_data["turnkey_capital"])
+        set_site_state("wc", model_data["working_capital"])
+        st.rerun()
+
+    default_turnkey_capital = get_site_state("capex", model_data["turnkey_capital"])
+    default_working_capital = get_site_state("wc", model_data["working_capital"])
 
     internal_foh_sqm = internal_gla * model_data["foh_pct"]
     total_dining_sqm = internal_foh_sqm + external_gla
@@ -1120,10 +1126,10 @@ with tab1:
     col_cap, col_wc = st.columns(2)
     with col_cap:
         turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", value=default_turnkey_capital, step=50000.0, format="%.2f", key=f"{site_key}_capex_input")
-        set_site_state(f"capex_{selected_model}", turnkey_capital)
+        set_site_state("capex", turnkey_capital)
     with col_wc:
         working_capital = st.number_input("Suggested Working Capital Requirement", value=default_working_capital, step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
-        set_site_state(f"wc_{selected_model}", working_capital)
+        set_site_state("wc", working_capital)
 
     st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
@@ -1283,7 +1289,6 @@ with tab1:
             "popia_consent": 1
         })
 
-    # GENERATE PDF REPORT
     clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
     pdf_filename = f"{clean_site_slug}_{shop_code}_Phatbuns_Master_Investor_Pack.pdf"
 
@@ -1294,7 +1299,6 @@ with tab1:
     )
     pdf_bytes = pdf_buffer.getvalue()
 
-    # SYNC TO GOOGLE DRIVE API DIRECTLY
     drive_service = get_drive_service()
     if drive_service:
         try:
