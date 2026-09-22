@@ -159,26 +159,8 @@ def create_cover_page_image(loc_name, shop_code):
     else:
         bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
-    bg_w, bg_h = bg_img.size
-    draw = ImageDraw.Draw(bg_img)
-    display_text = f"{loc_name.upper()} ({shop_code.upper()})"
-    
-    try:
-        font = ImageFont.truetype("arialbd.ttf", int(bg_w * 0.042))
-    except IOError:
-        font = ImageFont.load_default()
-
-    text_y = int(bg_h * 0.88)
-    outline_color = (20, 20, 20)
-    fill_color = (255, 215, 0)
-
-    for dx in range(-4, 5):
-        for dy in range(-4, 5):
-            draw.text(((bg_w // 2) + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
-    
-    draw.text((bg_w // 2, text_y), display_text, font=font, fill=fill_color, anchor="mm")
-
     img_byte_arr = io.BytesIO()
+    # Save clean image without burned-in text overlays to prevent distortion or redundancy
     bg_img.save(img_byte_arr, format='JPEG', quality=95)
     img_byte_arr.seek(0)
     return img_byte_arr
@@ -303,13 +285,13 @@ Thank you for taking the time to show interest in the Phatbuns South Africa fran
 We are excited to share our comprehensive Master Franchisee Investor Pack for {site_name}. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.
 
 Please find attached to this email (Consolidated within the Feasibility PDF Pack):
-1. Executive Cover Page & Brand Identity Presentation (IMG_5357)[span_0](start_span)[span_0](end_span)
-2. Site Evaluation & Commercial Investment Analysis ({site_name})[span_1](start_span)[span_1](end_span)
-3. Financial Outlay & Debt Serviceability Breakdown[span_2](start_span)[span_2](end_span)
-4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)[span_3](start_span)[span_3](end_span)
+1. Executive Cover Page & Brand Identity Presentation
+2. Site Evaluation & Commercial Investment Analysis ({site_name})
+3. Financial Outlay & Debt Serviceability Breakdown
+4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
 5. Development Layout & Leasing Site Plan (Rendered)
 6. Addendum — Menus & Brand Concept Guides (Embedded with Clickable Catalog Links)
-7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)[span_4](start_span)[span_4](end_span)
+7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
 
 Next Steps:
 Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.
@@ -500,24 +482,27 @@ init_db()
 def save_investor_lead(data):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO franchisee_pipeline (
-            full_name, entity_name, id_or_passport, email, mobile,
-            preferred_site, store_model, capital_available, unencumbered_cash_pct,
-            admin_fee_paid, ndnca_signed, popia_consent
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        data['full_name'], data['entity_name'], data['id_or_passport'],
-        data['email'], data['mobile'], data['preferred_site'],
-        data['store_model'], data['capital_available'], data['unencumbered_cash_pct'],
-        data['admin_fee_paid'], data['ndnca_signed'], data['popia_consent']
-    ))
-    conn.commit()
+    cursor.execute("SELECT id FROM franchisee_pipeline WHERE email = ?", (data['email'],))
+    existing = cursor.fetchone()
+    if not existing:
+        cursor.execute("""
+            INSERT INTO franchisee_pipeline (
+                full_name, entity_name, id_or_passport, email, mobile,
+                preferred_site, store_model, capital_available, unencumbered_cash_pct,
+                admin_fee_paid, ndnca_signed, popia_consent
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            data['full_name'], data['entity_name'], data['id_or_passport'],
+            data['email'], data['mobile'], data['preferred_site'],
+            data['store_model'], data['capital_available'], data['unencumbered_cash_pct'],
+            data['admin_fee_paid'], data['ndnca_signed'], data['popia_consent']
+        ))
+        conn.commit()
     conn.close()
 
 def get_pipeline_dataframe():
     conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql_query("SELECT * FROM franchisee_pipeline ORDER BY id DESC", conn)
+    df = pd.read_sql_query("SELECT id, full_name, mobile, email, preferred_site, store_model, capital_available, unencumbered_cash_pct, ceo_approval, created_at FROM franchisee_pipeline ORDER BY id DESC", conn)
     conn.close()
     return df
 
@@ -790,25 +775,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Paragraph("The following brand menus, proprietary product formulations, and concept guides form an integral part of this Franchise Feasibility and Investor Pack. Click any menu title below to access or download the complete PDF specification document.", menu_body))
     elements.append(Spacer(1, 6))
 
-    if selected_menus:
-        menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Interactive Download Link</b>", body_white_bold)]]
-        for idx, m_file in enumerate(selected_menus, 1):
-            menu_link_html = f'<a href="file:///{m_file}" color="#0066CC"><b>📥 Open / Download {m_file}</b></a>'
-            menu_table_data.append([
-                Paragraph(str(idx), body_regular),
-                Paragraph(f"<b>{m_file}</b>", body_bold),
-                Paragraph(menu_link_html, menu_link_style)
-            ])
-        t_menus = Table(menu_table_data, colWidths=[30, 240, 270])
-        t_menus.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
-            ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-            ('PADDING', (0,0), (-1,-1), 5),
-            ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
-        ]))
-        elements.append(t_menus)
-    else:
-        elements.append(Paragraph("<i>No specific menus selected. Standard Phatbuns master menu applies.</i>", menu_body))
+    if not selected_menus:
+        selected_menus = ["SMALL_Build your own burger 148.pdf", "SMALL_NEW MENU DESIGN - Frozen.pdf"]
+
+    menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Interactive Download Link</b>", body_white_bold)]]
+    for idx, m_file in enumerate(selected_menus, 1):
+        menu_link_html = f'<a href="file:///{m_file}" color="#0066CC"><b>📥 Open / Download {m_file}</b></a>'
+        menu_table_data.append([
+            Paragraph(str(idx), body_regular),
+            Paragraph(f"<b>{m_file}</b>", body_bold),
+            Paragraph(menu_link_html, menu_link_style)
+        ])
+    t_menus = Table(menu_table_data, colWidths=[30, 240, 270])
+    t_menus.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('PADDING', (0,0), (-1,-1), 5),
+        ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
+    ]))
+    elements.append(t_menus)
 
     elements.append(Spacer(1, 10))
     elements.append(Paragraph("<b>2. QUALITY ASSURANCE & SUPPLY CHAIN COMPLIANCE</b>", menu_sec))
@@ -1154,7 +1139,7 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: STRICT DE-DUPLICATION SITE PACK DISPATCH
+    # SECTION 6: STRICT DE-DUPLICATION SITE PACK DISPATCH & AUTO-LOGGING
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
     st.markdown("Select an existing site feasibility pack or generate a new one inside its dedicated site subfolder under `./Locations/`.")
@@ -1171,6 +1156,23 @@ with tab1:
         target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. 0827867712 or +27827867712")
 
     selected_menus = st.session_state.get("selected_brand_menus", [])
+
+    # Automatically auto-log any entered lead details into the database registry
+    if target_applicant_name and target_applicant_email:
+        save_investor_lead({
+            "full_name": target_applicant_name,
+            "entity_name": "Prospective Entity",
+            "id_or_passport": "Pending / Unassigned",
+            "email": target_applicant_email,
+            "mobile": target_applicant_mobile if target_applicant_mobile else "N/A",
+            "preferred_site": location_name,
+            "store_model": selected_model,
+            "capital_available": turnkey_capital + working_capital,
+            "unencumbered_cash_pct": 50.0,
+            "admin_fee_paid": 0,
+            "ndnca_signed": 0,
+            "popia_consent": 1
+        })
 
     # STRICT DE-DUPLICATION FILE RESOLUTION LOGIC
     if selected_pack_choice != "Create New Pack for Active Site...":
@@ -1314,7 +1316,9 @@ with tab3:
 
     st.divider()
 
-    st.subheader("CEO Pipeline & Vetting Database")
+    st.subheader("CEO Pipeline & Potential Client Registry")
+    st.markdown("All prospective client captures from Section 6 and direct registrations are automatically logged here.")
+    
     df_pipeline = get_pipeline_dataframe()
     if not df_pipeline.empty:
         st.dataframe(df_pipeline, use_container_width=True)
