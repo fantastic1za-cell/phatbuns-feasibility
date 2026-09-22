@@ -4,6 +4,7 @@ import io
 import re
 import sqlite3
 import json
+import base64
 import urllib.parse
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -11,9 +12,9 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 import streamlit as st
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
-# ReportLab Imports for Comprehensive Executive PDF Generation
+# ReportLab Imports for Executive PDF Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage, PageBreak
@@ -33,6 +34,64 @@ try:
     HAS_GENAI = True
 except ImportError:
     HAS_GENAI = False
+
+# ==========================================
+# COVER PAGE IMAGE COMPOSITOR
+# ==========================================
+def create_cover_page_image(loc_name, shop_code):
+    """
+    Dynamically generates the cover page image by layering the SA Phatbuns logo
+    at half size over the background spread and drawing the location text at the bottom.
+    """
+    bg_path = os.path.join(os.getcwd(), "assets", "cover_bg.jpg")
+    logo_path = os.path.join(os.getcwd(), "assets", "sa_logo.png")
+
+    # Fallback to solid canvas if background images are not present in assets
+    if os.path.exists(bg_path):
+        bg_img = Image.open(bg_path).convert("RGB")
+    else:
+        bg_img = Image.new("RGB", (1240, 1754), color=(255, 136, 0))
+
+    bg_w, bg_h = bg_img.size
+
+    # Layer SA Logo (Scaled to half size)
+    if os.path.exists(logo_path):
+        logo_img = Image.open(logo_path).convert("RGBA")
+        logo_w, logo_h = logo_img.size
+        new_logo_w = int(logo_w * 0.5)
+        new_logo_h = int(logo_h * 0.5)
+        logo_resized = logo_img.resize((new_logo_w, new_logo_h), Image.Resampling.LANCZOS)
+        
+        logo_x = (bg_w - new_logo_w) // 2
+        logo_y = int(bg_h * 0.35)
+        bg_img.paste(logo_resized, (logo_x, logo_y), logo_resized)
+
+    # Draw Centered Location Text at Bottom
+    draw = ImageDraw.Draw(bg_img)
+    display_text = f"{loc_name.upper()} ({shop_code.upper()})"
+    
+    try:
+        font = ImageFont.truetype("arialbd.ttf", 60)
+    except IOError:
+        font = ImageFont.load_default()
+
+    # Text styling with dark outline and orange fill
+    text_y = int(bg_h * 0.82)
+    outline_color = (62, 39, 35)
+    fill_color = (255, 215, 0)
+
+    # Draw outline
+    for dx in range(-4, 5):
+        for dy in range(-4, 5):
+            draw.text(((bg_w) // 2 + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
+    
+    # Draw main text
+    draw.text((bg_w // 2, text_y), display_text, font=font, fill=fill_color, anchor="mm")
+
+    img_byte_arr = io.BytesIO()
+    bg_img.save(img_byte_arr, format='JPEG', quality=95)
+    img_byte_arr.seek(0)
+    return img_byte_arr
 
 # ==========================================
 # GEMINI VISION JPG EXTRACTION ENGINE
@@ -134,14 +193,14 @@ def process_uploaded_file(uploaded_file):
             return None, ""
 
 # ==========================================
-# GMAIL & DISPATCH ENGINE (WITH READ RECEIPTS)
+# GMAIL & DISPATCH ENGINE
 # ==========================================
 def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
     sender_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
     
     if not sender_password:
-        return False, "Gmail App Password not configured in Streamlit secrets."
+        return False, "Gmail App Password missing in Streamlit Secrets (`GMAIL_APP_PASSWORD`)."
 
     try:
         msg = MIMEMultipart()
@@ -149,21 +208,21 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
         msg['To'] = recipient_email
         msg['Subject'] = f"Phatbuns SA — Executive Franchisee & Feasibility Pack ({site_name})"
         
-        # Delivery & Read Receipt Headers
         msg['Disposition-Notification-To'] = sender_email
         msg['Return-Receipt-To'] = sender_email
         msg['X-Confirm-Reading-To'] = sender_email
 
-        body_text = f"""Dear {recipient_name},
+        body_text = f"""Dear {recipient_name if recipient_name else 'Investor'},
 
 Thank you for your interest in the Phatbuns South Africa franchise expansion program.
 
 Please find attached the complete Master Franchisee Investor Pack for {site_name}, including:
-1. Executive Site Evaluation & Investment Analysis
-2. Financial Outlay & Debt Serviceability Breakdown
-3. 5-Year Pro Forma Income Statement & 60-Month P&L Projections (35% COGS)
-4. Development Layout & Leasing Site Plan
-5. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
+1. Custom Cover Page & Brand Identity
+2. Executive Site Evaluation & Investment Analysis
+3. Financial Outlay & Debt Serviceability Breakdown
+4. 5-Year Pro Forma Income Statement & 60-Month P&L Projections (35% COGS)
+5. Development Layout & Leasing Site Plan
+6. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
 
 Please review, sign the NCNDA section, and return a copy to proceed.
 
@@ -175,7 +234,6 @@ WhatsApp: +27 82 786 7712
 """
         msg.attach(MIMEText(body_text, 'plain'))
 
-        # Attach PDF
         part = MIMEApplication(pdf_bytes, Name=pdf_filename)
         part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
         msg.attach(part)
@@ -185,12 +243,12 @@ WhatsApp: +27 82 786 7712
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        return True, "Email successfully sent with delivery & read-receipt requests enabled!"
+        return True, "Email sent with delivery & read receipts requested!"
     except Exception as e:
         return False, str(e)
 
 # ==========================================
-# STREAMLIT PAGE CONFIG & BRAND STYLING
+# STREAMLIT PAGE CONFIG & STYLING
 # ==========================================
 st.set_page_config(
     page_title="Phatbuns Feasibility Engine",
@@ -226,6 +284,18 @@ st.markdown("""
     font-size: 13px;
     margin-top: 4px;
 }
+.direct-dl-btn {
+    display: inline-block;
+    width: 100%;
+    background-color: #0066CC;
+    color: white !important;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    margin-top: 5px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -236,7 +306,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Database
+# Database Setup
 DB_FILE = "phatbuns_franchisees.db"
 
 def init_db():
@@ -326,6 +396,13 @@ STORE_MODELS = {
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
+LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
+os.makedirs(LOCATIONS_DIR, exist_ok=True)
+
+def get_existing_site_packs():
+    files = [f for f in os.listdir(LOCATIONS_DIR) if f.endswith(".pdf")]
+    return sorted(files)
+
 # ==========================================
 # MASTER PDF GENERATION ENGINE
 # ==========================================
@@ -334,7 +411,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
     styles = getSampleStyleSheet()
 
-    # Exact Color Palette
     NAVY_HEADER = colors.HexColor('#131B2A')
     ORANGE_BRAND = colors.HexColor('#FF5500')
     DARK_TEXT = colors.HexColor('#1A1A1A')
@@ -343,7 +419,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     BORDER_COLOR = colors.HexColor('#D3D3D3')
     MAROON_LINE = colors.HexColor('#8B0000')
 
-    # Typography
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, textColor=WHITE_TEXT, leading=18)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, leading=10, alignment=2)
     sec_banner_style = ParagraphStyle('SecBannerStyle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=9, textColor=WHITE_TEXT, leading=11)
@@ -354,8 +429,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements = []
 
     # ==========================================
-    # PAGE 1: SITE EVALUATION & INVESTMENT ANALYSIS (Photo 3)
+    # PAGE 0: COVER PAGE (A4 Bleed Design)
     # ==========================================
+    cover_img_bytes = create_cover_page_image(loc_name, shop)
+    rl_cover_img = RLImage(cover_img_bytes, width=545, height=770)
+    elements.append(rl_cover_img)
+    elements.append(PageBreak())
+
+    # PAGE 1: SITE EVALUATION
     header_data = [
         [Paragraph("PHATBUNS FEASIBILITY", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)],
         [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#CCCCCC'))), ""]
@@ -365,7 +446,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_header)
     elements.append(Spacer(1, 4))
 
-    # KPI Bar
     kpi_bar_data = [
         [Paragraph("TURNKEY SETUP", body_regular), Paragraph("WORKING CAPITAL", body_regular), Paragraph("BASE NET RENTAL", body_regular), Paragraph("OPS COST", body_regular)],
         [Paragraph(f"<b>R {int(round(capital)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(wc)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(int_rent * int_gla)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(ops_cost * total_gla)):,}</b>", body_bold)],
@@ -376,7 +456,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_kpi_bar)
     elements.append(Spacer(1, 6))
 
-    # 01. Site Profile
     sec1_banner = Table([[Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", sec_banner_style)]], colWidths=[540])
     sec1_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(sec1_banner)
@@ -395,7 +474,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec1)
     elements.append(Spacer(1, 6))
 
-    # 02. Lease Structure
     sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[540])
     sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(sec2_banner)
@@ -413,7 +491,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec2)
     elements.append(Spacer(1, 6))
 
-    # 03. Catchment Intelligence
     sec3_banner = Table([[Paragraph("03. CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[540])
     sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(sec3_banner)
@@ -431,9 +508,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # ==========================================
-    # PAGE 2: FINANCIAL SUMMARY & PAYBACK MATRIX (Photo 2)
-    # ==========================================
+    # PAGE 2: PAYBACK MATRIX
     p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=DARK_TEXT, alignment=1)
     p2_subtitle = ParagraphStyle('P2SubTitle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#555555'), alignment=1)
 
@@ -489,9 +564,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # ==========================================
-    # PAGE 3: 5-YEAR PRO FORMA P&L (Photo 24 Fixed: 35% COGS & No Decimals)
-    # ==========================================
+    # PAGE 3: 5-YEAR P&L
     elements.append(Paragraph("4. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST", ParagraphStyle('P3PnlH', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
     elements.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 35% COGS | 9% Royalties & Marketing", body_regular))
     elements.append(Spacer(1, 8))
@@ -519,9 +592,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # ==========================================
-    # PAGE 4: ADDENDUM SITE DEVELOPMENT PLAN (Photo 1 / Photo 23 Fixed)
-    # ==========================================
+    # PAGE 4: DEVELOPMENT PLAN
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 8))
@@ -547,9 +618,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # ==========================================
-    # PAGE 5 & 6: NCNDA LEGAL AGREEMENT
-    # ==========================================
+    # PAGE 5 & 6: NCNDA
     ncnda_title = ParagraphStyle('NCNDATitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
     ncnda_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
     ncnda_sec = ParagraphStyle('NCNDASec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=9, textColor=MAROON_LINE, spaceBefore=6, spaceAfter=2)
@@ -728,7 +797,6 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint:** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
-    # FIX ISSUE 1 & 3: Persistent Blueprint Image Session State
     st.subheader("Site Blueprint & Development Layout Plan")
     blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"])
     
@@ -845,7 +913,6 @@ with tab1:
 
     st.divider()
 
-    # FIX ISSUE 2: COGS Updated to 35% & Whole Rand Numbers
     st.header("5. 60-Month Cash Flow Forecast & Annual Pro Forma P&L (35% COGS)")
     
     total_initial_investment = turnkey_capital + working_capital
@@ -863,7 +930,7 @@ with tab1:
         
         monthly_turnover = (turnover_req_12 * (1.08 ** year_idx)) * season_multiplier
         monthly_lease = total_lease_outlay_monthly * (st.session_state["ext_escalation"] / 100 + 1) ** year_idx
-        monthly_cogs = monthly_turnover * 0.35  # COGS 35%
+        monthly_cogs = monthly_turnover * 0.35
         monthly_royalties = monthly_turnover * 0.09
         
         total_monthly_expenses = monthly_lease + monthly_cogs + monthly_royalties + monthly_labor_cost
@@ -879,45 +946,92 @@ with tab1:
     df_cashflow['Year_Label'] = "Year " + df_cashflow['Year'].astype(str)
     annual_pnl = df_cashflow.groupby('Year_Label').agg({'Turnover': 'sum', 'Lease Outlay': 'sum', 'COGS (35%)': 'sum', 'Labor': 'sum', 'Royalties (9%)': 'sum', 'EBITDA': 'sum', 'Bank Repayment': 'sum', 'Net Operating Profit': 'sum'}).reset_index()
 
-    # Clean P&L Display without Decimals
     st.dataframe(annual_pnl.style.format({'Turnover': 'R {:,.0f}', 'Lease Outlay': 'R {:,.0f}', 'COGS (35%)': 'R {:,.0f}', 'Labor': 'R {:,.0f}', 'Royalties (9%)': 'R {:,.0f}', 'EBITDA': 'R {:,.0f}', 'Bank Repayment': 'R {:,.0f}', 'Net Operating Profit': 'R {:,.0f}'}), use_container_width=True)
 
     st.divider()
 
-    st.header("6. Generate Master Franchisee Investor Pack")
-    
-    # Generate PDF in Memory
-    pdf_buffer = generate_pdf_report(
-        location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
-        max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
-        ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img
-    )
-    pdf_bytes = pdf_buffer.getvalue()
+    # ==========================================
+    # SECTION 6: EXISTING PACK SELECTOR & DIRECT DISPATCH
+    # ==========================================
+    st.header("6. Dispatch Completed Site Feasibility Pack")
+    st.markdown("Select an existing site feasibility pack from the `./Locations/` folder, or generate a new one with a custom cover page for the active site parameters above.")
 
-    # FIX ISSUE 4: Automatically Save Local Copy in /Locations Directory
+    existing_packs = get_existing_site_packs()
+    pack_options = ["Create New Pack for Active Site..."] + existing_packs
+    selected_pack_choice = st.selectbox("Select Feasibility Pack Source", options=pack_options)
+
+    col_inv1, col_inv2 = st.columns(2)
+    with col_inv1:
+        target_applicant_name = st.text_input("Prospective Franchisee Full Name", value="", placeholder="e.g. John Doe")
+        target_applicant_email = st.text_input("Prospective Franchisee Email Address", value="", placeholder="e.g. applicant@domain.com")
+    with col_inv2:
+        target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. +27821234567")
+
     clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
-    pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
-    
-    locations_dir = os.path.join(os.getcwd(), "Locations")
-    os.makedirs(locations_dir, exist_ok=True)
-    local_pdf_path = os.path.join(locations_dir, pdf_filename)
-    
-    with open(local_pdf_path, "wb") as f:
-        f.write(pdf_bytes)
+    default_pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
+    target_local_path = os.path.join(LOCATIONS_DIR, default_pdf_filename)
 
-    st.success(f"📁 **File auto-archived on server:** `{local_pdf_path}`")
+    if selected_pack_choice != "Create New Pack for Active Site...":
+        pdf_filename = selected_pack_choice
+        chosen_path = os.path.join(LOCATIONS_DIR, pdf_filename)
+        with open(chosen_path, "rb") as f:
+            pdf_bytes = f.read()
+        st.info(f"📁 **Using Existing Site Pack:** `{pdf_filename}` (No duplicate file generated)")
+    else:
+        pdf_filename = default_pdf_filename
+        if os.path.exists(target_local_path):
+            with open(target_local_path, "rb") as f:
+                pdf_bytes = f.read()
+            st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from Locations folder.")
+        else:
+            pdf_buffer = generate_pdf_report(
+                location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
+                max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
+                ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img
+            )
+            pdf_bytes = pdf_buffer.getvalue()
+            with open(target_local_path, "wb") as f:
+                f.write(pdf_bytes)
+            st.success(f"📁 **New Pack Created & Saved:** `{target_local_path}`")
 
-    # FIX ISSUE 3: Mobile Web Session Retention (No Refresh / No Redirect Loop)
-    st.download_button(
-        label="📥 Download Master Franchisee Investor Pack PDF",
-        data=pdf_bytes,
-        file_name=pdf_filename,
-        mime="application/pdf",
-        use_container_width=True
-    )
+    # Action Row
+    btn_col1, btn_col2 = st.columns(2)
+    
+    with btn_col1:
+        # BASE64 DIRECT FILE DOWNLOAD (Fixes Mobile App Redirection Issue)
+        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Save PDF Direct to Phone / Files</a>'
+        st.markdown(dl_link_html, unsafe_allow_html=True)
+
+    with btn_col2:
+        if st.button("📧 Dispatch via Email (with Read Receipt)"):
+            if not target_applicant_email:
+                st.error("Please enter a valid Franchisee Email Address above.")
+            else:
+                sent_ok, send_msg = send_franchisee_email_pack(
+                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename
+                )
+                if sent_ok:
+                    st.success(f"✅ {send_msg}")
+                else:
+                    st.error(f"❌ Email Failed: {send_msg}")
+
+    if target_applicant_mobile:
+        clean_mobile = re.sub(r'[^0-9]', '', target_applicant_mobile)
+        wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, this is Nisaar Ally from Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name} to your email ({target_applicant_email}). Please review the attached feasibility pack and NCNDA."
+        encoded_wa_text = urllib.parse.quote(wa_text)
+        wa_url = f"https://api.whatsapp.com/send?phone={clean_mobile}&text={encoded_wa_text}"
+
+        st.markdown(f"""
+        <a href="{wa_url}" target="_blank" style="text-decoration:none;">
+            <div style="background-color:#25D366; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; font-size:15px; margin-top:10px;">
+                💬 Launch WhatsApp Direct Chat with {target_applicant_name} ({clean_mobile})
+            </div>
+        </a>
+        """, unsafe_allow_html=True)
 
 with tab2:
-    st.header("Franchisee & Investor Lead Intake & Auto-Dispatch")
+    st.header("Franchisee & Investor Lead Intake & Database")
     
     with st.form("investor_registration_form", clear_on_submit=False):
         f_col1, f_col2 = st.columns(2)
@@ -927,7 +1041,7 @@ with tab2:
             id_or_passport = st.text_input("ID or Passport Number *")
             email = st.text_input("Email Address *")
         with f_col2:
-            mobile = st.text_input("Mobile / WhatsApp Number (e.g. +27827867712) *")
+            mobile = st.text_input("Mobile / WhatsApp Number *")
             preferred_site = st.text_input("Preferred Target Site / Node *", value=location_name)
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()))
             capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=4500000.0, step=100000.0)
@@ -938,12 +1052,11 @@ with tab2:
         with c_col2: ndnca_signed = st.checkbox("Signed NCNDA Received")
         with c_col3: popia_consent = st.checkbox("POPIA / NCA Consent Received")
 
-        submitted = st.form_submit_button("Submit & Dispatch Investor Pack")
+        submitted = st.form_submit_button("Submit Application to Database")
         if submitted:
             if not full_name or not email or not mobile or not id_or_passport or not preferred_site:
                 st.error("Please fill in all mandatory fields (*).")
             else:
-                # 1. Save to Database
                 save_investor_lead({
                     "full_name": full_name, "entity_name": entity_name, "id_or_passport": id_or_passport,
                     "email": email, "mobile": mobile, "preferred_site": preferred_site,
@@ -953,27 +1066,7 @@ with tab2:
                     "ndnca_signed": 1 if ndnca_signed else 0,
                     "popia_consent": 1 if popia_consent else 0
                 })
-                
-                # FIX ISSUE 5: Gmail Email Dispatch with Read Receipts & Direct WhatsApp Link
-                email_sent, email_msg = send_franchisee_email_pack(email, full_name, preferred_site, pdf_bytes, pdf_filename)
-                
-                if email_sent:
-                    st.success(f"📧 **Executive Pack Dispatched via Gmail:** Delivery & Read-receipt headers attached ({email_msg}).")
-                else:
-                    st.warning(f"⚠️ Email Status: {email_msg}")
-
-                clean_mobile = re.sub(r'[^0-9]', '', mobile)
-                wa_text = f"Hi {full_name}, this is Nisaar Ally from Phatbuns South Africa. I have dispatched the Executive Feasibility Pack for {preferred_site} to {email}. Please review the attached pack and NCNDA."
-                encoded_wa_text = urllib.parse.quote(wa_text)
-                wa_url = f"https://api.whatsapp.com/send?phone={clean_mobile}&text={encoded_wa_text}"
-
-                st.markdown(f"""
-                <a href="{wa_url}" target="_blank" style="text-decoration:none;">
-                    <div style="background-color:#25D366; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; font-size:16px;">
-                        💬 Launch WhatsApp Direct Chat with {full_name} ({clean_mobile})
-                    </div>
-                </a>
-                """, unsafe_allow_html=True)
+                st.success(f"Applicant record for **{full_name}** successfully logged in database!")
 
     st.divider()
 
