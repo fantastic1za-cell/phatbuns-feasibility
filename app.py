@@ -117,9 +117,6 @@ def get_available_brand_menus():
     return sorted(menu_files)
 
 def get_existing_site_packs():
-    """
-    Recursively scans the Locations directory including all site subfolders.
-    """
     pdf_map = {}
     if os.path.exists(LOCATIONS_DIR):
         for root, dirs, files in os.walk(LOCATIONS_DIR):
@@ -130,9 +127,6 @@ def get_existing_site_packs():
     return pdf_map
 
 def find_existing_site_file(loc_name):
-    """
-    Strict de-duplication helper: Searches for existing files or folders matching loc_name.
-    """
     clean_target = re.sub(r'[^a-zA-Z0-9]', '', loc_name.lower())
     if not os.path.exists(LOCATIONS_DIR):
         return None, None
@@ -403,6 +397,17 @@ st.markdown("""
     border: 1px solid #333;
     text-align: center;
 }
+.brand-title-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.banner-logo-icon {
+    height: 48px;
+    object-fit: contain;
+}
 .brand-title {
     color: #FFFFFF;
     font-size: 24px;
@@ -454,10 +459,24 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Main Banner
-st.markdown("""
+# LOAD LOGO MAP FOR BANNER & FOOTER
+logo_map = get_asset_images_map()
+b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
+b64_pv = get_image_base64(logo_map.get("phatville"))
+b64_pb = get_image_base64(logo_map.get("phatbuns"))
+b64_bb = get_image_base64(logo_map.get("butter_brulee"))
+b64_ds = get_image_base64(logo_map.get("doorstep"))
+
+# Speech Bubble Icon for Header Title
+banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
+
+# Main Banner with Icon before Phatbuns Title
+st.markdown(f"""
 <div class="brand-banner">
-    <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
+    <div class="brand-title-container">
+        {banner_logo_html}
+        <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
+    </div>
     <div class="brand-subtitle">Bankable Commercial Feasibility, Financial Modeling & Automated Lease Extraction</div>
 </div>
 """, unsafe_allow_html=True)
@@ -465,15 +484,7 @@ st.markdown("""
 # Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# LOAD LOGO MAP & CONVERT TO FLEXBOX HORIZONTAL LAYOUT
-logo_map = get_asset_images_map()
-
-b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
-b64_pv = get_image_base64(logo_map.get("phatville"))
-b64_pb = get_image_base64(logo_map.get("phatbuns"))
-b64_bb = get_image_base64(logo_map.get("butter_brulee"))
-b64_ds = get_image_base64(logo_map.get("doorstep"))
-
+# FLEXBOX HORIZONTAL LOGO BAR
 logos_html = f"""
 <div class="logo-row-container">
     {'<img src="data:image/png;base64,' + b64_sa + '" class="logo-item"/>' if b64_sa else ''}
