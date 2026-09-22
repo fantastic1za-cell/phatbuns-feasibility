@@ -1068,7 +1068,6 @@ with tab1:
 
     st.subheader("Store Model Type")
 
-    # DEFINE MODEL CHANGE CALLBACK TO ENSURE STATE SYNCHRONIZATION
     def on_model_changed():
         m_choice = st.session_state.get(f"{site_key}_model_radio", "Express Model")
         m_info = STORE_MODELS.get(m_choice, STORE_MODELS["Express Model"])
@@ -1101,6 +1100,7 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint ({location_name}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
+    # DYNAMIC FRONT OF HOUSE (FOH) & SEATING CALCULATION BASED ON AMENDED GLA FIGURES
     internal_foh_sqm = internal_gla * model_data["foh_pct"]
     total_dining_sqm = internal_foh_sqm + external_gla
     max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
@@ -1127,7 +1127,6 @@ with tab1:
 
     st.subheader("2. Commercial Capital, Lease & Operational Cost Breakdown")
 
-    # INITIALIZE STATE FOR NUMBER INPUTS IF NOT ALREADY PRESENT
     if f"{site_key}_capex_input" not in st.session_state:
         st.session_state[f"{site_key}_capex_input"] = model_data["turnkey_capital"]
     if f"{site_key}_wc_input" not in st.session_state:
