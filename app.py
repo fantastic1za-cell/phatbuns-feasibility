@@ -40,7 +40,10 @@ except ImportError:
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
 MENUS_DIR = os.path.join(ASSETS_DIR, "menus")
+LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
+
 os.makedirs(MENUS_DIR, exist_ok=True)
+os.makedirs(LOCATIONS_DIR, exist_ok=True)
 
 def resolve_asset_file(key_keywords):
     if not os.path.exists(ASSETS_DIR):
@@ -91,9 +94,6 @@ def get_image_base64(file_path):
         return ""
 
 def get_available_brand_menus():
-    """
-    Scans ./assets/menus/ and ./assets/ for menu PDF files matching Google Drive files.
-    """
     menu_files = []
     search_dirs = [MENUS_DIR, ASSETS_DIR]
     for d in search_dirs:
@@ -102,7 +102,6 @@ def get_available_brand_menus():
                 if f.lower().endswith(".pdf") and f not in menu_files:
                     menu_files.append(f)
     
-    # Pre-defined menu standard defaults if folder is empty
     default_menus = [
         "SMALL_Build your own burger 148.pdf",
         "SMALL_NEW MENU DESIGN - Frozen.pdf",
@@ -116,6 +115,19 @@ def get_available_brand_menus():
             menu_files.append(dm)
 
     return sorted(menu_files)
+
+def get_existing_site_packs():
+    """
+    Recursively scans the Locations directory including all site subfolders.
+    """
+    pdf_map = {}
+    if os.path.exists(LOCATIONS_DIR):
+        for root, dirs, files in os.walk(LOCATIONS_DIR):
+            for f in files:
+                if f.lower().endswith(".pdf"):
+                    rel_path = os.path.relpath(os.path.join(root, f), LOCATIONS_DIR)
+                    pdf_map[rel_path] = os.path.join(root, f)
+    return pdf_map
 
 # ==========================================
 # COVER PAGE IMAGE COMPOSITOR
@@ -267,7 +279,7 @@ def process_uploaded_file(uploaded_file):
             return None, ""
 
 # ==========================================
-# ENHANCED EMAIL DISPATCH ENGINE WITH MENUS
+# EMAIL DISPATCH ENGINE WITH MENUS
 # ==========================================
 def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[]):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
@@ -551,13 +563,6 @@ STORE_MODELS = {
 }
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
-
-LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
-os.makedirs(LOCATIONS_DIR, exist_ok=True)
-
-def get_existing_site_packs():
-    files = [f for f in os.listdir(LOCATIONS_DIR) if f.endswith(".pdf")]
-    return sorted(files)
 
 # ==========================================
 # MASTER PDF GENERATION ENGINE
@@ -867,7 +872,7 @@ def generate_pipeline_pdf(df_pipeline):
     return buffer
 
 # ==========================================
-# NAVIGATION TABS (ADDED TAB FOR BRAND MENUS)
+# NAVIGATION TABS
 # ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📊 Feasibility & Bank Model",
@@ -1110,13 +1115,13 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: EXISTING PACK SELECTOR & DIRECT DISPATCH
+    # SECTION 6: DYNAMIC SITE FOLDER & PACK DISPATCH
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
-    st.markdown("Select an existing site feasibility pack from the `./Locations/` folder, or generate a new one with a custom cover page for the active site parameters above.")
+    st.markdown("Select an existing site feasibility pack or generate a new one inside its dedicated site subfolder under `./Locations/`.")
 
-    existing_packs = get_existing_site_packs()
-    pack_options = ["Create New Pack for Active Site..."] + existing_packs
+    existing_packs_map = get_existing_site_packs()
+    pack_options = ["Create New Pack for Active Site..."] + list(existing_packs_map.keys())
     selected_pack_choice = st.selectbox("Select Feasibility Pack Source", options=pack_options)
 
     col_inv1, col_inv2 = st.columns(2)
@@ -1126,22 +1131,27 @@ with tab1:
     with col_inv2:
         target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. +27821234567")
 
+    # Dynamic Site Folder & Subdirectory Creation
+    clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
+    site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
+    os.makedirs(site_subfolder_path, exist_ok=True)
+
     clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
     default_pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
-    target_local_path = os.path.join(LOCATIONS_DIR, default_pdf_filename)
+    target_local_path = os.path.join(site_subfolder_path, default_pdf_filename)
 
     if selected_pack_choice != "Create New Pack for Active Site...":
-        pdf_filename = selected_pack_choice
-        chosen_path = os.path.join(LOCATIONS_DIR, pdf_filename)
+        chosen_path = existing_packs_map[selected_pack_choice]
+        pdf_filename = os.path.basename(chosen_path)
         with open(chosen_path, "rb") as f:
             pdf_bytes = f.read()
-        st.info(f"📁 **Using Existing Site Pack:** `{pdf_filename}` (No duplicate file generated)")
+        st.info(f"📁 **Using Existing Site Pack:** `{selected_pack_choice}`")
     else:
         pdf_filename = default_pdf_filename
         if os.path.exists(target_local_path):
             with open(target_local_path, "rb") as f:
                 pdf_bytes = f.read()
-            st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from Locations folder.")
+            st.info(f"📁 **Existing Site File Found:** Reusing `{default_pdf_filename}` in site folder `{clean_site_folder_name}`.")
         else:
             pdf_buffer = generate_pdf_report(
                 location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
@@ -1151,13 +1161,12 @@ with tab1:
             pdf_bytes = pdf_buffer.getvalue()
             with open(target_local_path, "wb") as f:
                 f.write(pdf_bytes)
-            st.success(f"📁 **New Pack Created & Saved:** `{target_local_path}`")
+            st.success(f"📁 **Site Folder Created & Output PDF Saved:** `{target_local_path}`")
 
     # Action Row
     btn_col1, btn_col2 = st.columns(2)
     
     with btn_col1:
-        # BASE64 DIRECT FILE DOWNLOAD
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Save PDF Direct to Phone / Files</a>'
         st.markdown(dl_link_html, unsafe_allow_html=True)
