@@ -46,9 +46,6 @@ os.makedirs(MENUS_DIR, exist_ok=True)
 os.makedirs(LOCATIONS_DIR, exist_ok=True)
 
 def find_file_in_assets(target_names):
-    """
-    Looks for exact target filenames inside the ./assets/ folder and project root.
-    """
     search_dirs = [ASSETS_DIR, os.getcwd()]
     targets_clean = [t.lower() for t in target_names]
 
@@ -87,10 +84,6 @@ def get_image_base64(file_path):
         return ""
 
 def format_sa_mobile_number(raw_mobile):
-    """
-    Converts local South African mobile numbers (e.g., 0827867712, 0687101939, +2782...)
-    into clean international format (27827867712) for WhatsApp API links.
-    """
     if not raw_mobile:
         return ""
     digits = re.sub(r'[^0-9]', '', str(raw_mobile))
@@ -160,7 +153,6 @@ def create_cover_page_image(loc_name, shop_code):
     if bg_path and os.path.exists(bg_path):
         bg_img = Image.open(bg_path).convert("RGB")
     else:
-        # Fallback Canvas if image path is missing
         bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
     bg_w, bg_h = bg_img.size
@@ -172,17 +164,14 @@ def create_cover_page_image(loc_name, shop_code):
     except IOError:
         font = ImageFont.load_default()
 
-    # Positioned nicely near the bottom of the cover photo
     text_y = int(bg_h * 0.88)
     outline_color = (20, 20, 20)
-    fill_color = (255, 215, 0) # Phatbuns Gold/Yellow Accent
+    fill_color = (255, 215, 0)
 
-    # Draw dark shadow outline for readability over background image
     for dx in range(-4, 5):
         for dy in range(-4, 5):
             draw.text(((bg_w // 2) + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
     
-    # Draw primary text
     draw.text((bg_w // 2, text_y), display_text, font=font, fill=fill_color, anchor="mm")
 
     img_byte_arr = io.BytesIO()
@@ -190,9 +179,6 @@ def create_cover_page_image(loc_name, shop_code):
     img_byte_arr.seek(0)
     return img_byte_arr
 
-# ==========================================
-# GEMINI VISION JPG EXTRACTION ENGINE
-# ==========================================
 def extract_lease_from_jpg(pil_img):
     if not HAS_GENAI:
         return {}
@@ -292,7 +278,7 @@ def process_uploaded_file(uploaded_file):
 # ==========================================
 # EMAIL DISPATCH ENGINE (HARDCODED APP PASSWORD)
 # ==========================================
-def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[]):
+def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
     sender_password = "ehyjsvzhffmbvuaf"
 
@@ -306,23 +292,20 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
         msg['Return-Receipt-To'] = sender_email
         msg['X-Confirm-Reading-To'] = sender_email
 
-        menu_bullet_list = ""
-        if selected_menus:
-            menu_bullet_list = "\nAttached Brand Menus & Concept Guides:\n" + "\n".join([f" • {m}" for m in selected_menus])
-
         body_text = f"""Dear {recipient_name if recipient_name else 'Valued Prospective Franchisee'},
 
 Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.
 
 We are excited to share our comprehensive Master Franchisee Investor Pack for {site_name}. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.
 
-Please find attached to this email:
+Please find attached to this email (Consolidated within the Feasibility PDF Pack):
 1. Executive Cover Page & Brand Identity Presentation (IMG_5357)
 2. Site Evaluation & Commercial Investment Analysis ({site_name})
 3. Financial Outlay & Debt Serviceability Breakdown
 4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
-5. Development Layout & Leasing Site Plan
-6. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA){menu_bullet_list}
+5. Development Layout & Leasing Site Plan (Rendered)
+6. Addendum — Menus & Brand Concept Guides
+7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
 
 Next Steps:
 Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.
@@ -339,32 +322,16 @@ Mobile: +27 68 710 1939 | +27 68 727 4731
 """
         msg.attach(MIMEText(body_text, 'plain'))
 
-        # Attach Primary Feasibility PDF Pack
         part = MIMEApplication(pdf_bytes, Name=pdf_filename)
         part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
         msg.attach(part)
-
-        # Attach Selected Brand Menus
-        for menu_file in selected_menus:
-            possible_paths = [
-                os.path.join(MENUS_DIR, menu_file),
-                os.path.join(ASSETS_DIR, menu_file)
-            ]
-            for m_path in possible_paths:
-                if os.path.exists(m_path):
-                    with open(m_path, "rb") as mf:
-                        m_bytes = mf.read()
-                    m_part = MIMEApplication(m_bytes, Name=menu_file)
-                    m_part['Content-Disposition'] = f'attachment; filename="{menu_file}"'
-                    msg.attach(m_part)
-                    break
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        return True, f"Email sent successfully with Feasibility Pack and {len(selected_menus)} Brand Menu attachments!"
+        return True, "Email sent successfully with consolidated Feasibility & Menu Pack!"
     except Exception as e:
         return False, str(e)
 
@@ -437,7 +404,6 @@ st.markdown("""
     text-decoration: none;
     margin-top: 5px;
 }
-/* STRICT MOBILE & DESKTOP FLEXBOX LOCK */
 .logo-row-locked {
     display: flex !important;
     flex-direction: row !important;
@@ -461,7 +427,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# LOAD LOGO MAP FOR BANNER & FOOTER
 logo_map = get_asset_images_map()
 
 b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
@@ -498,7 +463,6 @@ st.markdown(locked_logos_html, unsafe_allow_html=True)
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 st.write("")
 
-# Database Setup
 DB_FILE = "phatbuns_franchisees.db"
 
 def init_db():
@@ -590,9 +554,9 @@ STORE_MODELS = {
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# MASTER PDF GENERATION ENGINE
+# MASTER PDF GENERATION ENGINE WITH BLUEPRINT FIX
 # ==========================================
-def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img):
+def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img, selected_menus=[]):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
     styles = getSampleStyleSheet()
@@ -776,20 +740,23 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 4: DEVELOPMENT PLAN
+    # PAGE 4: DEVELOPMENT PLAN & RENDERED BLUEPRINT
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 8))
 
+    # Robust Blueprint PIL Image Rendering
     if blueprint_pil_img is not None:
         try:
-            img_byte_arr = io.BytesIO()
-            blueprint_pil_img.save(img_byte_arr, format='PNG')
-            img_byte_arr.seek(0)
-            rl_img = RLImage(img_byte_arr, width=520, height=480)
-            elements.append(rl_img)
+            bp_byte_arr = io.BytesIO()
+            blueprint_pil_img.save(bp_byte_arr, format='JPEG', quality=90)
+            bp_byte_arr.seek(0)
+            rl_blueprint = RLImage(bp_byte_arr, width=520, height=360)
+            elements.append(rl_blueprint)
         except Exception:
-            pass
+            elements.append(Paragraph("<i>[Blueprint Image Stream Render Error]</i>", body_regular))
+    else:
+        elements.append(Paragraph("<i>[Default Architectural Layout Plan Active]</i>", body_regular))
 
     elements.append(Spacer(1, 10))
     sig_p2 = [
@@ -802,7 +769,46 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5 & 6: NCNDA
+    # PAGE 5: ADDENDUM — MENUS (EMBEDDED BRAND MENU CATALOGUE)
+    menu_title = ParagraphStyle('MenuTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
+    menu_sec = ParagraphStyle('MenuSec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE, spaceBefore=8, spaceAfter=4)
+    menu_body = ParagraphStyle('MenuBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=12, textColor=DARK_TEXT)
+
+    elements.append(Paragraph("ADDENDUM — MENUS & BRAND CONCEPT GUIDES", menu_title))
+    elements.append(Paragraph("PHATBUNS SOUTH AFRICA — APPROVED PRODUCT & MENU SPECIFICATIONS", ParagraphStyle('MenuSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#555555'), alignment=1)))
+    elements.append(Spacer(1, 6))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
+
+    elements.append(Paragraph("<b>1. OFFICIAL BRAND MENU ATTACHMENTS & SPECIFICATIONS</b>", menu_sec))
+    elements.append(Paragraph("The following brand menus, proprietary product formulations, and concept guides form an integral part of this Franchise Feasibility and Investor Pack. All approved franchisees must adhere strictly to these product specifications and pricing guidelines.", menu_body))
+    elements.append(Spacer(1, 6))
+
+    if selected_menus:
+        menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Operational Status</b>", body_white_bold)]]
+        for idx, m_file in enumerate(selected_menus, 1):
+            menu_table_data.append([
+                Paragraph(str(idx), body_regular),
+                Paragraph(f"<b>{m_file}</b>", body_bold),
+                Paragraph("Approved Core Offering / Standard Specification", body_regular)
+            ])
+        t_menus = Table(menu_table_data, colWidths=[30, 310, 200])
+        t_menus.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
+            ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+            ('PADDING', (0,0), (-1,-1), 5),
+            ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
+        ]))
+        elements.append(t_menus)
+    else:
+        elements.append(Paragraph("<i>No specific menus selected. Standard Phatbuns master menu applies.</i>", menu_body))
+
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("<b>2. QUALITY ASSURANCE & SUPPLY CHAIN COMPLIANCE</b>", menu_sec))
+    elements.append(Paragraph("All ingredients, proteins, proprietary sauces, and packaging components must be procured exclusively through approved Phatbuns South Africa central supply chain partners. Substitution of ingredients or unauthorized menu modifications are strictly prohibited under the Master Franchise Agreement.", menu_body))
+
+    elements.append(PageBreak())
+
+    # PAGE 6 & 7: NCNDA
     ncnda_title = ParagraphStyle('NCNDATitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
     ncnda_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
     ncnda_sec = ParagraphStyle('NCNDASec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=9, textColor=MAROON_LINE, spaceBefore=6, spaceAfter=2)
@@ -1156,6 +1162,8 @@ with tab1:
     with col_inv2:
         target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. 0827867712 or +27827867712")
 
+    selected_menus = st.session_state.get("selected_brand_menus", [])
+
     # STRICT DE-DUPLICATION FILE RESOLUTION LOGIC
     if selected_pack_choice != "Create New Pack for Active Site...":
         chosen_path = existing_packs_map[selected_pack_choice]
@@ -1183,7 +1191,7 @@ with tab1:
             pdf_buffer = generate_pdf_report(
                 location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
                 max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
-                ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img
+                ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img, selected_menus=selected_menus
             )
             pdf_bytes = pdf_buffer.getvalue()
             with open(target_local_path, "wb") as f:
@@ -1204,9 +1212,8 @@ with tab1:
             if not target_applicant_email:
                 st.error("Please enter a valid Franchisee Email Address above.")
             else:
-                selected_menus = st.session_state.get("selected_brand_menus", [])
                 sent_ok, send_msg = send_franchisee_email_pack(
-                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename, selected_menus
+                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename
                 )
                 if sent_ok:
                     st.success(f"✅ {send_msg}")
@@ -1230,11 +1237,11 @@ with tab1:
 # TAB 2: BRAND MENUS & ATTACHMENTS
 with tab2:
     st.header("📖 Brand Menus & Concept Collateral Selector")
-    st.markdown("Select which brand menu PDF files from your **Phatbuns Menu** collection should be attached to the franchisee dispatch email.")
+    st.markdown("Select which brand menu PDF files from your **Phatbuns Menu** collection to embed directly as an **Addendum — Menus** inside the investor PDF pack.")
 
     available_menus = get_available_brand_menus()
 
-    st.subheader("Select Menus to Include in Investor Email Pack:")
+    st.subheader("Select Menus to Embed into PDF Pack:")
     
     selected_menus = []
     for menu in available_menus:
@@ -1244,7 +1251,7 @@ with tab2:
 
     st.session_state["selected_brand_menus"] = selected_menus
 
-    st.info(f"📋 **Selected Attachments:** {len(selected_menus)} Brand Menu(s) queued to be emailed.")
+    st.info(f"📋 **Embedded Menus:** {len(selected_menus)} Brand Menu(s) selected for inclusion in the PDF addendum.")
 
     st.divider()
 
