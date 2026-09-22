@@ -14,6 +14,15 @@ import streamlit as st
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
+# Google Drive API Imports
+try:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaIoBaseUpload
+    HAS_GDRIVE = True
+except ImportError:
+    HAS_GDRIVE = False
+
 # ReportLab Imports for Executive PDF Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -130,6 +139,70 @@ def get_available_brand_menus():
             menu_files.append(dm)
 
     return sorted(menu_files)
+
+# ==========================================
+# GOOGLE DRIVE API SYNC HELPERS
+# ==========================================
+GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
+
+def get_drive_service():
+    if not HAS_GDRIVE:
+        return None
+    try:
+        if "gcp_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=GDRIVE_SCOPES)
+            return build('drive', 'v3', credentials=creds)
+        elif os.path.exists("service_account.json"):
+            creds = service_account.Credentials.from_service_account_file("service_account.json", scopes=GDRIVE_SCOPES)
+            return build('drive', 'v3', credentials=creds)
+    except Exception as e:
+        st.warning(f"Google Drive API Authentication skipped: {e}")
+    return None
+
+def get_or_create_drive_folder(service, folder_name, parent_id=None):
+    try:
+        query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+        if parent_id:
+            query += f" and '{parent_id}' in parents"
+        
+        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        files = results.get('files', [])
+        
+        if files:
+            return files[0]['id']
+        else:
+            file_metadata = {
+                'name': folder_name,
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
+            if parent_id:
+                file_metadata['parents'] = [parent_id]
+            folder = service.files().create(body=file_metadata, fields='id').execute()
+            return folder.get('id')
+    except Exception:
+        return None
+
+def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
+    try:
+        media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
+        query = f"name = '{filename}' and '{parent_folder_id}' in parents and trashed = false"
+        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        files = results.get('files', [])
+        
+        if files:
+            file_id = files[0]['id']
+            updated_file = service.files().update(fileId=file_id, media_body=media).execute()
+            return updated_file.get('id')
+        else:
+            file_metadata = {
+                'name': filename,
+                'parents': [parent_folder_id]
+            }
+            file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            return file.get('id')
+    except Exception:
+        return None
 
 # ==========================================
 # COVER PAGE COMPOSITOR
@@ -945,7 +1018,6 @@ with tab1:
         full_key = f"{site_key}_{key}"
         st.session_state[full_key] = val
 
-    # Apply extracted values directly to this specific site's isolated state if available
     if extracted_parsed_res:
         if 'shop_code' in extracted_parsed_res: set_site_state("shop_code", str(extracted_parsed_res['shop_code']))
         if 'internal_gla' in extracted_parsed_res: set_site_state("internal_gla", float(extracted_parsed_res['internal_gla']))
@@ -1148,10 +1220,10 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: MANDATORY SUBFOLDER CREATION & AUTOMATIC SAVING
+    # SECTION 6: GOOGLE DRIVE CLOUD FOLDER CREATION & UPLOADING
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
-    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `./Locations/{location_name}/` and saves the exact site PDF inside it.")
+    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder in Google Drive under `Locations/{location_name}/` and uploads the exact site PDF directly.")
 
     col_inv1, col_inv2 = st.columns(2)
     with col_inv1:
@@ -1178,14 +1250,9 @@ with tab1:
             "popia_consent": 1
         })
 
-    # ALWAYS CREATE DEDICATED SUBFOLDER & SAVE GENERATED PDF ON DEMAND
-    clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
-    site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
-    os.makedirs(site_subfolder_path, exist_ok=True)
-
+    # GENERATE PDF REPORT
     clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
     pdf_filename = f"{clean_site_slug}_{shop_code}_Phatbuns_Master_Investor_Pack.pdf"
-    target_local_path = os.path.join(site_subfolder_path, pdf_filename)
 
     pdf_buffer = generate_pdf_report(
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
@@ -1194,10 +1261,18 @@ with tab1:
     )
     pdf_bytes = pdf_buffer.getvalue()
 
-    with open(target_local_path, "wb") as f:
-        f.write(pdf_bytes)
-
-    st.success(f"📁 **Dedicated Subfolder Created & PDF Saved:** `Locations/{clean_site_folder_name}/{pdf_filename}`")
+    # SYNC TO GOOGLE DRIVE API DIRECTLY
+    drive_service = get_drive_service()
+    if drive_service:
+        try:
+            locations_root_id = get_or_create_drive_folder(drive_service, "Locations")
+            if locations_root_id:
+                site_folder_id = get_or_create_drive_folder(drive_service, location_name.strip(), parent_id=locations_root_id)
+                if site_folder_id:
+                    upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
+                    st.success(f"☁️ **Google Drive Synced:** Subfolder `Locations/{location_name}/` and `{pdf_filename}` created/updated successfully in Google Drive!")
+        except Exception as e:
+            st.warning(f"Google Drive cloud sync warning: {e}")
 
     btn_col1, btn_col2 = st.columns(2)
     
