@@ -151,50 +151,38 @@ def find_existing_site_file(loc_name):
     return None, None
 
 # ==========================================
-# COVER PAGE COMPOSITOR USING IMG_5357.jpeg
+# COVER PAGE COMPOSITOR USING PHOTO 2 (IMG_5357.jpeg)
 # ==========================================
 def create_cover_page_image(loc_name, shop_code):
     asset_map = get_asset_images_map()
     bg_path = asset_map.get("cover_bg")
-    logo_path = asset_map.get("phatbuns_sa") or asset_map.get("phatbuns")
 
     if bg_path and os.path.exists(bg_path):
         bg_img = Image.open(bg_path).convert("RGB")
     else:
+        # Fallback Canvas if image path is missing
         bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
     bg_w, bg_h = bg_img.size
-
-    # Overlay Phatbuns SA Logo onto Cover Photo
-    if logo_path and os.path.exists(logo_path):
-        logo_img = Image.open(logo_path).convert("RGBA")
-        logo_w, logo_h = logo_img.size
-        
-        target_logo_w = int(bg_w * 0.45)
-        aspect_ratio = logo_h / logo_w
-        target_logo_h = int(target_logo_w * aspect_ratio)
-        
-        logo_resized = logo_img.resize((target_logo_w, target_logo_h), Image.Resampling.LANCZOS)
-        logo_x = (bg_w - target_logo_w) // 2
-        logo_y = int(bg_h * 0.35)
-        bg_img.paste(logo_resized, (logo_x, logo_y), logo_resized)
-
     draw = ImageDraw.Draw(bg_img)
     display_text = f"{loc_name.upper()} ({shop_code.upper()})"
     
     try:
-        font = ImageFont.truetype("arialbd.ttf", int(bg_w * 0.045))
+        font = ImageFont.truetype("arialbd.ttf", int(bg_w * 0.042))
     except IOError:
         font = ImageFont.load_default()
 
-    text_y = int(bg_h * 0.85)
-    outline_color = (15, 15, 15)
-    fill_color = (255, 215, 0)
+    # Positioned nicely near the bottom of the cover photo
+    text_y = int(bg_h * 0.88)
+    outline_color = (20, 20, 20)
+    fill_color = (255, 215, 0) # Phatbuns Gold/Yellow Accent
 
+    # Draw dark shadow outline for readability over background image
     for dx in range(-4, 5):
         for dy in range(-4, 5):
             draw.text(((bg_w // 2) + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
     
+    # Draw primary text
     draw.text((bg_w // 2, text_y), display_text, font=font, fill=fill_color, anchor="mm")
 
     img_byte_arr = io.BytesIO()
@@ -306,8 +294,6 @@ def process_uploaded_file(uploaded_file):
 # ==========================================
 def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[]):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
-    
-    # Hardcoded App Password generated from your Google Account
     sender_password = "ehyjsvzhffmbvuaf"
 
     try:
@@ -451,7 +437,7 @@ st.markdown("""
     text-decoration: none;
     margin-top: 5px;
 }
-/* STRICT MOBILE & DESKTOP FLEXBOX LOCK (FORCES HORIZONTAL ALIGNMENT & PREVENTS STACKING) */
+/* STRICT MOBILE & DESKTOP FLEXBOX LOCK */
 .logo-row-locked {
     display: flex !important;
     flex-direction: row !important;
@@ -484,10 +470,8 @@ b64_bb = get_image_base64(logo_map.get("butter_brulee"))
 b64_pv = get_image_base64(logo_map.get("phatville"))
 b64_pb = get_image_base64(logo_map.get("phatbuns"))
 
-# Speech Bubble Phatbuns SA Logo for Header Title
 banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
 
-# Main Banner
 st.markdown(f"""
 <div class="brand-banner">
     <div class="brand-title-container">
@@ -500,7 +484,6 @@ st.markdown(f"""
 
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# LOCKED HORIZONTAL FLEXBOX ROW (Guaranteed side-by-side alignment across mobile & desktop)
 locked_logos_html = f"""
 <div class="logo-row-locked">
     {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item-locked"/>' if b64_ds else ''}
@@ -513,7 +496,6 @@ locked_logos_html = f"""
 st.markdown(locked_logos_html, unsafe_allow_html=True)
 
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
-
 st.write("")
 
 # Database Setup
@@ -632,7 +614,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements = []
 
-    # PAGE 0: COVER / INTRODUCTION PAGE (IMG_5357.jpeg)
+    # PAGE 0: COVER / INTRODUCTION PAGE (PHOTO 2: IMG_5357.jpeg)
     cover_img_bytes = create_cover_page_image(loc_name, shop)
     rl_cover_img = RLImage(cover_img_bytes, width=545, height=770)
     elements.append(rl_cover_img)
