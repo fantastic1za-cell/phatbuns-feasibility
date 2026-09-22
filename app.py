@@ -558,7 +558,7 @@ SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 
 # ==========================================
 def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img, selected_menus=[]):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=25, leftMargin=25, topMargin=25, bottomMargin=25)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=22, leftMargin=22, topMargin=22, bottomMargin=22)
     styles = getSampleStyleSheet()
 
     NAVY_HEADER = colors.HexColor('#131B2A')
@@ -569,12 +569,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     BORDER_COLOR = colors.HexColor('#D3D3D3')
     MAROON_LINE = colors.HexColor('#8B0000')
 
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, textColor=WHITE_TEXT, leading=18)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=WHITE_TEXT, leading=16)
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, leading=10, alignment=2)
-    sec_banner_style = ParagraphStyle('SecBannerStyle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=9, textColor=WHITE_TEXT, leading=11)
-    body_bold = ParagraphStyle('BodyBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=DARK_TEXT)
-    body_regular = ParagraphStyle('BodyRegular', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=9, textColor=DARK_TEXT)
-    body_white_bold = ParagraphStyle('BodyWhiteBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9, textColor=WHITE_TEXT)
+    sec_banner_style = ParagraphStyle('SecBannerStyle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=8.5, textColor=WHITE_TEXT, leading=10)
+    body_bold = ParagraphStyle('BodyBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=8.5, textColor=DARK_TEXT)
+    body_regular = ParagraphStyle('BodyRegular', parent=styles['Normal'], fontName='Helvetica', fontSize=7, leading=8.5, textColor=DARK_TEXT)
+    body_white_bold = ParagraphStyle('BodyWhiteBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=8.5, textColor=WHITE_TEXT)
 
     elements = []
 
@@ -587,25 +587,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     # PAGE 1: SITE EVALUATION
     header_data = [
         [Paragraph("PHATBUNS FEASIBILITY", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)],
-        [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#CCCCCC'))), ""]
+        [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, textColor=colors.HexColor('#CCCCCC'))), ""]
     ]
-    t_header = Table(header_data, colWidths=[370, 170])
-    t_header.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 6), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
+    t_header = Table(header_data, colWidths=[370, 181])
+    t_header.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elements.append(t_header)
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 3))
 
     kpi_bar_data = [
         [Paragraph("TURNKEY SETUP", body_regular), Paragraph("WORKING CAPITAL", body_regular), Paragraph("BASE NET RENTAL", body_regular), Paragraph("OPS COST", body_regular)],
         [Paragraph(f"<b>R {int(round(capital)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(wc)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(int_rent * int_gla)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(ops_cost * total_gla)):,}</b>", body_bold)],
-        [Paragraph("Excl. VAT (Turnkey)", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Suggested Reserve", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph(f"R {int(round(int_rent))} / m² pm", ParagraphStyle('Micro', parent=body_regular, fontSize=6)), Paragraph("Gross Rental Terms", ParagraphStyle('Micro', parent=body_regular, fontSize=6))]
+        [Paragraph("Excl. VAT (Turnkey)", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5)), Paragraph("Suggested Reserve", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5)), Paragraph(f"R {int(round(int_rent))} / m² pm", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5)), Paragraph("Gross Rental Terms", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5))]
     ]
-    t_kpi_bar = Table(kpi_bar_data, colWidths=[135, 135, 135, 135])
-    t_kpi_bar.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4), ('ALIGN', (0,0), (-1,-1), 'CENTER')]))
+    t_kpi_bar = Table(kpi_bar_data, colWidths=[137, 137, 137, 140])
+    t_kpi_bar.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('ALIGN', (0,0), (-1,-1), 'CENTER')]))
     elements.append(t_kpi_bar)
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
 
-    sec1_banner = Table([[Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", sec_banner_style)]], colWidths=[540])
-    sec1_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
+    sec1_banner = Table([[Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", sec_banner_style)]], colWidths=[551])
+    sec1_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec1_banner)
 
     sec1_table_data = [
@@ -617,13 +617,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Mall GLA Size", body_bold), Paragraph("55,000 m² Regional Flagship", body_regular), Paragraph("Working Capital Reserve (Excluded)", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
         [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Captured & Uploaded)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {int(round(total_lease_outlay*2)):,}", body_regular)],
     ]
-    t_sec1 = Table(sec1_table_data, colWidths=[110, 150, 180, 100])
-    t_sec1.setStyle(TableStyle([('BACKGROUND', (0,0), (1,0), NAVY_HEADER), ('BACKGROUND', (2,0), (3,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    t_sec1 = Table(sec1_table_data, colWidths=[110, 155, 196, 90])
+    t_sec1.setStyle(TableStyle([('BACKGROUND', (0,0), (1,0), NAVY_HEADER), ('BACKGROUND', (2,0), (3,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec1)
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
 
-    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[540])
-    sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
+    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[551])
+    sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec2_banner)
 
     sec2_table_data = [
@@ -634,13 +634,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Turnover Rental Clause", body_bold), Paragraph("7.0% of Net Monthly Turnover vs Base Net Rental", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
     ]
-    t_sec2 = Table(sec2_table_data, colWidths=[150, 240, 150])
-    t_sec2.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    t_sec2 = Table(sec2_table_data, colWidths=[150, 241, 160])
+    t_sec2.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec2)
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
 
-    sec3_banner = Table([[Paragraph("03. CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[540])
-    sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
+    sec3_banner = Table([[Paragraph("03. CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[551])
+    sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec3_banner)
 
     sec3_grid_data = [
@@ -650,34 +650,34 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Catchment Household Count", body_bold), Paragraph("110,000–135,000 Active Households (10 km Radius)", body_regular)],
         [Paragraph("In-Mall QSR Competitor Profile", body_bold), Paragraph("RocoMamas, Fournos, Spur, Checkers, Woolworths Food", body_regular)]
     ]
-    t_sec3_grid = Table(sec3_grid_data, colWidths=[150, 390])
-    t_sec3_grid.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    t_sec3_grid = Table(sec3_grid_data, colWidths=[150, 401])
+    t_sec3_grid.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec3_grid)
 
     elements.append(PageBreak())
 
     # PAGE 2: PAYBACK MATRIX
-    p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=18, textColor=DARK_TEXT, alignment=1)
-    p2_subtitle = ParagraphStyle('P2SubTitle', parent=styles['Normal'], fontName='Helvetica', fontSize=10, textColor=colors.HexColor('#555555'), alignment=1)
+    p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=16, textColor=DARK_TEXT, alignment=1)
+    p2_subtitle = ParagraphStyle('P2SubTitle', parent=styles['Normal'], fontName='Helvetica', fontSize=9, textColor=colors.HexColor('#555555'), alignment=1)
 
     elements.append(Paragraph("PHATBUNS SOUTH AFRICA", p2_title))
     elements.append(Paragraph(f"Bankable Commercial Feasibility & Investment Review — {loc_name} ({shop})", p2_subtitle))
-    elements.append(Spacer(1, 6))
-    elements.append(HRFlowable(width="100%", thickness=1.5, color=MAROON_LINE, spaceBefore=2, spaceAfter=8))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=1.2, color=MAROON_LINE, spaceBefore=2, spaceAfter=6))
 
-    elements.append(Paragraph("1. Site & Space Specification", ParagraphStyle('P2Sec', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
+    elements.append(Paragraph("1. Site & Space Specification", ParagraphStyle('P2Sec', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE)))
     site_p2_data = [
         [Paragraph("<b>Location Name:</b>", body_regular), Paragraph(str(loc_name), body_regular), Paragraph("<b>Shop Code:</b>", body_regular), Paragraph(str(shop), body_regular)],
         [Paragraph("<b>Suburb / Node:</b>", body_regular), Paragraph(str(suburb), body_regular), Paragraph("<b>Store Model:</b>", body_regular), Paragraph(str(model), body_regular)],
         [Paragraph("<b>Internal GLA:</b>", body_regular), Paragraph(f"{int_gla:.2f} sqm", body_regular), Paragraph("<b>External Area:</b>", body_regular), Paragraph(f"{ext_gla:.2f} sqm", body_regular)],
         [Paragraph("<b>Total Footprint:</b>", body_regular), Paragraph(f"{total_gla:.2f} sqm", body_regular), Paragraph("<b>Seating Capacity:</b>", body_regular), Paragraph(f"{max_seats} Std / {high_seats} Dense", body_regular)]
     ]
-    t_p2_site = Table(site_p2_data, colWidths=[110, 150, 110, 150])
-    t_p2_site.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4)]))
+    t_p2_site = Table(site_p2_data, colWidths=[110, 165, 110, 166], hAlign='CENTER')
+    t_p2_site.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(t_p2_site)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 6))
 
-    elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", ParagraphStyle('P2Sec2', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
+    elements.append(Paragraph("2. Financial Outlay & Debt Serviceability", ParagraphStyle('P2Sec2', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE)))
     
     green_recovery_style = ParagraphStyle('GreenRecovery', parent=body_regular, textColor=colors.HexColor('#008000'), fontName='Helvetica-Bold')
     
@@ -689,12 +689,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("<b>Bank Debt Service Coverage Ratio (DSCR):</b>", body_regular), Paragraph(f"<b>{dscr:.2f}x</b> (Required > 1.30x)", body_regular)],
         [Paragraph("<b>Full Capital Recovery Period:</b>", body_regular), Paragraph("<b>Month 15 (Avg. Required Monthly Turnover: R 1,098,160)</b>", green_recovery_style)],
     ]
-    t_p2_fin = Table(fin_p2_data, colWidths=[230, 290])
-    t_p2_fin.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 4)]))
+    t_p2_fin = Table(fin_p2_data, colWidths=[230, 321], hAlign='CENTER')
+    t_p2_fin.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(t_p2_fin)
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 6))
 
-    elements.append(Paragraph(f"3. INVESTMENT RECOVERY & PAYBACK MATRIX (R{capital/1000000:.1f}M CAPEX AMORTIZATION @ 55% BLENDED GP)", ParagraphStyle('P2Sec3', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE)))
+    elements.append(Paragraph(f"3. INVESTMENT RECOVERY & PAYBACK MATRIX (R{capital/1000000:.1f}M CAPEX AMORTIZATION @ 55% BLENDED GP)", ParagraphStyle('P2Sec3', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=9.5, textColor=MAROON_LINE)))
     matrix_table_data = [[Paragraph(f"<b>{col}</b>", body_regular) for col in payback_df.columns]]
     for idx, row in payback_df.iterrows():
         row_cells = []
@@ -702,23 +702,23 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             row_cells.append(Paragraph(str(row[col]), body_regular))
         matrix_table_data.append(row_cells)
 
-    t_matrix = Table(matrix_table_data, colWidths=[140, 80, 80, 80, 80, 80])
+    t_matrix = Table(matrix_table_data, colWidths=[141, 82, 82, 82, 82, 82], hAlign='CENTER')
     t_matrix.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F2F2F2')),
         ('BACKGROUND', (0,3), (-1,3), colors.HexColor('#FFF2CC')),
         ('BACKGROUND', (0,4), (-1,4), colors.HexColor('#1F1F1F')),
         ('TEXTCOLOR', (0,4), (-1,4), colors.white),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 4),
+        ('PADDING', (0,0), (-1,-1), 3),
     ]))
     elements.append(t_matrix)
 
     elements.append(PageBreak())
 
     # PAGE 3: 5-YEAR P&L
-    elements.append(Paragraph("4. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST", ParagraphStyle('P3PnlH', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
+    elements.append(Paragraph("4. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST", ParagraphStyle('P3PnlH', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
     elements.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 35% COGS | 9% Royalties & Marketing", body_regular))
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 6))
 
     pnl_table_data = [[Paragraph(f"<b>{col}</b>", body_white_bold) for col in df_pnl_annual.columns]]
     for idx, row in df_pnl_annual.iterrows():
@@ -732,21 +732,21 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             row_cells.append(Paragraph(formatted, body_regular))
         pnl_table_data.append(row_cells)
 
-    t_pnl = Table(pnl_table_data, colWidths=[50, 68, 62, 60, 58, 60, 62, 60, 60])
+    t_pnl = Table(pnl_table_data, colWidths=[51, 69, 64, 62, 59, 62, 64, 60, 60], hAlign='CENTER')
     t_pnl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 3),
+        ('PADDING', (0,0), (-1,-1), 2.5),
         ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
     ]))
     elements.append(t_pnl)
 
     elements.append(PageBreak())
 
-    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (ROBUSTLY RENDERED OR BOLD FALLBACK)
-    elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (OPTIMIZED HEIGHT TO PREVENT OVERFLOW)
+    elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 6))
 
     effective_blueprint_img = blueprint_pil_img
     if effective_blueprint_img is None:
@@ -762,38 +762,39 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=520, height=360)
+            # Optimized dimensions to ensure it never triggers a LayoutError
+            rl_blueprint = RLImage(bp_byte_arr, width=480, height=260)
             elements.append(rl_blueprint)
         except Exception:
-            elements.append(Paragraph("<b>Not Available Yet</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=12)))
+            elements.append(Paragraph("<b>Not Available Yet</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=11)))
     else:
-        elements.append(Paragraph("<b>Not Available Yet</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=12)))
+        elements.append(Paragraph("<b>Not Available Yet</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=11)))
 
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 8))
     sig_p2 = [
         [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_regular), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_regular)],
         [Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular), Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular)]
     ]
-    t_sig_p2 = Table(sig_p2, colWidths=[260, 260])
-    t_sig_p2.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 4)]))
+    t_sig_p2 = Table(sig_p2, colWidths=[270, 271], hAlign='CENTER')
+    t_sig_p2.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(t_sig_p2)
 
     elements.append(PageBreak())
 
     # PAGE 5: ADDENDUM — MENUS & INTERACTIVE CLICKABLE CATALOGUE LINKS
-    menu_title = ParagraphStyle('MenuTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
-    menu_sec = ParagraphStyle('MenuSec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=10, textColor=MAROON_LINE, spaceBefore=8, spaceAfter=4)
-    menu_body = ParagraphStyle('MenuBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8.5, leading=12, textColor=DARK_TEXT)
-    menu_link_style = ParagraphStyle('MenuLink', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, textColor=colors.HexColor('#0066CC'))
+    menu_title = ParagraphStyle('MenuTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, textColor=NAVY_HEADER, alignment=1)
+    menu_sec = ParagraphStyle('MenuSec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=9.5, textColor=MAROON_LINE, spaceBefore=6, spaceAfter=3)
+    menu_body = ParagraphStyle('MenuBody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
+    menu_link_style = ParagraphStyle('MenuLink', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=colors.HexColor('#0066CC'))
 
     elements.append(Paragraph("ADDENDUM — MENUS & BRAND CONCEPT GUIDES", menu_title))
-    elements.append(Paragraph("PHATBUNS SOUTH AFRICA — APPROVED PRODUCT & MENU SPECIFICATIONS", ParagraphStyle('MenuSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#555555'), alignment=1)))
-    elements.append(Spacer(1, 6))
-    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
+    elements.append(Paragraph("PHATBUNS SOUTH AFRICA — APPROVED PRODUCT & MENU SPECIFICATIONS", ParagraphStyle('MenuSub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, textColor=colors.HexColor('#555555'), alignment=1)))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=6))
 
     elements.append(Paragraph("<b>1. OFFICIAL BRAND MENU ATTACHMENTS & SPECIFICATIONS</b>", menu_sec))
     elements.append(Paragraph("The following brand menus, proprietary product formulations, and concept guides form an integral part of this Franchise Feasibility and Investor Pack. Click any menu title below to access or download the complete PDF specification document.", menu_body))
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
 
     if not selected_menus:
         selected_menus = ["SMALL_NEW MENU DESIGN - Frozen.pdf", "SMALL_Build your own burger 148.pdf"]
@@ -811,50 +812,50 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             Paragraph(f"<b>{m_file}</b>", body_bold),
             Paragraph(menu_link_html, menu_link_style)
         ])
-    t_menus = Table(menu_table_data, colWidths=[30, 240, 270])
+    t_menus = Table(menu_table_data, colWidths=[25, 246, 280], hAlign='CENTER')
     t_menus.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ('PADDING', (0,0), (-1,-1), 4),
         ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
     ]))
     elements.append(t_menus)
 
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 6))
     elements.append(Paragraph("<b>2. QUALITY ASSURANCE & SUPPLY CHAIN COMPLIANCE</b>", menu_sec))
     elements.append(Paragraph("All ingredients, proteins, proprietary sauces, and packaging components must be procured exclusively through approved Phatbuns South Africa central supply chain partners. Substitution of ingredients or unauthorized menu modifications are strictly prohibited under the Master Franchise Agreement.", menu_body))
 
     elements.append(PageBreak())
 
     # PAGE 6 & 7: NCNDA
-    ncnda_title = ParagraphStyle('NCNDATitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=NAVY_HEADER, alignment=1)
-    ncnda_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=DARK_TEXT)
-    ncnda_sec = ParagraphStyle('NCNDASec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=9, textColor=MAROON_LINE, spaceBefore=6, spaceAfter=2)
+    ncnda_title = ParagraphStyle('NCNDATitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, textColor=NAVY_HEADER, alignment=1)
+    ncnda_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=DARK_TEXT)
+    ncnda_sec = ParagraphStyle('NCNDASec', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=8.5, textColor=MAROON_LINE, spaceBefore=4, spaceAfter=2)
 
     elements.append(Paragraph("NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)", ncnda_title))
-    elements.append(Paragraph("PHATBUNS SOUTH AFRICA — FRANCHISE EXPANSION PROGRAM", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=colors.HexColor('#555555'), alignment=1)))
-    elements.append(Spacer(1, 6))
-    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
+    elements.append(Paragraph("PHATBUNS SOUTH AFRICA — FRANCHISE EXPANSION PROGRAM", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, textColor=colors.HexColor('#555555'), alignment=1)))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=6))
 
     elements.append(Paragraph("<b>1. PARTIES TO THE AGREEMENT</b>", ncnda_sec))
     elements.append(Paragraph(f"This Non-Circumvention, Non-Disclosure & Confidentiality Agreement is entered into between <b>Phatbuns South Africa (Master Rights Holder)</b> and the prospective Franchisee/Investor detailed below regarding the commercial opportunity at <b>{loc_name} ({shop})</b>.", ncnda_body))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>2. CONFIDENTIAL INFORMATION</b>", ncnda_sec))
     elements.append(Paragraph("Confidential Information includes, without limitation, all trade secrets, store financial models, site feasibility studies, landlord lease negotiations, supplier lists, operational manuals, recipe specifications, and corporate structures provided by the Disclosing Party.", ncnda_body))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>3. NON-DISCLOSURE OBLIGATIONS</b>", ncnda_sec))
     elements.append(Paragraph("The Receiving Party agrees to hold all Confidential Information in strict confidence and shall not disclose, copy, reproduce, or distribute any portion thereof to any third party without express prior written consent from Phatbuns South Africa.", ncnda_body))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>4. NON-CIRCUMVENTION</b>", ncnda_sec))
     elements.append(Paragraph(f"The Receiving Party irrevocably agrees not to circumvent, avoid, or bypass Phatbuns South Africa in negotiating, acquiring, or leasing commercial property at <b>{loc_name}</b> or any affiliated site introduced by Phatbuns South Africa for a period of 24 months from the execution date.", ncnda_body))
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>5. GOVERNING LAW & JURISDICTION</b>", ncnda_sec))
     elements.append(Paragraph("This Agreement shall be governed by and construed in accordance with the laws of the Republic of South Africa. Any disputes arising shall be subject to arbitration under AFSA guidelines in Johannesburg.", ncnda_body))
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 6))
 
     elements.append(Paragraph("<b>6. APPLICANT & EXECUTION SIGNATURES</b>", ncnda_sec))
     
@@ -866,11 +867,11 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("<b>APPLICANT SIGNATURE:</b>", body_bold), Paragraph("_______________________  <b>DATE:</b> ____/____/________", body_regular)],
         [Paragraph("<b>PHATBUNS CEO SIGNATURE:</b>", body_bold), Paragraph("Nisaar Ally             <b>DATE:</b> ____/____/________", body_regular)],
     ]
-    t_ncnda_sig = Table(ncnda_sig_box, colWidths=[180, 340])
+    t_ncnda_sig = Table(ncnda_sig_box, colWidths=[180, 371], hAlign='CENTER')
     t_ncnda_sig.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 6),
+        ('PADDING', (0,0), (-1,-1), 4),
     ]))
     elements.append(t_ncnda_sig)
 
@@ -910,7 +911,7 @@ def generate_pipeline_pdf(df_pipeline):
                 Paragraph(str(row['ceo_approval']), body_style)
             ])
 
-        t_pipe = Table(table_data, colWidths=[25, 100, 110, 85, 90, 65, 65])
+        t_pipe = Table(table_data, colWidths=[25, 100, 110, 85, 90, 65, 65], hAlign='CENTER')
         t_pipe.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')), ('PADDING', (0,0), (-1,-1), 4)]))
         elements.append(t_pipe)
     else:
@@ -1214,7 +1215,6 @@ with tab1:
                 pdf_bytes = f.read()
             st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from folder `{os.path.basename(found_folder_path)}`.")
         else:
-            # Create subfolder inside Locations for the active site
             clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
             site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
             os.makedirs(site_subfolder_path, exist_ok=True)
