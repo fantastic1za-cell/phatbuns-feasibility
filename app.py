@@ -40,52 +40,51 @@ except ImportError:
 # ==========================================
 def create_cover_page_image(loc_name, shop_code):
     """
-    Dynamically generates the cover page image by layering the SA Phatbuns logo
-    at half size over the background spread and drawing the location text at the bottom.
+    Generates the A4 Cover Page by layering the Phatbuns South Africa logo (Photo 5)
+    centered on the food spread background (Photo 1) at half size, with centered location text.
     """
     bg_path = os.path.join(os.getcwd(), "assets", "cover_bg.jpg")
-    logo_path = os.path.join(os.getcwd(), "assets", "sa_logo.png")
+    logo_path = os.path.join(os.getcwd(), "assets", "phatbuns_sa_logo.png")
 
-    # Fallback to solid canvas if background images are not present in assets
     if os.path.exists(bg_path):
         bg_img = Image.open(bg_path).convert("RGB")
     else:
-        bg_img = Image.new("RGB", (1240, 1754), color=(255, 136, 0))
+        bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
     bg_w, bg_h = bg_img.size
 
-    # Layer SA Logo (Scaled to half size)
+    # Layer Phatbuns South Africa Logo (Photo 5) at 50% scale
     if os.path.exists(logo_path):
         logo_img = Image.open(logo_path).convert("RGBA")
         logo_w, logo_h = logo_img.size
-        new_logo_w = int(logo_w * 0.5)
-        new_logo_h = int(logo_h * 0.5)
+        
+        new_logo_w = int(logo_w * 0.50)
+        new_logo_h = int(logo_h * 0.50)
         logo_resized = logo_img.resize((new_logo_w, new_logo_h), Image.Resampling.LANCZOS)
         
         logo_x = (bg_w - new_logo_w) // 2
         logo_y = int(bg_h * 0.35)
         bg_img.paste(logo_resized, (logo_x, logo_y), logo_resized)
 
-    # Draw Centered Location Text at Bottom
+    # Centered Location Text at Bottom
     draw = ImageDraw.Draw(bg_img)
     display_text = f"{loc_name.upper()} ({shop_code.upper()})"
     
     try:
-        font = ImageFont.truetype("arialbd.ttf", 60)
+        font = ImageFont.truetype("arialbd.ttf", 55)
     except IOError:
         font = ImageFont.load_default()
 
-    # Text styling with dark outline and orange fill
-    text_y = int(bg_h * 0.82)
+    text_y = int(bg_h * 0.85)
     outline_color = (62, 39, 35)
     fill_color = (255, 215, 0)
 
-    # Draw outline
+    # Draw Text Outline
     for dx in range(-4, 5):
         for dy in range(-4, 5):
-            draw.text(((bg_w) // 2 + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
+            draw.text(((bg_w // 2) + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
     
-    # Draw main text
+    # Draw Main Text
     draw.text((bg_w // 2, text_y), display_text, font=font, fill=fill_color, anchor="mm")
 
     img_byte_arr = io.BytesIO()
@@ -217,7 +216,7 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
 Thank you for your interest in the Phatbuns South Africa franchise expansion program.
 
 Please find attached the complete Master Franchisee Investor Pack for {site_name}, including:
-1. Custom Cover Page & Brand Identity
+1. Executive Cover Page & Brand Identity
 2. Executive Site Evaluation & Investment Analysis
 3. Financial Outlay & Debt Serviceability Breakdown
 4. 5-Year Pro Forma Income Statement & 60-Month P&L Projections (35% COGS)
@@ -248,7 +247,7 @@ WhatsApp: +27 82 786 7712
         return False, str(e)
 
 # ==========================================
-# STREAMLIT PAGE CONFIG & STYLING
+# STREAMLIT PAGE CONFIG & BRAND STYLING
 # ==========================================
 st.set_page_config(
     page_title="Phatbuns Feasibility Engine",
@@ -268,7 +267,7 @@ st.markdown("""
     background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%);
     padding: 20px;
     border-radius: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     border: 1px solid #333;
     text-align: center;
 }
@@ -283,6 +282,13 @@ st.markdown("""
     color: #FFD1B3;
     font-size: 13px;
     margin-top: 4px;
+}
+.green-divider {
+    border: none;
+    height: 3px;
+    background-color: #72BF44;
+    border-radius: 2px;
+    margin: 15px 0;
 }
 .direct-dl-btn {
     display: inline-block;
@@ -299,12 +305,64 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Main Banner
 st.markdown("""
 <div class="brand-banner">
     <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
     <div class="brand-subtitle">Bankable Commercial Feasibility, Financial Modeling & Automated Lease Extraction</div>
 </div>
 """, unsafe_allow_html=True)
+
+# Top Green Accent Line
+st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
+
+# Centered 5 Brand Logos Header Row
+logo_col1, logo_col2, logo_col3, logo_col4, logo_col5, logo_col6, logo_col7 = st.columns([1, 2, 2, 2, 2, 2, 1])
+
+logo_paths = {
+    "phatville": os.path.join(os.getcwd(), "assets", "phatville_logo.png"),
+    "phatbuns": os.path.join(os.getcwd(), "assets", "phatbuns_logo.png"),
+    "butter_brulee": os.path.join(os.getcwd(), "assets", "butter_brulee_logo.png"),
+    "doorstep": os.path.join(os.getcwd(), "assets", "doorstep_desserts_logo.png"),
+    "phatbuns_sa": os.path.join(os.getcwd(), "assets", "phatbuns_sa_logo.png"),
+}
+
+with logo_col2:
+    if os.path.exists(logo_paths["phatville"]):
+        st.image(logo_paths["phatville"], use_container_width=True)
+    else:
+        st.markdown("<p style='text-align:center; font-weight:bold; color:#FF5500;'>PHATVILLE</p>", unsafe_allow_html=True)
+
+with logo_col3:
+    if os.path.exists(logo_paths["phatbuns"]):
+        st.image(logo_paths["phatbuns"], use_container_width=True)
+    else:
+        st.markdown("<p style='text-align:center; font-weight:bold; color:#FF5500;'>PHATBUNS</p>", unsafe_allow_html=True)
+
+with logo_col4:
+    if os.path.exists(logo_paths["butter_brulee"]):
+        st.image(logo_paths["butter_brulee"], use_container_width=True)
+    else:
+        st.markdown("<p style='text-align:center; font-weight:bold; color:#D4AF37;'>BUTTER BRÛLÉE</p>", unsafe_allow_html=True)
+
+with logo_col5:
+    if os.path.exists(logo_paths["doorstep"]):
+        st.image(logo_paths["doorstep"], use_container_width=True)
+    else:
+        st.markdown("<p style='text-align:center; font-weight:bold; color:#D8A7B1;'>DOORSTEP DESSERTS</p>", unsafe_allow_html=True)
+
+with logo_col6:
+    if os.path.exists(logo_paths["phatbuns_sa"]):
+        st.image(logo_paths["phatbuns_sa"], use_container_width=True)
+    else:
+        st.markdown("<p style='text-align:center; font-weight:bold; color:#FF5500;'>PHATBUNS SA 🇿🇦</p>", unsafe_allow_html=True)
+
+# Bottom Green Accent Line
+st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
+
+# 2-Line Spacing before Next Section
+st.write("")
+st.write("")
 
 # Database Setup
 DB_FILE = "phatbuns_franchisees.db"
@@ -428,9 +486,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements = []
 
-    # ==========================================
-    # PAGE 0: COVER PAGE (A4 Bleed Design)
-    # ==========================================
+    # PAGE 0: COVER PAGE
     cover_img_bytes = create_cover_page_image(loc_name, shop)
     rl_cover_img = RLImage(cover_img_bytes, width=545, height=770)
     elements.append(rl_cover_img)
@@ -998,7 +1054,7 @@ with tab1:
     btn_col1, btn_col2 = st.columns(2)
     
     with btn_col1:
-        # BASE64 DIRECT FILE DOWNLOAD (Fixes Mobile App Redirection Issue)
+        # BASE64 DIRECT FILE DOWNLOAD
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Save PDF Direct to Phone / Files</a>'
         st.markdown(dl_link_html, unsafe_allow_html=True)
