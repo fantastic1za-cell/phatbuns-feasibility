@@ -36,12 +36,12 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# COVER PAGE IMAGE COMPOSITOR
+# COVER PAGE IMAGE COMPOSITOR (ASSETS DIRECTORY)
 # ==========================================
 def create_cover_page_image(loc_name, shop_code):
     """
-    Generates the A4 Cover Page by layering the Phatbuns South Africa logo (Photo 5)
-    centered on the food spread background (Photo 1) at half size, with centered location text.
+    Generates the A4 Cover Page by layering the Phatbuns South Africa logo
+    centered on the food spread background at 50% scale, with centered location text.
     """
     bg_path = os.path.join(os.getcwd(), "assets", "cover_bg.jpg")
     logo_path = os.path.join(os.getcwd(), "assets", "phatbuns_sa_logo.png")
@@ -53,7 +53,7 @@ def create_cover_page_image(loc_name, shop_code):
 
     bg_w, bg_h = bg_img.size
 
-    # Layer Phatbuns South Africa Logo (Photo 5) at 50% scale
+    # Layer Phatbuns South Africa Logo at 50% scale
     if os.path.exists(logo_path):
         logo_img = Image.open(logo_path).convert("RGBA")
         logo_w, logo_h = logo_img.size
@@ -119,7 +119,7 @@ def extract_lease_from_jpg(pil_img):
           "mktg": float,
           "generator": float
         }
-        Preserve exact numbers (e.g. 270.0, 80.0, 40.0, 24.50).
+        Preserve exact numbers.
         """
         response = client.models.generate_content(
             model='gemini-2.5-flash',
@@ -316,7 +316,7 @@ st.markdown("""
 # Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# Centered 5 Brand Logos Header Row
+# Centered 5 Brand Logos Header Row (Loaded from assets directory)
 logo_col1, logo_col2, logo_col3, logo_col4, logo_col5, logo_col6, logo_col7 = st.columns([1, 2, 2, 2, 2, 2, 1])
 
 logo_paths = {
@@ -330,32 +330,22 @@ logo_paths = {
 with logo_col2:
     if os.path.exists(logo_paths["phatville"]):
         st.image(logo_paths["phatville"], use_container_width=True)
-    else:
-        st.markdown("<p style='text-align:center; font-weight:bold; color:#FF5500;'>PHATVILLE</p>", unsafe_allow_html=True)
 
 with logo_col3:
     if os.path.exists(logo_paths["phatbuns"]):
         st.image(logo_paths["phatbuns"], use_container_width=True)
-    else:
-        st.markdown("<p style='text-align:center; font-weight:bold; color:#FF5500;'>PHATBUNS</p>", unsafe_allow_html=True)
 
 with logo_col4:
     if os.path.exists(logo_paths["butter_brulee"]):
         st.image(logo_paths["butter_brulee"], use_container_width=True)
-    else:
-        st.markdown("<p style='text-align:center; font-weight:bold; color:#D4AF37;'>BUTTER BRÛLÉE</p>", unsafe_allow_html=True)
 
 with logo_col5:
     if os.path.exists(logo_paths["doorstep"]):
         st.image(logo_paths["doorstep"], use_container_width=True)
-    else:
-        st.markdown("<p style='text-align:center; font-weight:bold; color:#D8A7B1;'>DOORSTEP DESSERTS</p>", unsafe_allow_html=True)
 
 with logo_col6:
     if os.path.exists(logo_paths["phatbuns_sa"]):
         st.image(logo_paths["phatbuns_sa"], use_container_width=True)
-    else:
-        st.markdown("<p style='text-align:center; font-weight:bold; color:#FF5500;'>PHATBUNS SA 🇿🇦</p>", unsafe_allow_html=True)
 
 # Bottom Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
