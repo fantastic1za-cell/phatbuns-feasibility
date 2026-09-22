@@ -91,7 +91,7 @@ def get_asset_images_map():
         "doorstep": find_file_in_assets(["Doorstep Logo.PNG", "doorstep.png"]),
         "adega": find_file_in_assets(["Adega.PNG", "adega.png"]),
         "sa_flag": find_file_in_assets(["SAFlag.PNG", "saflag.png"]),
-        "cover_bg": find_file_in_assets(["IMG_5357.jpeg", "IMG_5357.jpg", "cover.jpg", "img_5357.jpeg"])
+        "cover_bg": find_file_in_assets(["coverSA.jpg", "coversa.jpg", "cover.jpg", "IMG_5357.jpeg", "img_5357.jpeg"])
     }
     return asset_map
 
@@ -224,18 +224,25 @@ def create_cover_page_image():
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def extract_lease_from_jpg(pil_img):
+def extract_lease_from_source(source_input):
+    """
+    Extract commercial lease offer details from either a PIL image or text/PDF text string.
+    """
     if not HAS_GENAI:
+        if isinstance(source_input, str):
+            return parse_landlord_text(source_input)
         return parse_landlord_text("")
     
     api_key = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
     if not api_key:
+        if isinstance(source_input, str):
+            return parse_landlord_text(source_input)
         return parse_landlord_text("")
 
     try:
         client = genai.Client(api_key=api_key)
         prompt = """
-        Extract commercial lease offer details from this image into a JSON object:
+        Extract commercial lease offer details from this input into a JSON object:
         {
           "shop_code": "string",
           "internal_gla": float,
@@ -250,9 +257,10 @@ def extract_lease_from_jpg(pil_img):
         }
         Preserve exact numbers.
         """
+        contents_payload = [source_input, prompt] if not isinstance(source_input, str) else [source_input + "\n\n" + prompt]
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=[pil_img, prompt],
+            contents=contents_payload,
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         data = json.loads(response.text)
@@ -260,6 +268,9 @@ def extract_lease_from_jpg(pil_img):
             return data
     except Exception:
         pass
+
+    if isinstance(source_input, str):
+        return parse_landlord_text(source_input)
     return parse_landlord_text("")
 
 def parse_landlord_text(text):
@@ -503,6 +514,17 @@ locked_logos_html = f"""
 st.markdown(locked_logos_html, unsafe_allow_html=True)
 
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
+
+# ==========================================
+# REFRESH BUTTON (EXACTLY AS INDICATED IN PHOTO 5)
+# ==========================================
+c_ref1, c_ref2 = st.columns([4, 1])
+with c_ref2:
+    if st.button("🔄 Refresh App / Clear State"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+
 st.write("")
 
 DB_FILE = "phatbuns_franchisees.db"
@@ -562,7 +584,9 @@ def get_pipeline_dataframe():
     conn.close()
     return df
 
+# Custom / Other Site placed at the TOP of the dictionary/dropdown options as requested
 LOCATION_LOOKUP = {
+    "Custom / Other Site...": "",
     "Bedford Centre": "Bedfordview, Johannesburg",
     "Loftus Park, Pretoria": "Arcadia, Pretoria East",
     "The Glen Shopping Centre": "Oakdene, Johannesburg South",
@@ -573,8 +597,7 @@ LOCATION_LOOKUP = {
     "Clearwater Mall": "Strubensvallei, Roodepoort",
     "Eastgate Shopping Centre": "Bedfordview, Ekurhuleni",
     "Gateway Theatre of Shopping": "Umhlanga, Durban",
-    "V&A Waterfront": "Green Point, Cape Town",
-    "Custom / Other Site...": ""
+    "V&A Waterfront": "Green Point, Cape Town"
 }
 
 STORE_MODELS = {
@@ -776,10 +799,16 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (STRICTLY ISOLATED)
-    elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
-    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
-    elements.append(Spacer(1, 6))
+    # ==========================================
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (EXACTLY FITTED TO PORTRAIT A4)
+    # ==========================================
+    blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
+    blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=10, textColor=ORANGE_BRAND, alignment=1)
+
+    elements.append(Paragraph(f"<b>{loc_name.upper()} — SHOP {shop.upper()}</b>", blueprint_header_style))
+    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT PLAN ({total_gla:.2f} M² | {model})</b>", blueprint_subheader_style))
+    elements.append(Spacer(1, 10))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=10))
 
     effective_blueprint_img = blueprint_pil_img
     if effective_blueprint_img is None:
@@ -795,25 +824,26 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=480, height=260)
+            # Fits neatly in portrait A4 page dimensions
+            rl_blueprint = RLImage(bp_byte_arr, width=500, height=580)
             elements.append(rl_blueprint)
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=11)))
     else:
-        placeholder_img = Image.new("RGB", (800, 450), color=(240, 240, 240))
+        placeholder_img = Image.new("RGB", (800, 920), color=(240, 240, 240))
         draw = ImageDraw.Draw(placeholder_img)
-        draw.rectangle([10, 10, 790, 440], outline=(100, 100, 100), width=3)
+        draw.rectangle([10, 10, 790, 910], outline=(100, 100, 100), width=3)
         try:
-            draw.text((300, 210), f"LAYOUT PLAN: {loc_name} ({shop})", fill=(50, 50, 50))
+            draw.text((280, 440), f"LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(50, 50, 50))
         except Exception:
             pass
         bp_byte_arr = io.BytesIO()
         placeholder_img.save(bp_byte_arr, format='JPEG', quality=95)
         bp_byte_arr.seek(0)
-        rl_blueprint = RLImage(bp_byte_arr, width=480, height=260)
+        rl_blueprint = RLImage(bp_byte_arr, width=500, height=580)
         elements.append(rl_blueprint)
 
-    elements.append(Spacer(1, 8))
+    elements.append(Spacer(1, 15))
     sig_p2 = [
         [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_regular), Paragraph("<b>CEO Signature:</b> Nisaar Ally", body_regular)],
         [Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular), Paragraph("<b>Date:</b> ____ / ____ / ________", body_regular)]
@@ -980,7 +1010,7 @@ with tab1:
 
     col_up1, col_up2 = st.columns(2)
     with col_up1:
-        uploaded_offer_file = st.file_uploader("Upload Offer File (JPG, PNG, PDF)", type=["jpg", "jpeg", "png", "pdf"])
+        uploaded_offer_file = st.file_uploader("Upload Offer File (JPG, PNG, PDF, Screenshot)", type=["jpg", "jpeg", "png", "pdf"])
     with col_up2:
         pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
 
@@ -989,12 +1019,12 @@ with tab1:
         if uploaded_offer_file is not None:
             pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
             if pil_img is not None:
-                extracted_parsed_res = extract_lease_from_jpg(pil_img)
+                extracted_parsed_res = extract_lease_from_source(pil_img)
             elif pdf_text:
-                extracted_parsed_res = parse_landlord_text(pdf_text)
+                extracted_parsed_res = extract_lease_from_source(pdf_text)
 
         if not extracted_parsed_res and pasted_text:
-            extracted_parsed_res = parse_landlord_text(pasted_text)
+            extracted_parsed_res = extract_lease_from_source(pasted_text)
 
     st.divider()
 
@@ -1003,9 +1033,9 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
-        location_name = st.text_input("Enter Custom Location Name", value="Bedford Centre") if selected_location == "Custom / Other Site..." else selected_location
+        location_name = st.text_input("Enter Custom Location Name", value="New Store Site") if selected_location == "Custom / Other Site..." else selected_location
 
-    # ISOLATED SESSION STATE NAMESPACE PER SITE TO PREVENT DATA MIXING
+    # ISOLATED SESSION STATE NAMESPACE PER SITE TO ENSURE ZERO DATA SPILLOVER
     site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower())
     
     def get_site_state(key, default_val):
@@ -1032,7 +1062,7 @@ with tab1:
         st.success(f"Lease terms successfully extracted and isolated for {location_name}!")
 
     with col2:
-        default_shop = get_site_state("shop_code", "U55")
+        default_shop = get_site_state("shop_code", "U01")
         shop_code = st.text_input("Shop / Unit Code", value=default_shop, key=f"{site_key}_shop_input")
         set_site_state("shop_code", shop_code)
 
@@ -1043,7 +1073,7 @@ with tab1:
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        def_int_gla = get_site_state("internal_gla", 78.0)
+        def_int_gla = get_site_state("internal_gla", 0.0)
         internal_gla = st.number_input("Internal Area (sqm)", value=def_int_gla, step=1.0, key=f"{site_key}_int_gla_input")
         set_site_state("internal_gla", internal_gla)
     with col_ext_gla:
@@ -1075,6 +1105,10 @@ with tab1:
     selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True, key=f"{site_key}_model_radio")
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
+    # AUTOMATED COMMERCIAL CAPITAL MAPPING BASED ON STORE MODEL TYPE (WITH FULL MANUAL OVERRIDE SUPPORT)
+    default_turnkey_capital = get_site_state(f"capex_{selected_model}", model_data["turnkey_capital"])
+    default_working_capital = get_site_state(f"wc_{selected_model}", model_data["working_capital"])
+
     internal_foh_sqm = internal_gla * model_data["foh_pct"]
     total_dining_sqm = internal_foh_sqm + external_gla
     max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
@@ -1088,14 +1122,16 @@ with tab1:
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
-        turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", value=model_data["turnkey_capital"], step=50000.0, format="%.2f", key=f"{site_key}_capex")
+        turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", value=default_turnkey_capital, step=50000.0, format="%.2f", key=f"{site_key}_capex_input")
+        set_site_state(f"capex_{selected_model}", turnkey_capital)
     with col_wc:
-        working_capital = st.number_input("Suggested Working Capital Requirement", value=model_data["working_capital"], step=25000.0, format="%.2f", key=f"{site_key}_wc")
+        working_capital = st.number_input("Suggested Working Capital Requirement", value=default_working_capital, step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
+        set_site_state(f"wc_{selected_model}", working_capital)
 
     st.subheader("Landlord Lease Breakdown (Per SQM)")
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        def_int_rent = get_site_state("internal_rent", 300.00)
+        def_int_rent = get_site_state("internal_rent", 0.00)
         internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=def_int_rent, step=10.0, format="%.2f", key=f"{site_key}_int_rent_input")
         set_site_state("internal_rent", internal_rent_sqm)
         total_internal_rent = internal_gla * internal_rent_sqm
@@ -1334,7 +1370,7 @@ with tab2:
     if uploaded_menu_files:
         for u_file in uploaded_menu_files:
             save_path = os.path.join(MENUS_DIR, u_file.name)
-            with open(save_path, "wb") as f:
+            with open(save_path, "wb":
                 f.write(u_file.read())
         st.success("New brand menu PDFs saved successfully!")
         st.rerun()
