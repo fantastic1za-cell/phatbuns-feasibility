@@ -36,7 +36,7 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# DIRECTORY & ROBUST ASSET FILE INITIALIZATION
+# DIRECTORY & ASSET FILE INITIALIZATION
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
 MENUS_DIR = os.path.join(ASSETS_DIR, "menus")
@@ -45,35 +45,34 @@ LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
 os.makedirs(MENUS_DIR, exist_ok=True)
 os.makedirs(LOCATIONS_DIR, exist_ok=True)
 
-def find_file_case_insensitive(target_names):
+def find_file_in_assets(target_names):
     """
-    Recursively searches the current working directory and all subdirectories
-    for target filenames regardless of case sensitivity or exact folder structure.
+    Looks for exact target filenames inside the ./assets/ folder and project root.
     """
+    search_dirs = [ASSETS_DIR, os.getcwd()]
     targets_clean = [t.lower() for t in target_names]
-    
-    for root, dirs, files in os.walk(os.getcwd()):
-        for file in files:
-            file_lower = file.lower()
-            if file_lower in targets_clean:
-                return os.path.join(root, file)
-            # Partial stem check
-            for t in targets_clean:
-                t_stem = t.split('.')[0]
-                if t_stem == file_lower.split('.')[0] and file_lower.endswith(('.png', '.jpg', '.jpeg')):
-                    return os.path.join(root, file)
+
+    for d in search_dirs:
+        if os.path.exists(d):
+            for file in os.listdir(d):
+                if file.lower() in targets_clean:
+                    return os.path.join(d, file)
+                for t in targets_clean:
+                    t_stem = t.split('.')[0]
+                    if t_stem == file.lower().split('.')[0] and file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        return os.path.join(d, file)
     return None
 
 def get_asset_images_map():
     asset_map = {
-        "phatbuns_sa": find_file_case_insensitive(["Phatbuns_SA.PNG", "Phatbuns_SA.png"]),
-        "phatville": find_file_case_insensitive(["Phatville.PNG", "Phatville.png"]),
-        "phatbuns": find_file_case_insensitive(["Phatbuns.PNG", "Phatbuns.png"]),
-        "butter_brulee": find_file_case_insensitive(["ButterBruleeLogo.PNG", "ButterBrulee.PNG", "ButterBruleeLogo.png"]),
-        "doorstep": find_file_case_insensitive(["Doorstep Logo.PNG", "Doorstep.PNG", "Doorstep Logo.png", "DoorstepLogo.png"]),
-        "adega": find_file_case_insensitive(["Adega.PNG", "Adega.png"]),
-        "sa_flag": find_file_case_insensitive(["SAFlag.PNG", "SAFlag.png"]),
-        "cover_bg": find_file_case_insensitive(["cover.jpg", "cover_bg.jpg", "background.jpg"])
+        "phatbuns_sa": find_file_in_assets(["Phatbuns_SA.PNG", "Phatbuns_SA.png"]),
+        "phatville": find_file_in_assets(["Phatville.PNG", "Phatville.png"]),
+        "phatbuns": find_file_in_assets(["Phatbuns.PNG", "Phatbuns.png"]),
+        "butter_brulee": find_file_in_assets(["ButterBruleeLogo.PNG", "ButterBrulee.PNG"]),
+        "doorstep": find_file_in_assets(["Doorstep Logo.PNG", "Doorstep.PNG"]),
+        "adega": find_file_in_assets(["Adega.PNG", "Adega.png"]),
+        "sa_flag": find_file_in_assets(["SAFlag.PNG", "SAFlag.png"]),
+        "cover_bg": find_file_in_assets(["IMG_5357.jpeg", "IMG_5357.jpg", "cover.jpg"])
     }
     return asset_map
 
@@ -136,7 +135,7 @@ def find_existing_site_file(loc_name):
     return None, None
 
 # ==========================================
-# COVER PAGE IMAGE COMPOSITOR
+# COVER PAGE COMPOSITOR USING IMG_5357.jpeg
 # ==========================================
 def create_cover_page_image(loc_name, shop_code):
     asset_map = get_asset_images_map()
@@ -150,15 +149,17 @@ def create_cover_page_image(loc_name, shop_code):
 
     bg_w, bg_h = bg_img.size
 
+    # Overlay Phatbuns SA Logo onto Cover Photo
     if logo_path and os.path.exists(logo_path):
         logo_img = Image.open(logo_path).convert("RGBA")
         logo_w, logo_h = logo_img.size
         
-        new_logo_w = int(logo_w * 0.50)
-        new_logo_h = int(logo_h * 0.50)
-        logo_resized = logo_img.resize((new_logo_w, new_logo_h), Image.Resampling.LANCZOS)
+        target_logo_w = int(bg_w * 0.45)
+        aspect_ratio = logo_h / logo_w
+        target_logo_h = int(target_logo_w * aspect_ratio)
         
-        logo_x = (bg_w - new_logo_w) // 2
+        logo_resized = logo_img.resize((target_logo_w, target_logo_h), Image.Resampling.LANCZOS)
+        logo_x = (bg_w - target_logo_w) // 2
         logo_y = int(bg_h * 0.35)
         bg_img.paste(logo_resized, (logo_x, logo_y), logo_resized)
 
@@ -166,12 +167,12 @@ def create_cover_page_image(loc_name, shop_code):
     display_text = f"{loc_name.upper()} ({shop_code.upper()})"
     
     try:
-        font = ImageFont.truetype("arialbd.ttf", 55)
+        font = ImageFont.truetype("arialbd.ttf", int(bg_w * 0.045))
     except IOError:
         font = ImageFont.load_default()
 
     text_y = int(bg_h * 0.85)
-    outline_color = (62, 39, 35)
+    outline_color = (15, 15, 15)
     fill_color = (255, 215, 0)
 
     for dx in range(-4, 5):
@@ -315,7 +316,7 @@ Thank you for taking the time to show interest in the Phatbuns South Africa fran
 We are excited to share our comprehensive Master Franchisee Investor Pack for {site_name}. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.
 
 Please find attached to this email:
-1. Executive Cover Page & Brand Identity Presentation
+1. Executive Cover Page & Brand Identity Presentation (IMG_5357)
 2. Site Evaluation & Commercial Investment Analysis ({site_name})
 3. Financial Outlay & Debt Serviceability Breakdown
 4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
@@ -435,38 +436,17 @@ st.markdown("""
     text-decoration: none;
     margin-top: 5px;
 }
-.logo-row-container {
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: space-around !important;
-    align-items: center !important;
-    width: 100% !important;
-    padding: 10px 0 !important;
-    gap: 8px !important;
-}
-.logo-item {
-    flex: 1 !important;
-    max-width: 18% !important;
-    height: 65px !important;
-    object-fit: contain !important;
-    display: block !important;
-    margin: 0 auto !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
 # LOAD LOGO MAP FOR BANNER & FOOTER
 logo_map = get_asset_images_map()
 b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
-b64_pv = get_image_base64(logo_map.get("phatville"))
-b64_pb = get_image_base64(logo_map.get("phatbuns"))
-b64_bb = get_image_base64(logo_map.get("butter_brulee"))
-b64_ds = get_image_base64(logo_map.get("doorstep"))
 
 # Speech Bubble Phatbuns SA Logo for Header Title
 banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
 
-# Main Banner with Exact Phatbuns SA Speech-Bubble Logo
+# Main Banner
 st.markdown(f"""
 <div class="brand-banner">
     <div class="brand-title-container">
@@ -477,37 +457,25 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# FLEXBOX HORIZONTAL LOGO BAR WITH NATIVE STREAMLIT FALLBACK
-if b64_sa or b64_pv or b64_pb or b64_bb or b64_ds:
-    logos_html = f"""
-    <div class="logo-row-container">
-        {'<img src="data:image/png;base64,' + b64_sa + '" class="logo-item"/>' if b64_sa else ''}
-        {'<img src="data:image/png;base64,' + b64_pv + '" class="logo-item"/>' if b64_pv else ''}
-        {'<img src="data:image/png;base64,' + b64_pb + '" class="logo-item"/>' if b64_pb else ''}
-        {'<img src="data:image/png;base64,' + b64_bb + '" class="logo-item"/>' if b64_bb else ''}
-        {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item"/>' if b64_ds else ''}
-    </div>
-    """
-    st.markdown(logos_html, unsafe_allow_html=True)
-else:
-    # Native Streamlit Image Columns Fallback
-    l_cols = st.columns(5)
-    brand_keys = ["doorstep", "butter_brulee", "phatville", "phatbuns_sa", "phatbuns"]
-    for idx, b_key in enumerate(brand_keys):
-        path = logo_map.get(b_key)
-        with l_cols[idx]:
-            if path and os.path.exists(path):
-                st.image(path, use_container_width=True)
-            else:
-                st.caption(f"⚠️ {b_key.replace('_', ' ').title()} Missing")
+# Native 5-Column Streamlit Logo Display Row from ./assets/
+logo_cols = st.columns(5)
+brand_display = [
+    ("Doorstep", logo_map.get("doorstep")),
+    ("Butter Brulee", logo_map.get("butter_brulee")),
+    ("Phatville", logo_map.get("phatville")),
+    ("Phatbuns SA", logo_map.get("phatbuns_sa")),
+    ("Phatbuns", logo_map.get("phatbuns"))
+]
 
-# Bottom Green Accent Line
+for idx, (label, fpath) in enumerate(brand_display):
+    with logo_cols[idx]:
+        if fpath and os.path.exists(fpath):
+            st.image(fpath, use_container_width=True)
+
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-st.write("")
 st.write("")
 
 # Database Setup
@@ -626,7 +594,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements = []
 
-    # PAGE 0: COVER PAGE
+    # PAGE 0: COVER / INTRODUCTION PAGE (IMG_5357.jpeg)
     cover_img_bytes = create_cover_page_image(loc_name, shop)
     rl_cover_img = RLImage(cover_img_bytes, width=545, height=770)
     elements.append(rl_cover_img)
