@@ -36,7 +36,7 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# ASSET FILE RESOLVER & BASE64 CONVERTER
+# DIRECTORY & ASSET FILE INITIALIZATION
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
 MENUS_DIR = os.path.join(ASSETS_DIR, "menus")
@@ -128,6 +128,24 @@ def get_existing_site_packs():
                     rel_path = os.path.relpath(os.path.join(root, f), LOCATIONS_DIR)
                     pdf_map[rel_path] = os.path.join(root, f)
     return pdf_map
+
+def find_existing_site_file(loc_name):
+    """
+    Strict de-duplication helper: Searches for existing files or folders matching loc_name.
+    """
+    clean_target = re.sub(r'[^a-zA-Z0-9]', '', loc_name.lower())
+    if not os.path.exists(LOCATIONS_DIR):
+        return None, None
+
+    for root, dirs, files in os.walk(LOCATIONS_DIR):
+        for f in files:
+            if f.lower().endswith(".pdf"):
+                clean_file = re.sub(r'[^a-zA-Z0-9]', '', f.lower())
+                clean_dir = re.sub(r'[^a-zA-Z0-9]', '', os.path.basename(root).lower())
+                if clean_target in clean_file or clean_target in clean_dir:
+                    return os.path.join(root, f), root
+
+    return None, None
 
 # ==========================================
 # COVER PAGE IMAGE COMPOSITOR
@@ -279,14 +297,14 @@ def process_uploaded_file(uploaded_file):
             return None, ""
 
 # ==========================================
-# EMAIL DISPATCH ENGINE WITH MENUS
+# EMAIL DISPATCH ENGINE WITH UI PASSWORD FALLBACK
 # ==========================================
-def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[]):
+def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename, selected_menus=[], custom_app_password=""):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
-    sender_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
+    sender_password = custom_app_password or st.secrets.get("GMAIL_APP_PASSWORD", "")
     
     if not sender_password:
-        return False, "Gmail App Password missing in Streamlit Secrets (`GMAIL_APP_PASSWORD`)."
+        return False, "Gmail App Password missing. Please enter your 16-character App Password below or configure `GMAIL_APP_PASSWORD` in Streamlit Secrets."
 
     try:
         msg = MIMEMultipart()
@@ -1115,7 +1133,7 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: DYNAMIC SITE FOLDER & PACK DISPATCH
+    # SECTION 6: STRICT DE-DUPLICATION SITE PACK DISPATCH
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
     st.markdown("Select an existing site feasibility pack or generate a new one inside its dedicated site subfolder under `./Locations/`.")
@@ -1131,28 +1149,30 @@ with tab1:
     with col_inv2:
         target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. +27821234567")
 
-    # Dynamic Site Folder & Subdirectory Creation
-    clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
-    site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
-    os.makedirs(site_subfolder_path, exist_ok=True)
-
-    clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
-    default_pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
-    target_local_path = os.path.join(site_subfolder_path, default_pdf_filename)
-
+    # STRICT DE-DUPLICATION FILE RESOLUTION LOGIC
     if selected_pack_choice != "Create New Pack for Active Site...":
         chosen_path = existing_packs_map[selected_pack_choice]
         pdf_filename = os.path.basename(chosen_path)
         with open(chosen_path, "rb") as f:
             pdf_bytes = f.read()
-        st.info(f"📁 **Using Existing Site Pack:** `{selected_pack_choice}`")
+        st.info(f"📁 **Reusing Existing Pack (No Duplication):** `{selected_pack_choice}`")
     else:
-        pdf_filename = default_pdf_filename
-        if os.path.exists(target_local_path):
-            with open(target_local_path, "rb") as f:
+        found_file_path, found_folder_path = find_existing_site_file(location_name)
+        
+        if found_file_path and os.path.exists(found_file_path):
+            pdf_filename = os.path.basename(found_file_path)
+            with open(found_file_path, "rb") as f:
                 pdf_bytes = f.read()
-            st.info(f"📁 **Existing Site File Found:** Reusing `{default_pdf_filename}` in site folder `{clean_site_folder_name}`.")
+            st.info(f"📁 **Existing Site File Found:** Reusing `{pdf_filename}` from folder `{os.path.basename(found_folder_path)}` without re-creating.")
         else:
+            clean_site_folder_name = re.sub(r'[\\/*?:"<>|]', '', location_name.strip())
+            site_subfolder_path = os.path.join(LOCATIONS_DIR, clean_site_folder_name)
+            os.makedirs(site_subfolder_path, exist_ok=True)
+
+            clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
+            default_pdf_filename = f"{clean_site_slug}_Phatbuns_Master_Investor_Pack.pdf"
+            target_local_path = os.path.join(site_subfolder_path, default_pdf_filename)
+
             pdf_buffer = generate_pdf_report(
                 location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
                 max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
@@ -1161,7 +1181,8 @@ with tab1:
             pdf_bytes = pdf_buffer.getvalue()
             with open(target_local_path, "wb") as f:
                 f.write(pdf_bytes)
-            st.success(f"📁 **Site Folder Created & Output PDF Saved:** `{target_local_path}`")
+            pdf_filename = default_pdf_filename
+            st.success(f"📁 **New Site Folder Created & Output PDF Saved:** `{target_local_path}`")
 
     # Action Row
     btn_col1, btn_col2 = st.columns(2)
@@ -1172,13 +1193,17 @@ with tab1:
         st.markdown(dl_link_html, unsafe_allow_html=True)
 
     with btn_col2:
+        gmail_pw = ""
+        if not st.secrets.get("GMAIL_APP_PASSWORD"):
+            gmail_pw = st.text_input("Enter Gmail App Password (16 Chars)", type="password", key="app_pw_input", help="Generated from your Google Account Security settings.")
+            
         if st.button("📧 Dispatch via Email (with Read Receipt)"):
             if not target_applicant_email:
                 st.error("Please enter a valid Franchisee Email Address above.")
             else:
                 selected_menus = st.session_state.get("selected_brand_menus", [])
                 sent_ok, send_msg = send_franchisee_email_pack(
-                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename, selected_menus
+                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename, selected_menus, custom_app_password=gmail_pw
                 )
                 if sent_ok:
                     st.success(f"✅ {send_msg}")
