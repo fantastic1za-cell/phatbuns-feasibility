@@ -61,6 +61,18 @@ def find_file_in_assets(target_names):
                         return os.path.join(d, file)
     return None
 
+def find_site_blueprint(loc_name):
+    clean_target = re.sub(r'[^a-zA-Z0-9]', '', loc_name.lower())
+    search_dirs = [LOCATIONS_DIR, ASSETS_DIR, os.getcwd()]
+    for d in search_dirs:
+        if os.path.exists(d):
+            for root, dirs, files in os.walk(d):
+                for f in files:
+                    f_lower = f.lower()
+                    if f_lower.endswith(('.png', '.jpg', '.jpeg', '.pdf')) and ('dev' in f_lower or 'plan' in f_lower or 'layout' in f_lower or 'blueprint' in f_lower or clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)):
+                        return os.path.join(root, f)
+    return None
+
 def get_asset_images_map():
     asset_map = {
         "phatbuns_sa": find_file_in_assets(["Phatbuns_SA.PNG", "phatbuns_sa.png"]),
@@ -732,15 +744,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 4: DEVELOPMENT PLAN & RENDERED BLUEPRINT (WITH BOLD FALLBACK)
+    # PAGE 4: DEVELOPMENT PLAN & RENDERED BLUEPRINT (WITH AUTO SITE BLUEPRINT FINDER & BOLD FALLBACK)
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 8))
 
-    if blueprint_pil_img is not None:
+    effective_blueprint_img = blueprint_pil_img
+    if effective_blueprint_img is None:
+        auto_bp_path = find_site_blueprint(loc_name)
+        if auto_bp_path and os.path.exists(auto_bp_path):
+            try:
+                if auto_bp_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
+            except Exception:
+                pass
+
+    if effective_blueprint_img is not None:
         try:
             bp_byte_arr = io.BytesIO()
-            blueprint_pil_img.save(bp_byte_arr, format='JPEG', quality=90)
+            effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=90)
             bp_byte_arr.seek(0)
             rl_blueprint = RLImage(bp_byte_arr, width=520, height=360)
             elements.append(rl_blueprint)
