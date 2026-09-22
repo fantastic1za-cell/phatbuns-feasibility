@@ -106,8 +106,8 @@ def get_available_brand_menus():
                     menu_files.append(f)
     
     default_menus = [
-        "SMALL_Build your own burger 148.pdf",
         "SMALL_NEW MENU DESIGN - Frozen.pdf",
+        "SMALL_Build your own burger 148.pdf",
         "Seasonal - cookie caviar tiramisu.pdf",
         "Doorstep Menu Individual Pages 2025 - New.pdf",
         "classic and exclusive cookies.pdf",
@@ -145,7 +145,7 @@ def find_existing_site_file(loc_name):
     return None, None
 
 # ==========================================
-# COVER PAGE COMPOSITOR USING PHOTO 2 (IMG_5357.jpeg)
+# COVER PAGE COMPOSITOR USING PHOTO 2 (IMG_5357.jpeg) - CRISP FULL BLEED
 # ==========================================
 def create_cover_page_image(loc_name, shop_code):
     asset_map = get_asset_images_map()
@@ -160,7 +160,7 @@ def create_cover_page_image(loc_name, shop_code):
         bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
     img_byte_arr = io.BytesIO()
-    # Save clean image without burned-in text overlays to prevent distortion or redundancy
+    # Save clean, undistorted high-resolution image matching Photo 2 exact standards
     bg_img.save(img_byte_arr, format='JPEG', quality=95)
     img_byte_arr.seek(0)
     return img_byte_arr
@@ -776,7 +776,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Spacer(1, 6))
 
     if not selected_menus:
-        selected_menus = ["SMALL_Build your own burger 148.pdf", "SMALL_NEW MENU DESIGN - Frozen.pdf"]
+        selected_menus = ["SMALL_NEW MENU DESIGN - Frozen.pdf", "SMALL_Build your own burger 148.pdf"]
 
     menu_table_data = [[Paragraph("<b>#</b>", body_white_bold), Paragraph("<b>Menu / Concept Guide Title</b>", body_white_bold), Paragraph("<b>Category & Interactive Download Link</b>", body_white_bold)]]
     for idx, m_file in enumerate(selected_menus, 1):
@@ -1255,7 +1255,7 @@ with tab2:
     
     selected_menus = []
     for menu in available_menus:
-        is_checked = st.checkbox(f"📄 {menu}", value=True if ("burger" in menu.lower() or "frozen" in menu.lower()) else False)
+        is_checked = st.checkbox(f"📄 {menu}", value=True if ("frozen" in menu.lower() or "burger" in menu.lower()) else False)
         if is_checked:
             selected_menus.append(menu)
 
