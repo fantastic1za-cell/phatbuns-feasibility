@@ -157,7 +157,7 @@ def find_existing_site_file(loc_name):
     return None, None
 
 # ==========================================
-# COVER PAGE COMPOSITOR (PHOTO 2 EXACT FULL BLEED)
+# COVER PAGE COMPOSITOR
 # ==========================================
 def create_cover_page_image():
     asset_map = get_asset_images_map()
@@ -578,9 +578,9 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements = []
 
-    # PAGE 0: FULL-BLEED CRISP COVER PAGE (PHOTO 2 EXACT STANDARD: 595.27 x 841.89 points)
+    # PAGE 0: COVER / INTRODUCTION PAGE (Scaled to 780 height with standard margins to prevent LayoutError)
     cover_img_bytes = create_cover_page_image()
-    rl_cover_img = RLImage(cover_img_bytes, width=595.27, height=841.89)
+    rl_cover_img = RLImage(cover_img_bytes, width=551, height=780)
     elements.append(rl_cover_img)
     elements.append(PageBreak())
 
@@ -743,7 +743,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN (OPTIMIZED HEIGHT TO PREVENT OVERFLOW)
+    # PAGE 4: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN
     elements.append(Paragraph("ADDENDUM: SITE BLUEPRINT & DEVELOPMENT LAYOUT PLAN", ParagraphStyle('P4Header', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=MAROON_LINE)))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT — {loc_name.upper()} ({shop})</b>", body_regular))
     elements.append(Spacer(1, 6))
@@ -762,7 +762,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            # Optimized dimensions to ensure it never triggers a LayoutError
             rl_blueprint = RLImage(bp_byte_arr, width=480, height=260)
             elements.append(rl_blueprint)
         except Exception:
