@@ -36,18 +36,13 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# ASSET FILE RESOLVER (HANDLES ANY FILE NAME)
+# ASSET FILE RESOLVER & RESIZER (15mm x 15mm EQUAL SIZING)
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
 
 def resolve_asset_file(key_keywords):
-    """
-    Searches the assets folder for files matching any of the keywords,
-    regardless of how they are named on disk or in GitHub.
-    """
     if not os.path.exists(ASSETS_DIR):
         return None
-    
     files = os.listdir(ASSETS_DIR)
     for f in files:
         f_lower = f.lower()
@@ -56,31 +51,25 @@ def resolve_asset_file(key_keywords):
     return None
 
 def get_asset_images_map():
-    """
-    Flexible mapping for the 5 logos + 1 cover image.
-    Looks for exact keywords or falls back to ordered image list.
-    """
     asset_map = {
+        "phatbuns_sa": resolve_asset_file(["phatbuns_sa", "sa_logo", "south_africa"]),
         "phatville": resolve_asset_file(["phatville"]),
         "phatbuns": resolve_asset_file(["phatbuns_logo", "phatbuns."]),
         "butter_brulee": resolve_asset_file(["butter", "brulee"]),
         "doorstep": resolve_asset_file(["doorstep", "dessert"]),
-        "phatbuns_sa": resolve_asset_file(["phatbuns_sa", "sa_logo", "south_africa"]),
         "cover_bg": resolve_asset_file(["cover", "bg", "background", "spread"])
     }
 
-    # Fallback: if files were uploaded with random names (e.g. IMG_001.png, Image.jpg)
     if os.path.exists(ASSETS_DIR):
         all_imgs = [os.path.join(ASSETS_DIR, f) for f in os.listdir(ASSETS_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         all_imgs.sort()
         
-        keys = ["phatville", "phatbuns", "butter_brulee", "doorstep", "phatbuns_sa"]
+        keys = ["phatbuns_sa", "phatville", "phatbuns", "butter_brulee", "doorstep"]
         for idx, key in enumerate(keys):
             if not asset_map[key] and idx < len(all_imgs):
                 asset_map[key] = all_imgs[idx]
         
         if not asset_map["cover_bg"]:
-            # Pick JPG first or last image for cover
             jpgs = [img for img in all_imgs if img.lower().endswith(('.jpg', '.jpeg'))]
             if jpgs:
                 asset_map["cover_bg"] = jpgs[0]
@@ -88,6 +77,25 @@ def get_asset_images_map():
                 asset_map["cover_bg"] = all_imgs[-1]
 
     return asset_map
+
+def load_resized_logo(file_path, size_px=(57, 57)):
+    """
+    Resizes each image to an exact 15mm x 15mm equivalent (57px x 57px at 96 DPI)
+    with balanced padding to keep proportions perfectly crisp.
+    """
+    if not file_path or not os.path.exists(file_path):
+        return None
+    try:
+        img = Image.open(file_path).convert("RGBA")
+        img.thumbnail(size_px, Image.Resampling.LANCZOS)
+        
+        canvas = Image.new("RGBA", size_px, (0, 0, 0, 0))
+        offset_x = (size_px[0] - img.width) // 2
+        offset_y = (size_px[1] - img.height) // 2
+        canvas.paste(img, (offset_x, offset_y), img)
+        return canvas
+    except Exception:
+        return None
 
 # ==========================================
 # COVER PAGE IMAGE COMPOSITOR
@@ -104,7 +112,6 @@ def create_cover_page_image(loc_name, shop_code):
 
     bg_w, bg_h = bg_img.size
 
-    # Layer Phatbuns South Africa Logo centered at 50% scale
     if logo_path and os.path.exists(logo_path):
         logo_img = Image.open(logo_path).convert("RGBA")
         logo_w, logo_h = logo_img.size
@@ -117,7 +124,6 @@ def create_cover_page_image(loc_name, shop_code):
         logo_y = int(bg_h * 0.35)
         bg_img.paste(logo_resized, (logo_x, logo_y), logo_resized)
 
-    # Centered Location Text at Bottom
     draw = ImageDraw.Draw(bg_img)
     display_text = f"{loc_name.upper()} ({shop_code.upper()})"
     
@@ -130,12 +136,10 @@ def create_cover_page_image(loc_name, shop_code):
     outline_color = (62, 39, 35)
     fill_color = (255, 215, 0)
 
-    # Draw Text Outline
     for dx in range(-4, 5):
         for dy in range(-4, 5):
             draw.text(((bg_w // 2) + dx, text_y + dy), display_text, font=font, fill=outline_color, anchor="mm")
     
-    # Draw Main Text
     draw.text((bg_w // 2, text_y), display_text, font=font, fill=fill_color, anchor="mm")
 
     img_byte_arr = io.BytesIO()
@@ -367,30 +371,31 @@ st.markdown("""
 # Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# Centered 5 Brand Logos Header Row
-logo_col1, logo_col2, logo_col3, logo_col4, logo_col5, logo_col6, logo_col7 = st.columns([1, 2, 2, 2, 2, 2, 1])
-
+# Centered Brand Logos Header Row (Phatbuns SA on TOP, sized equally to 15mm x 15mm = 57px x 57px)
 logo_map = get_asset_images_map()
 
-with logo_col2:
-    if logo_map.get("phatville") and os.path.exists(logo_map["phatville"]):
-        st.image(logo_map["phatville"], use_container_width=True)
+# Phatbuns South Africa Logo Displayed On Top Center
+top_sa_logo = load_resized_logo(logo_map.get("phatbuns_sa"), size_px=(57, 57))
+if top_sa_logo:
+    sa_col1, sa_col2, sa_col3 = st.columns([2, 1, 2])
+    with sa_col2:
+        st.image(top_sa_logo, width=57)
 
-with logo_col3:
-    if logo_map.get("phatbuns") and os.path.exists(logo_map["phatbuns"]):
-        st.image(logo_map["phatbuns"], use_container_width=True)
+# Remaining 4 Brand Logos Displayed Below Across Equal Columns
+l_col1, l_col2, l_col3, l_col4 = st.columns(4)
 
-with logo_col4:
-    if logo_map.get("butter_brulee") and os.path.exists(logo_map["butter_brulee"]):
-        st.image(logo_map["butter_brulee"], use_container_width=True)
+keys_in_order = [
+    ("phatville", l_col1),
+    ("phatbuns", l_col2),
+    ("butter_brulee", l_col3),
+    ("doorstep", l_col4)
+]
 
-with logo_col5:
-    if logo_map.get("doorstep") and os.path.exists(logo_map["doorstep"]):
-        st.image(logo_map["doorstep"], use_container_width=True)
-
-with logo_col6:
-    if logo_map.get("phatbuns_sa") and os.path.exists(logo_map["phatbuns_sa"]):
-        st.image(logo_map["phatbuns_sa"], use_container_width=True)
+for key, col in keys_in_order:
+    with col:
+        resized_img = load_resized_logo(logo_map.get(key), size_px=(57, 57))
+        if resized_img:
+            st.image(resized_img, width=57)
 
 # Bottom Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
