@@ -36,7 +36,7 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# ASSET FILE RESOLVER & RESIZER (15mm x 15mm EQUAL SIZING)
+# ASSET FILE RESOLVER & BASE64 CONVERTER
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
 
@@ -78,24 +78,15 @@ def get_asset_images_map():
 
     return asset_map
 
-def load_resized_logo(file_path, size_px=(57, 57)):
-    """
-    Resizes each image to an exact 15mm x 15mm equivalent (57px x 57px at 96 DPI)
-    with balanced padding to keep proportions perfectly crisp.
-    """
+def get_image_base64(file_path):
     if not file_path or not os.path.exists(file_path):
-        return None
+        return ""
     try:
-        img = Image.open(file_path).convert("RGBA")
-        img.thumbnail(size_px, Image.Resampling.LANCZOS)
-        
-        canvas = Image.new("RGBA", size_px, (0, 0, 0, 0))
-        offset_x = (size_px[0] - img.width) // 2
-        offset_y = (size_px[1] - img.height) // 2
-        canvas.paste(img, (offset_x, offset_y), img)
-        return canvas
+        with open(file_path, "rb") as f:
+            data = f.read()
+        return base64.b64encode(data).decode('utf-8')
     except Exception:
-        return None
+        return ""
 
 # ==========================================
 # COVER PAGE IMAGE COMPOSITOR
@@ -357,6 +348,23 @@ st.markdown("""
     text-decoration: none;
     margin-top: 5px;
 }
+.logo-row-container {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 10px 0 !important;
+    gap: 8px !important;
+}
+.logo-item {
+    flex: 1 !important;
+    max-width: 18% !important;
+    height: 65px !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -371,31 +379,25 @@ st.markdown("""
 # Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# Centered Brand Logos Header Row (Phatbuns SA on TOP, sized equally to 15mm x 15mm = 57px x 57px)
+# LOAD LOGO MAP & CONVERT TO FLEXBOX HORIZONTAL LAYOUT
 logo_map = get_asset_images_map()
 
-# Phatbuns South Africa Logo Displayed On Top Center
-top_sa_logo = load_resized_logo(logo_map.get("phatbuns_sa"), size_px=(57, 57))
-if top_sa_logo:
-    sa_col1, sa_col2, sa_col3 = st.columns([2, 1, 2])
-    with sa_col2:
-        st.image(top_sa_logo, width=57)
+b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
+b64_pv = get_image_base64(logo_map.get("phatville"))
+b64_pb = get_image_base64(logo_map.get("phatbuns"))
+b64_bb = get_image_base64(logo_map.get("butter_brulee"))
+b64_ds = get_image_base64(logo_map.get("doorstep"))
 
-# Remaining 4 Brand Logos Displayed Below Across Equal Columns
-l_col1, l_col2, l_col3, l_col4 = st.columns(4)
-
-keys_in_order = [
-    ("phatville", l_col1),
-    ("phatbuns", l_col2),
-    ("butter_brulee", l_col3),
-    ("doorstep", l_col4)
-]
-
-for key, col in keys_in_order:
-    with col:
-        resized_img = load_resized_logo(logo_map.get(key), size_px=(57, 57))
-        if resized_img:
-            st.image(resized_img, width=57)
+logos_html = f"""
+<div class="logo-row-container">
+    {'<img src="data:image/png;base64,' + b64_sa + '" class="logo-item"/>' if b64_sa else ''}
+    {'<img src="data:image/png;base64,' + b64_pv + '" class="logo-item"/>' if b64_pv else ''}
+    {'<img src="data:image/png;base64,' + b64_pb + '" class="logo-item"/>' if b64_pb else ''}
+    {'<img src="data:image/png;base64,' + b64_bb + '" class="logo-item"/>' if b64_bb else ''}
+    {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item"/>' if b64_ds else ''}
+</div>
+"""
+st.markdown(logos_html, unsafe_allow_html=True)
 
 # Bottom Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
