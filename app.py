@@ -49,6 +49,7 @@ def resolve_asset_file(key_keywords):
     if not os.path.exists(ASSETS_DIR):
         return None
     files = os.listdir(ASSETS_DIR)
+    # First pass: look for exact matches containing keywords
     for f in files:
         f_lower = f.lower()
         if any(kw in f_lower for kw in key_keywords):
@@ -57,7 +58,7 @@ def resolve_asset_file(key_keywords):
 
 def get_asset_images_map():
     asset_map = {
-        "phatbuns_sa": resolve_asset_file(["phatbuns_sa", "sa_logo", "south_africa"]),
+        "phatbuns_sa": resolve_asset_file(["phatbuns_sa", "sa_logo", "south_africa", "speech_bubble"]),
         "phatville": resolve_asset_file(["phatville"]),
         "phatbuns": resolve_asset_file(["phatbuns_logo", "phatbuns."]),
         "butter_brulee": resolve_asset_file(["butter", "brulee"]),
@@ -69,11 +70,12 @@ def get_asset_images_map():
         all_imgs = [os.path.join(ASSETS_DIR, f) for f in os.listdir(ASSETS_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         all_imgs.sort()
         
-        keys = ["phatbuns_sa", "phatville", "phatbuns", "butter_brulee", "doorstep"]
-        for idx, key in enumerate(keys):
-            if not asset_map[key] and idx < len(all_imgs):
-                asset_map[key] = all_imgs[idx]
-        
+        # Explicit fallback only if keyword lookup fails
+        if not asset_map["phatbuns_sa"]:
+            sa_matches = [img for img in all_imgs if "sa" in os.path.basename(img).lower() or "south" in os.path.basename(img).lower()]
+            if sa_matches:
+                asset_map["phatbuns_sa"] = sa_matches[0]
+
         if not asset_map["cover_bg"]:
             jpgs = [img for img in all_imgs if img.lower().endswith(('.jpg', '.jpeg'))]
             if jpgs:
@@ -402,11 +404,13 @@ st.markdown("""
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 14px;
 }
 .banner-logo-icon {
-    height: 48px;
+    height: 52px;
+    width: auto;
     object-fit: contain;
+    border-radius: 6px;
 }
 .brand-title {
     color: #FFFFFF;
@@ -418,7 +422,7 @@ st.markdown("""
 .brand-subtitle {
     color: #FFD1B3;
     font-size: 13px;
-    margin-top: 4px;
+    margin-top: 6px;
 }
 .green-divider {
     border: none;
@@ -467,10 +471,10 @@ b64_pb = get_image_base64(logo_map.get("phatbuns"))
 b64_bb = get_image_base64(logo_map.get("butter_brulee"))
 b64_ds = get_image_base64(logo_map.get("doorstep"))
 
-# Speech Bubble Icon for Header Title
+# Speech Bubble Phatbuns SA Logo for Header Title
 banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
 
-# Main Banner with Icon before Phatbuns Title
+# Main Banner with Exact Phatbuns SA Speech-Bubble Logo
 st.markdown(f"""
 <div class="brand-banner">
     <div class="brand-title-container">
