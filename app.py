@@ -36,7 +36,7 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# DIRECTORY & ASSET FILE INITIALIZATION
+# DIRECTORY & ROBUST ASSET FILE INITIALIZATION
 # ==========================================
 ASSETS_DIR = os.path.join(os.getcwd(), "assets")
 MENUS_DIR = os.path.join(ASSETS_DIR, "menus")
@@ -45,46 +45,35 @@ LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
 os.makedirs(MENUS_DIR, exist_ok=True)
 os.makedirs(LOCATIONS_DIR, exist_ok=True)
 
-def resolve_exact_asset(file_names):
+def find_file_case_insensitive(target_names):
     """
-    Scans assets subfolders for exact filenames as organized in Google Drive.
+    Recursively searches the current working directory and all subdirectories
+    for target filenames regardless of case sensitivity or exact folder structure.
     """
-    search_dirs = [
-        ASSETS_DIR,
-        os.path.join(ASSETS_DIR, "Logo"),
-        os.path.join(os.getcwd(), "Logo"),
-        os.getcwd()
-    ]
+    targets_clean = [t.lower() for t in target_names]
     
-    for d in search_dirs:
-        if os.path.exists(d):
-            files = os.listdir(d)
-            for fname in file_names:
-                for f in files:
-                    if f.lower() == fname.lower():
-                        return os.path.join(d, f)
-    
-    # Partial fallback pass
-    for d in search_dirs:
-        if os.path.exists(d):
-            files = os.listdir(d)
-            for fname in file_names:
-                clean_target = fname.split('.')[0].lower()
-                for f in files:
-                    if clean_target in f.lower() and f.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        return os.path.join(d, f)
+    for root, dirs, files in os.walk(os.getcwd()):
+        for file in files:
+            file_lower = file.lower()
+            if file_lower in targets_clean:
+                return os.path.join(root, file)
+            # Partial stem check
+            for t in targets_clean:
+                t_stem = t.split('.')[0]
+                if t_stem == file_lower.split('.')[0] and file_lower.endswith(('.png', '.jpg', '.jpeg')):
+                    return os.path.join(root, file)
     return None
 
 def get_asset_images_map():
     asset_map = {
-        "phatbuns_sa": resolve_exact_asset(["Phatbuns_SA.PNG", "Phatbuns_SA.png"]),
-        "phatville": resolve_exact_asset(["Phatville.PNG", "Phatville.png"]),
-        "phatbuns": resolve_exact_asset(["Phatbuns.PNG", "Phatbuns.png"]),
-        "butter_brulee": resolve_exact_asset(["ButterBruleeLogo.PNG", "ButterBrulee.PNG", "ButterBruleeLogo.png"]),
-        "doorstep": resolve_exact_asset(["Doorstep Logo.PNG", "Doorstep.PNG", "Doorstep Logo.png"]),
-        "adega": resolve_exact_asset(["Adega.PNG", "Adega.png"]),
-        "sa_flag": resolve_exact_asset(["SAFlag.PNG", "SAFlag.png"]),
-        "cover_bg": resolve_exact_asset(["cover.jpg", "cover_bg.jpg", "background.jpg"])
+        "phatbuns_sa": find_file_case_insensitive(["Phatbuns_SA.PNG", "Phatbuns_SA.png"]),
+        "phatville": find_file_case_insensitive(["Phatville.PNG", "Phatville.png"]),
+        "phatbuns": find_file_case_insensitive(["Phatbuns.PNG", "Phatbuns.png"]),
+        "butter_brulee": find_file_case_insensitive(["ButterBruleeLogo.PNG", "ButterBrulee.PNG", "ButterBruleeLogo.png"]),
+        "doorstep": find_file_case_insensitive(["Doorstep Logo.PNG", "Doorstep.PNG", "Doorstep Logo.png", "DoorstepLogo.png"]),
+        "adega": find_file_case_insensitive(["Adega.PNG", "Adega.png"]),
+        "sa_flag": find_file_case_insensitive(["SAFlag.PNG", "SAFlag.png"]),
+        "cover_bg": find_file_case_insensitive(["cover.jpg", "cover_bg.jpg", "background.jpg"])
     }
     return asset_map
 
@@ -491,17 +480,29 @@ st.markdown(f"""
 # Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# FLEXBOX HORIZONTAL LOGO BAR
-logos_html = f"""
-<div class="logo-row-container">
-    {'<img src="data:image/png;base64,' + b64_sa + '" class="logo-item"/>' if b64_sa else ''}
-    {'<img src="data:image/png;base64,' + b64_pv + '" class="logo-item"/>' if b64_pv else ''}
-    {'<img src="data:image/png;base64,' + b64_pb + '" class="logo-item"/>' if b64_pb else ''}
-    {'<img src="data:image/png;base64,' + b64_bb + '" class="logo-item"/>' if b64_bb else ''}
-    {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item"/>' if b64_ds else ''}
-</div>
-"""
-st.markdown(logos_html, unsafe_allow_html=True)
+# FLEXBOX HORIZONTAL LOGO BAR WITH NATIVE STREAMLIT FALLBACK
+if b64_sa or b64_pv or b64_pb or b64_bb or b64_ds:
+    logos_html = f"""
+    <div class="logo-row-container">
+        {'<img src="data:image/png;base64,' + b64_sa + '" class="logo-item"/>' if b64_sa else ''}
+        {'<img src="data:image/png;base64,' + b64_pv + '" class="logo-item"/>' if b64_pv else ''}
+        {'<img src="data:image/png;base64,' + b64_pb + '" class="logo-item"/>' if b64_pb else ''}
+        {'<img src="data:image/png;base64,' + b64_bb + '" class="logo-item"/>' if b64_bb else ''}
+        {'<img src="data:image/png;base64,' + b64_ds + '" class="logo-item"/>' if b64_ds else ''}
+    </div>
+    """
+    st.markdown(logos_html, unsafe_allow_html=True)
+else:
+    # Native Streamlit Image Columns Fallback
+    l_cols = st.columns(5)
+    brand_keys = ["doorstep", "butter_brulee", "phatville", "phatbuns_sa", "phatbuns"]
+    for idx, b_key in enumerate(brand_keys):
+        path = logo_map.get(b_key)
+        with l_cols[idx]:
+            if path and os.path.exists(path):
+                st.image(path, use_container_width=True)
+            else:
+                st.caption(f"⚠️ {b_key.replace('_', ' ').title()} Missing")
 
 # Bottom Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
