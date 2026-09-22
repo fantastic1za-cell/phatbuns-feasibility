@@ -1068,14 +1068,12 @@ with tab1:
 
     st.subheader("Store Model Type")
 
-    # DEFINE MODEL CHANGE CALLBACK TO ENSURE STATE SYNCHRONIZATION
     def on_model_changed():
         m_choice = st.session_state.get(f"{site_key}_model_radio", "Express Model")
         m_info = STORE_MODELS.get(m_choice, STORE_MODELS["Express Model"])
         st.session_state[f"{site_key}_capex_input"] = m_info["turnkey_capital"]
         st.session_state[f"{site_key}_wc_input"] = m_info["working_capital"]
-        if st.session_state.get(f"{site_key}_int_gla_input", 0.0) == 0.0:
-            st.session_state[f"{site_key}_int_gla_input"] = m_info["default_gla"]
+        st.session_state[f"{site_key}_int_gla_input"] = m_info["default_gla"]
 
     selected_model = st.radio(
         "Select Model Type",
@@ -1087,20 +1085,27 @@ with tab1:
     )
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
+    # ENSURE DEFAULT GLA AND CAPITAL KEYS EXIST BEFORE WIDGET INSTANTIATION
+    if f"{site_key}_int_gla_input" not in st.session_state:
+        st.session_state[f"{site_key}_int_gla_input"] = model_data["default_gla"]
+    if f"{site_key}_external_gla" not in st.session_state:
+        st.session_state[f"{site_key}_external_gla"] = 0.0
+    if f"{site_key}_capex_input" not in st.session_state:
+        st.session_state[f"{site_key}_capex_input"] = model_data["turnkey_capital"]
+    if f"{site_key}_wc_input" not in st.session_state:
+        st.session_state[f"{site_key}_wc_input"] = model_data["working_capital"]
+
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        def_int_gla = get_site_state("int_gla_input", model_data["default_gla"])
-        internal_gla = st.number_input("Internal Area (sqm)", value=def_int_gla, step=1.0, key=f"{site_key}_int_gla_input")
-        set_site_state("int_gla_input", internal_gla)
+        internal_gla = st.number_input("Internal Area (sqm)", step=1.0, key=f"{site_key}_int_gla_input")
     with col_ext_gla:
-        def_ext_gla = get_site_state("external_gla", 0.0)
-        external_gla = st.number_input("External / Patio Area (sqm)", value=def_ext_gla, step=1.0, key=f"{site_key}_ext_gla_input")
-        set_site_state("external_gla", external_gla)
+        external_gla = st.number_input("External / Patio Area (sqm)", step=1.0, key=f"{site_key}_external_gla")
 
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint ({location_name}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
+    # DYNAMIC FRONT OF HOUSE (FOH) & SEATING CALCULATION BASED ON AMENDED GLA FIGURES
     internal_foh_sqm = internal_gla * model_data["foh_pct"]
     total_dining_sqm = internal_foh_sqm + external_gla
     max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
@@ -1126,12 +1131,6 @@ with tab1:
     st.divider()
 
     st.subheader("2. Commercial Capital, Lease & Operational Cost Breakdown")
-
-    # INITIALIZE STATE FOR NUMBER INPUTS IF NOT ALREADY PRESENT
-    if f"{site_key}_capex_input" not in st.session_state:
-        st.session_state[f"{site_key}_capex_input"] = model_data["turnkey_capital"]
-    if f"{site_key}_wc_input" not in st.session_state:
-        st.session_state[f"{site_key}_wc_input"] = model_data["working_capital"]
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
