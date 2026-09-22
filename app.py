@@ -36,25 +36,76 @@ except ImportError:
     HAS_GENAI = False
 
 # ==========================================
-# COVER PAGE IMAGE COMPOSITOR (ASSETS DIRECTORY)
+# ASSET FILE RESOLVER (HANDLES ANY FILE NAME)
+# ==========================================
+ASSETS_DIR = os.path.join(os.getcwd(), "assets")
+
+def resolve_asset_file(key_keywords):
+    """
+    Searches the assets folder for files matching any of the keywords,
+    regardless of how they are named on disk or in GitHub.
+    """
+    if not os.path.exists(ASSETS_DIR):
+        return None
+    
+    files = os.listdir(ASSETS_DIR)
+    for f in files:
+        f_lower = f.lower()
+        if any(kw in f_lower for kw in key_keywords):
+            return os.path.join(ASSETS_DIR, f)
+    return None
+
+def get_asset_images_map():
+    """
+    Flexible mapping for the 5 logos + 1 cover image.
+    Looks for exact keywords or falls back to ordered image list.
+    """
+    asset_map = {
+        "phatville": resolve_asset_file(["phatville"]),
+        "phatbuns": resolve_asset_file(["phatbuns_logo", "phatbuns."]),
+        "butter_brulee": resolve_asset_file(["butter", "brulee"]),
+        "doorstep": resolve_asset_file(["doorstep", "dessert"]),
+        "phatbuns_sa": resolve_asset_file(["phatbuns_sa", "sa_logo", "south_africa"]),
+        "cover_bg": resolve_asset_file(["cover", "bg", "background", "spread"])
+    }
+
+    # Fallback: if files were uploaded with random names (e.g. IMG_001.png, Image.jpg)
+    if os.path.exists(ASSETS_DIR):
+        all_imgs = [os.path.join(ASSETS_DIR, f) for f in os.listdir(ASSETS_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        all_imgs.sort()
+        
+        keys = ["phatville", "phatbuns", "butter_brulee", "doorstep", "phatbuns_sa"]
+        for idx, key in enumerate(keys):
+            if not asset_map[key] and idx < len(all_imgs):
+                asset_map[key] = all_imgs[idx]
+        
+        if not asset_map["cover_bg"]:
+            # Pick JPG first or last image for cover
+            jpgs = [img for img in all_imgs if img.lower().endswith(('.jpg', '.jpeg'))]
+            if jpgs:
+                asset_map["cover_bg"] = jpgs[0]
+            elif all_imgs:
+                asset_map["cover_bg"] = all_imgs[-1]
+
+    return asset_map
+
+# ==========================================
+# COVER PAGE IMAGE COMPOSITOR
 # ==========================================
 def create_cover_page_image(loc_name, shop_code):
-    """
-    Generates the A4 Cover Page by layering the Phatbuns South Africa logo
-    centered on the food spread background at 50% scale, with centered location text.
-    """
-    bg_path = os.path.join(os.getcwd(), "assets", "cover_bg.jpg")
-    logo_path = os.path.join(os.getcwd(), "assets", "phatbuns_sa_logo.png")
+    asset_map = get_asset_images_map()
+    bg_path = asset_map.get("cover_bg")
+    logo_path = asset_map.get("phatbuns_sa") or asset_map.get("phatbuns")
 
-    if os.path.exists(bg_path):
+    if bg_path and os.path.exists(bg_path):
         bg_img = Image.open(bg_path).convert("RGB")
     else:
         bg_img = Image.new("RGB", (1240, 1754), color=(235, 120, 35))
 
     bg_w, bg_h = bg_img.size
 
-    # Layer Phatbuns South Africa Logo at 50% scale
-    if os.path.exists(logo_path):
+    # Layer Phatbuns South Africa Logo centered at 50% scale
+    if logo_path and os.path.exists(logo_path):
         logo_img = Image.open(logo_path).convert("RGBA")
         logo_w, logo_h = logo_img.size
         
@@ -316,41 +367,34 @@ st.markdown("""
 # Top Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# Centered 5 Brand Logos Header Row (Loaded from assets directory)
+# Centered 5 Brand Logos Header Row
 logo_col1, logo_col2, logo_col3, logo_col4, logo_col5, logo_col6, logo_col7 = st.columns([1, 2, 2, 2, 2, 2, 1])
 
-logo_paths = {
-    "phatville": os.path.join(os.getcwd(), "assets", "phatville_logo.png"),
-    "phatbuns": os.path.join(os.getcwd(), "assets", "phatbuns_logo.png"),
-    "butter_brulee": os.path.join(os.getcwd(), "assets", "butter_brulee_logo.png"),
-    "doorstep": os.path.join(os.getcwd(), "assets", "doorstep_desserts_logo.png"),
-    "phatbuns_sa": os.path.join(os.getcwd(), "assets", "phatbuns_sa_logo.png"),
-}
+logo_map = get_asset_images_map()
 
 with logo_col2:
-    if os.path.exists(logo_paths["phatville"]):
-        st.image(logo_paths["phatville"], use_container_width=True)
+    if logo_map.get("phatville") and os.path.exists(logo_map["phatville"]):
+        st.image(logo_map["phatville"], use_container_width=True)
 
 with logo_col3:
-    if os.path.exists(logo_paths["phatbuns"]):
-        st.image(logo_paths["phatbuns"], use_container_width=True)
+    if logo_map.get("phatbuns") and os.path.exists(logo_map["phatbuns"]):
+        st.image(logo_map["phatbuns"], use_container_width=True)
 
 with logo_col4:
-    if os.path.exists(logo_paths["butter_brulee"]):
-        st.image(logo_paths["butter_brulee"], use_container_width=True)
+    if logo_map.get("butter_brulee") and os.path.exists(logo_map["butter_brulee"]):
+        st.image(logo_map["butter_brulee"], use_container_width=True)
 
 with logo_col5:
-    if os.path.exists(logo_paths["doorstep"]):
-        st.image(logo_paths["doorstep"], use_container_width=True)
+    if logo_map.get("doorstep") and os.path.exists(logo_map["doorstep"]):
+        st.image(logo_map["doorstep"], use_container_width=True)
 
 with logo_col6:
-    if os.path.exists(logo_paths["phatbuns_sa"]):
-        st.image(logo_paths["phatbuns_sa"], use_container_width=True)
+    if logo_map.get("phatbuns_sa") and os.path.exists(logo_map["phatbuns_sa"]):
+        st.image(logo_map["phatbuns_sa"], use_container_width=True)
 
 # Bottom Green Accent Line
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
-# 2-Line Spacing before Next Section
 st.write("")
 st.write("")
 
