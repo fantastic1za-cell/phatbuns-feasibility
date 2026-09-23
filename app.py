@@ -141,7 +141,7 @@ def get_available_brand_menus():
     return sorted(menu_files)
 
 # ==========================================
-# GOOGLE DRIVE API SYNC HELPERS
+# STRICT GOOGLE DRIVE API & LOCAL SYNC ENGINE
 # ==========================================
 GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
 
@@ -157,7 +157,7 @@ def get_drive_service():
             creds = service_account.Credentials.from_service_account_file("service_account.json", scopes=GDRIVE_SCOPES)
             return build('drive', 'v3', credentials=creds)
     except Exception as e:
-        st.warning(f"Google Drive API Authentication skipped: {e}")
+        print(f"Google Drive API Authentication error: {e}")
     return None
 
 def get_or_create_drive_folder(service, folder_name, parent_id=None):
@@ -180,7 +180,8 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
                 file_metadata['parents'] = [parent_id]
             folder = service.files().create(body=file_metadata, fields='id').execute()
             return folder.get('id')
-    except Exception:
+    except Exception as e:
+        print(f"Drive Folder Creation Error: {e}")
         return None
 
 def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
@@ -201,8 +202,34 @@ def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
             }
             file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
             return file.get('id')
-    except Exception:
+    except Exception as e:
+        print(f"Drive Upload Error: {e}")
         return None
+
+def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
+    # 1. ALWAYS SAVE LOCALLY TO LOCATIONS/{LOCATION_NAME}/
+    loc_sub_dir = os.path.join(LOCATIONS_DIR, location_name.strip())
+    os.makedirs(loc_sub_dir, exist_ok=True)
+    local_file_path = os.path.join(loc_sub_dir, pdf_filename)
+    
+    with open(local_file_path, "wb") as f:
+        f.write(pdf_bytes)
+
+    # 2. AUTOMATICALLY SYNC TO GOOGLE DRIVE
+    cloud_status = "Local Directory Saved Only (Drive API Unconfigured)"
+    drive_service = get_drive_service()
+    if drive_service:
+        try:
+            locations_root_id = get_or_create_drive_folder(drive_service, "Locations")
+            if locations_root_id:
+                site_folder_id = get_or_create_drive_folder(drive_service, location_name.strip(), parent_id=locations_root_id)
+                if site_folder_id:
+                    upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
+                    cloud_status = f"Successfully Synced to Google Drive: Locations/{location_name.strip()}/{pdf_filename}"
+        except Exception as e:
+            cloud_status = f"Local Saved OK | Cloud Sync Warning: {e}"
+
+    return local_file_path, cloud_status
 
 # ==========================================
 # COVER PAGE COMPOSITOR
@@ -581,7 +608,6 @@ def get_pipeline_dataframe():
     conn.close()
     return df
 
-# SITE-SPECIFIC PROFILE DATABASE FOR DYNAMIC AUTO-LOADING
 SITE_PROFILES = {
     "Clearwater Mall": {
         "suburb": "Strubensvalley, Roodepoort",
@@ -1053,7 +1079,6 @@ with tab1:
         full_key = f"{site_key}_{key}"
         st.session_state[full_key] = val
 
-    # LOAD SITE SPECIFIC PROFILE DEFAULTS DYNAMICALLY
     site_default_info = SITE_PROFILES.get(location_name, {
         "suburb": LOCATION_LOOKUP.get(selected_location, "Johannesburg"),
         "shop": "U01",
@@ -1094,7 +1119,6 @@ with tab1:
         st.session_state[f"{site_key}_wc_input"] = m_info["working_capital"]
         st.session_state[f"{site_key}_int_gla_input"] = site_default_info.get("default_gla", m_info["default_gla"])
 
-    # Determine default radio index based on site profile
     default_model_name = site_default_info.get("model", "Full Sit-Down Model")
     model_keys_list = list(STORE_MODELS.keys())
     default_radio_idx = model_keys_list.index(default_model_name) if default_model_name in model_keys_list else 2
@@ -1295,10 +1319,10 @@ with tab1:
     st.divider()
 
     # ==========================================
-    # SECTION 6: GOOGLE DRIVE CLOUD FOLDER CREATION & UPLOADING
+    # SECTION 6: AUTOMATIC DIRECTORY CREATION & CLOUD SYNC
     # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
-    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder in Google Drive under `Locations/{location_name}/` and uploads the exact site PDF directly.")
+    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `Locations/{location_name}/` and syncs to Google Drive.")
 
     col_inv1, col_inv2 = st.columns(2)
     with col_inv1:
@@ -1335,23 +1359,16 @@ with tab1:
     )
     pdf_bytes = pdf_buffer.getvalue()
 
-    drive_service = get_drive_service()
-    if drive_service:
-        try:
-            locations_root_id = get_or_create_drive_folder(drive_service, "Locations")
-            if locations_root_id:
-                site_folder_id = get_or_create_drive_folder(drive_service, location_name.strip(), parent_id=locations_root_id)
-                if site_folder_id:
-                    upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
-                    st.success(f"☁️ **Google Drive Synced:** Subfolder `Locations/{location_name}/` and `{pdf_filename}` created/updated successfully in Google Drive!")
-        except Exception as e:
-            st.warning(f"Google Drive cloud sync warning: {e}")
+    # AUTOMATICALLY EXECUTE LOCAL DIRECTORY CREATION & CLOUD SYNC
+    local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename)
+    st.success(f"📂 **Automated Directory Saved:** `{local_saved_path}`")
+    st.info(f"☁️ **Cloud Status:** {sync_status_msg}")
 
     btn_col1, btn_col2 = st.columns(2)
     
     with btn_col1:
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-        dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Save PDF Direct to Phone / Files</a>'
+        dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>'
         st.markdown(dl_link_html, unsafe_allow_html=True)
 
     with btn_col2:
@@ -1453,7 +1470,7 @@ with tab3:
 
     st.divider()
 
-    st.header("CEO Pipeline & Potential Client Registry")
+    st.subheader("CEO Pipeline & Potential Client Registry")
     st.markdown("All prospective client captures from Section 6 and direct registrations are automatically logged here.")
     
     df_pipeline = get_pipeline_dataframe()
