@@ -268,7 +268,7 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
     with open(local_file_path, "wb") as f:
         f.write(pdf_bytes)
 
-    cloud_status = "Local Directory Saved Only (Drive API Unconfigured)"
+    # Check if Google Drive credentials exist for site pack cloud upload
     drive_service = get_drive_service()
     if drive_service:
         try:
@@ -277,11 +277,12 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
                 site_folder_id = get_or_create_drive_folder(drive_service, location_name.strip(), parent_id=locations_root_id)
                 if site_folder_id:
                     upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
-                    cloud_status = f"Successfully Synced to Google Drive: Locations/{location_name.strip()}/{pdf_filename}"
+                    return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{location_name.strip()}/{pdf_filename}"
         except Exception as e:
-            cloud_status = f"Local Saved OK | Cloud Sync Warning: {e}"
+            return local_file_path, f"Saved Locally | Drive Sync Warning: {e}"
 
-    return local_file_path, cloud_status
+    # Clean display message when Google Drive API credentials are not yet linked
+    return local_file_path, "PDF Generated & Saved to Local Directory | Google Drive Menu Links Active"
 
 # ==========================================
 # COVER PAGE COMPOSITOR
@@ -537,7 +538,7 @@ st.markdown("""
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    justify-space: space-around !important;
+    justify-content: space-around !important;
     align-items: center !important;
     width: 100% !important;
     padding: 10px 0 !important;
@@ -972,25 +973,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[551])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
-    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_0](start_span)[span_0](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_1](start_span)[span_1](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_2](start_span)[span_2](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
+    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_1](start_span)[span_1](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_2](start_span)[span_2](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_3](start_span)[span_3](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[551])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
-    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_3](start_span)[span_3](end_span).", body_regular))
+    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_4](start_span)[span_4](end_span).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[551])
     sec9_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec9_banner)
-    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_4](start_span)[span_4](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_5](start_span)[span_5](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_6](start_span)[span_6](end_span).", body_regular))
+    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_5](start_span)[span_5](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_6](start_span)[span_6](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_7](start_span)[span_7](end_span).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[551])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
-    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_7](start_span)[span_7](end_span).", body_regular))
+    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_8](start_span)[span_8](end_span).", body_regular))
 
     elements.append(PageBreak())
 
