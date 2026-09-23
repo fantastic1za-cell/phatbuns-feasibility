@@ -1,5 +1,5 @@
 # Complete Python Script to Generate Dynamic Phatbuns Master Investor & Franchisee Document (Bank-Ready)
-# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads, Cross-Browser App Icon Injection & Location Integration
+# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads & Location Integration
 # Author: Nisaar Ally
 
 import math
@@ -145,52 +145,6 @@ def get_available_brand_menus():
             menu_files.append(dm)
 
     return sorted(menu_files)
-
-# ==========================================
-# STREAMLIT APP ICON & CROSS-BROWSER PWA INJECTION
-# ==========================================
-sa_app_logo_path = find_file_in_assets(["Phatbuns_SA.PNG", "phatbuns_sa.png"])
-b64_sa_app_icon = get_image_base64(sa_app_logo_path)
-
-if sa_app_logo_path and os.path.exists(sa_app_logo_path):
-    try:
-        app_favicon_img = Image.open(sa_app_logo_path)
-    except Exception:
-        app_favicon_img = "🍔"
-else:
-    app_favicon_img = "🍔"
-
-st.set_page_config(
-    page_title="Phatbuns Engine",
-    page_icon=app_favicon_img,
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Inject PWA Home Screen App Icon Header across Chrome, Google, Edge & Safari
-if b64_sa_app_icon:
-    mime_type_str = "image/png" if (sa_app_logo_path and sa_app_logo_path.lower().endswith(".png")) else "image/jpeg"
-    data_uri_icon = f"data:{mime_type_str};base64,{b64_sa_app_icon}"
-    
-    st.markdown(f"""
-        <head>
-            <!-- Standard Desktop Favicon (Chrome, Edge, Firefox) -->
-            <link rel="icon" type="{mime_type_str}" href="{data_uri_icon}">
-            <link rel="shortcut icon" type="{mime_type_str}" href="{data_uri_icon}">
-            
-            <!-- Apple iOS Safari Home Screen App Icon -->
-            <link rel="apple-touch-icon" sizes="180x180" href="{data_uri_icon}">
-            <link rel="apple-touch-icon-precomposed" href="{data_uri_icon}">
-            
-            <!-- Android Chrome / PWA Manifest Headers -->
-            <meta name="mobile-web-app-capable" content="yes">
-            <meta name="apple-mobile-web-app-capable" content="yes">
-            <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-            <meta name="apple-mobile-web-app-title" content="Phatbuns Engine">
-            <meta name="application-name" content="Phatbuns Engine">
-            <meta name="theme-color" content="#111111">
-        </head>
-    """, unsafe_allow_html=True)
 
 # ==========================================
 # BRAND MENU DIRECTORY & GOOGLE DRIVE LINK ENGINE
@@ -515,8 +469,15 @@ Mobile: +27 68 710 1939 | +27 68 727 4731
         return False, str(e)
 
 # ==========================================
-# STREAMLIT BRAND STYLING
+# STREAMLIT PAGE CONFIG & BRAND STYLING
 # ==========================================
+st.set_page_config(
+    page_title="Phatbuns Feasibility Engine",
+    page_icon="🍔",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 st.markdown("""
 <style>
 .stApp {
@@ -865,6 +826,7 @@ STORE_MODELS = {
 }
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
+
 # ==========================================
 # NUMBERED CANVAS WITH CENTERED DUAL LOGOS ABOVE FOOTER
 # ==========================================
@@ -895,12 +857,12 @@ class NumberedCanvas(canvas.Canvas):
             sa_flag_path = asset_map.get("sa_flag")
 
             page_width = A4[0]
-            logo_w = 100
+            logo_w = 100 # 100px width per requested spec
             logo_h = 32
             gap = 15
             total_block_w = (logo_w * 2) + gap
             start_x = (page_width - total_block_w) / 2.0
-            logo_y = 15 * mm
+            logo_y = 15 * mm # Positioned directly above running footer line
 
             if phatbuns_logo_path and os.path.exists(phatbuns_logo_path):
                 try:
@@ -917,13 +879,16 @@ class NumberedCanvas(canvas.Canvas):
         self.setFont("Helvetica", 5.5)
         self.setFillColor(colors.HexColor("#4A5568"))
         
+        # Single line footer positioned from page margin (10mm) to avoid right-hand overlap
         footer_text = "CONFIDENTIAL INFORMATION | Nisaar Ally : SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
         page_str = f"Page {self._pageNumber} of {page_count}"
         
+        # Draw running divider line
         self.setStrokeColor(colors.HexColor("#CBD5E0"))
         self.setLineWidth(0.5)
         self.line(10 * mm, 12 * mm, A4[0] - 10 * mm, 12 * mm)
         
+        # Align footer text cleanly to the far left and page numbering to the right
         self.drawString(10 * mm, 8 * mm, footer_text)
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
