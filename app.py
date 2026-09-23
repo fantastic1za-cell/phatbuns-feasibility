@@ -438,7 +438,7 @@ Please find attached to this email (Consolidated within the Feasibility PDF Pack
 4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
 5. Development Layout & Leasing Site Plan (Rendered)
 6. Addendum — Brand Menus with Direct Google Drive Download Links
-7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
+7. Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
 
 Next Steps:
 Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.
@@ -701,7 +701,6 @@ def save_investor_lead(data):
     cursor.execute("SELECT id FROM franchisee_pipeline WHERE email = ?", (data['email'],))
     existing = cursor.fetchone()
     if existing:
-        # Update existing record with full details including mobile and site details
         cursor.execute("""
             UPDATE franchisee_pipeline SET
                 full_name = ?, entity_name = ?, id_or_passport = ?, mobile = ?,
@@ -829,7 +828,7 @@ STORE_MODELS = {
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# NUMBERED CANVAS FOR DYNAMIC FOOTER & PAGE COUNTING
+# NUMBERED CANVAS WITH FIXED MARGIN ALIGNMENT
 # ==========================================
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -850,28 +849,28 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, page_count):
         self.saveState()
-        self.setFont("Helvetica", 6.5)
+        self.setFont("Helvetica", 5.5)
         self.setFillColor(colors.HexColor("#4A5568"))
         
-        # Explicit user-requested single-line footer text
+        # Single line footer positioned from page margin (10mm) to avoid right-hand overlap
         footer_text = "CONFIDENTIAL INFORMATION | Nisaar Ally : SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
         page_str = f"Page {self._pageNumber} of {page_count}"
         
-        # Draw running footer line
+        # Draw running divider line
         self.setStrokeColor(colors.HexColor("#CBD5E0"))
         self.setLineWidth(0.5)
-        self.line(15 * mm, 12 * mm, A4[0] - 15 * mm, 12 * mm)
+        self.line(10 * mm, 12 * mm, A4[0] - 10 * mm, 12 * mm)
         
-        # Draw single line footer strings
-        self.drawString(15 * mm, 8 * mm, footer_text)
-        self.drawRightString(A4[0] - 15 * mm, 8 * mm, page_str)
+        # Align footer text cleanly to the far left
+        self.drawString(10 * mm, 8 * mm, footer_text)
+        self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
         self.restoreState()
 
 # ==========================================
 # MASTER 10-HEADING PDF GENERATION ENGINE
 # ==========================================
-def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img, selected_menus=[]):
+def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ops_cost, total_lease_outlay, dscr, payback_df, df_pnl_annual, blueprint_pil_img, applicant_name="Prospective Investor", applicant_email="N/A", applicant_mobile="N/A", selected_menus=[]):
     site_p = SITE_PROFILES.get(loc_name, {
         "landlord": "Property Developers / Landlord",
         "mall_size": "Regional Flagship Retail Node",
@@ -883,7 +882,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     asset_map = get_asset_images_map()
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=22, leftMargin=22, topMargin=22, bottomMargin=25)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18, leftMargin=18, topMargin=18, bottomMargin=22)
     styles = getSampleStyleSheet()
 
     NAVY_HEADER = colors.HexColor('#1A365D')
@@ -905,7 +904,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     # COVER PAGE
     cover_img_bytes = create_cover_page_image()
-    rl_cover_img = RLImage(cover_img_bytes, width=551, height=770)
+    rl_cover_img = RLImage(cover_img_bytes, width=558, height=775)
     elements.append(rl_cover_img)
     elements.append(PageBreak())
 
@@ -914,7 +913,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("PHATBUNS SOUTH AFRICA", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)],
         [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, textColor=colors.HexColor('#CCCCCC'))), ""]
     ]
-    t_header = Table(header_data, colWidths=[370, 181])
+    t_header = Table(header_data, colWidths=[370, 188])
     t_header.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     elements.append(t_header)
     elements.append(Spacer(1, 3))
@@ -924,13 +923,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph(f"<b>R {int(round(capital)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(wc)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(int_rent * int_gla)):,}</b>", body_bold), Paragraph(f"<b>R {int(round(ops_cost * total_gla)):,}</b>", body_bold)],
         [Paragraph("Excl. VAT (Turnkey)", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5)), Paragraph("Suggested Reserve", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5)), Paragraph(f"R {int(round(int_rent))} / m² pm", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5)), Paragraph("Gross Rental Terms", ParagraphStyle('Micro', parent=body_regular, fontSize=5.5))]
     ]
-    t_kpi_bar = Table(kpi_bar_data, colWidths=[137, 137, 137, 140])
+    t_kpi_bar = Table(kpi_bar_data, colWidths=[139, 139, 139, 141])
     t_kpi_bar.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('ALIGN', (0,0), (-1,-1), 'CENTER')]))
     elements.append(t_kpi_bar)
     elements.append(Spacer(1, 4))
 
     # 01. SITE PROFILE & CAPITAL SCHEDULE
-    sec1_banner = Table([[Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", sec_banner_style)]], colWidths=[551])
+    sec1_banner = Table([[Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", sec_banner_style)]], colWidths=[558])
     sec1_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec1_banner)
 
@@ -941,15 +940,15 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {int(round(capital*0.10)):,}", body_regular)],
         [Paragraph("Managing Agent", body_bold), Paragraph(site_p["landlord"], body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {int(round(capital)):,}", body_regular)],
         [Paragraph("Mall GLA Size", body_bold), Paragraph(site_p["mall_size"], body_regular), Paragraph("Working Capital Reserve", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
-        [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Captured & Uploaded)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {int(round(total_lease_outlay*2)):,}", body_regular)],
+        [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Rendered on Page 5)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {int(round(total_lease_outlay*2)):,}", body_regular)],
     ]
-    t_sec1 = Table(sec1_table_data, colWidths=[110, 155, 196, 90])
+    t_sec1 = Table(sec1_table_data, colWidths=[110, 160, 198, 90])
     t_sec1.setStyle(TableStyle([('BACKGROUND', (0,0), (1,0), NAVY_HEADER), ('BACKGROUND', (2,0), (3,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec1)
     elements.append(Spacer(1, 4))
 
     # 02. LEASE STRUCTURE & FINANCIAL PROVISIONS
-    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[551])
+    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[558])
     sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec2_banner)
 
@@ -961,13 +960,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Turnover Rental Clause", body_bold), Paragraph("6.0% of Net Monthly Turnover vs Base Net Rental", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
     ]
-    t_sec2 = Table(sec2_table_data, colWidths=[150, 241, 160])
+    t_sec2 = Table(sec2_table_data, colWidths=[150, 248, 160])
     t_sec2.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec2)
     elements.append(Spacer(1, 4))
 
     # 03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE
-    sec3_banner = Table([[Paragraph("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[551])
+    sec3_banner = Table([[Paragraph("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[558])
     sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec3_banner)
 
@@ -978,7 +977,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Catchment Household Count", body_bold), Paragraph(site_p["households"], body_regular)],
         [Paragraph("In-Mall Competitor Profile", body_bold), Paragraph(site_p["competitors"], body_regular)]
     ]
-    t_sec3_grid = Table(sec3_grid_data, colWidths=[150, 401])
+    t_sec3_grid = Table(sec3_grid_data, colWidths=[150, 408])
     t_sec3_grid.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec3_grid)
 
@@ -990,7 +989,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=2, spaceAfter=5))
 
     # 04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX
-    sec4_banner = Table([[Paragraph("04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX", sec_banner_style)]], colWidths=[551])
+    sec4_banner = Table([[Paragraph("04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX", sec_banner_style)]], colWidths=[558])
     sec4_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec4_banner)
 
@@ -1001,7 +1000,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             row_cells.append(Paragraph(str(row[col]), body_regular))
         matrix_table_data.append(row_cells)
 
-    t_matrix = Table(matrix_table_data, colWidths=[141, 82, 82, 82, 82, 82], hAlign='CENTER')
+    t_matrix = Table(matrix_table_data, colWidths=[148, 82, 82, 82, 82, 82], hAlign='CENTER')
     t_matrix.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -1012,7 +1011,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Spacer(1, 3))
 
     # 05. OPERATIONS, STAFFING & CHANNEL BREAKDOWN
-    sec5_banner = Table([[Paragraph("05. OPERATIONS, STAFFING & CHANNEL BREAKDOWN", sec_banner_style)]], colWidths=[551])
+    sec5_banner = Table([[Paragraph("05. OPERATIONS, STAFFING & CHANNEL BREAKDOWN", sec_banner_style)]], colWidths=[558])
     sec5_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec5_banner)
 
@@ -1021,13 +1020,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("• Online Deliveries (UberEats/Mr D): 45%<br/>• Takeaway & Counter Collect: 30%<br/>• In-Store Express Dining: 25%", body_regular),
          Paragraph("• 1 x Store Manager — Operations & Inventory Control<br/>• 2 x Shift Supervisors — Floor Leads & POS Management<br/>• 3 x Line Grillers & Fryers — Smash Griddle & Assembly<br/>• 2 x Till Operators / Runners — Front-of-House Dispatch<br/>• 2 x Cleaners & Scullery — Hygiene & SANHA Standards", body_regular)]
     ]
-    t_sec5 = Table(sec5_data, colWidths=[180, 371])
+    t_sec5 = Table(sec5_data, colWidths=[180, 378])
     t_sec5.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec5)
     elements.append(Spacer(1, 3))
 
     # 06. TURNKEY KITCHEN EQUIPMENT MANIFEST
-    sec6_banner = Table([[Paragraph("06. TURNKEY KITCHEN EQUIPMENT MANIFEST", sec_banner_style)]], colWidths=[551])
+    sec6_banner = Table([[Paragraph("06. TURNKEY KITCHEN EQUIPMENT MANIFEST", sec_banner_style)]], colWidths=[558])
     sec6_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec6_banner)
 
@@ -1040,32 +1039,32 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Beverage & Shakes", body_bold), Paragraph("Heavy Duty Commercial Variable Speed Blender & Commercial Ice Machine (40kg/24hr capacity).", body_regular)],
         [Paragraph("Storage & Washup", body_bold), Paragraph("Stainless Steel Work Tables, Double Bowl Scullery Sink, Hand Wash Basin & Wall Shelving units.", body_regular)]
     ]
-    t_sec6 = Table(sec6_data, colWidths=[140, 411])
+    t_sec6 = Table(sec6_data, colWidths=[140, 418])
     t_sec6.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec6)
 
     elements.append(PageBreak())
 
     # PAGE 3: HEADINGS 07, 08, 09, 10
-    sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[551])
+    sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[558])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
     elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability. Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation. Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
-    sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[551])
+    sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[558])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
     elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement.", body_regular))
     elements.append(Spacer(1, 3))
 
-    sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[551])
+    sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[558])
     sec9_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec9_banner)
     elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one. Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits. An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution.", body_regular))
     elements.append(Spacer(1, 3))
 
-    sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[551])
+    sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[558])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
     elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands.", body_regular))
@@ -1089,7 +1088,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             row_cells.append(Paragraph(formatted, body_regular))
         pnl_table_data.append(row_cells)
 
-    t_pnl = Table(pnl_table_data, colWidths=[51, 69, 64, 62, 59, 62, 64, 60, 60], hAlign='CENTER')
+    t_pnl = Table(pnl_table_data, colWidths=[51, 69, 64, 62, 59, 62, 64, 60, 67], hAlign='CENTER')
     t_pnl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -1100,14 +1099,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: BLUEPRINT, LAYOUT & CLICKABLE BRAND MENUS WITH LOGOS ABOVE EACH ENTRY
+    # PAGE 5: DEDICATED STORE DEVELOPMENT LEASING LAYOUT PLAN
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=ORANGE_BRAND, alignment=1)
 
     elements.append(Paragraph(f"<b>{loc_name.upper()} — SHOP {shop.upper()}</b>", blueprint_header_style))
-    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT PLAN ({total_gla:.2f} M² | {model}) & BRAND MENU DOWNLOADS</b>", blueprint_subheader_style))
+    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT PLAN ({total_gla:.2f} M² | {model})</b>", blueprint_subheader_style))
     elements.append(Spacer(1, 4))
-    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=6))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
 
     effective_blueprint_img = blueprint_pil_img
     if effective_blueprint_img is None:
@@ -1118,34 +1117,57 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             except Exception:
                 pass
 
+    # High-clarity store layout rendering engine
     if effective_blueprint_img is not None:
         try:
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=400, height=300)
+            rl_blueprint = RLImage(bp_byte_arr, width=480, height=320)
             elements.append(rl_blueprint)
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
     else:
-        placeholder_img = Image.new("RGB", (800, 500), color=(240, 240, 240))
+        placeholder_img = Image.new("RGB", (900, 600), color=(245, 247, 250))
         draw = ImageDraw.Draw(placeholder_img)
-        draw.rectangle([10, 10, 790, 490], outline=(100, 100, 100), width=3)
+        draw.rectangle([15, 15, 885, 585], outline=(26, 54, 93), width=4)
+        
+        # Grid lines for store plan schematic
+        for x in range(100, 800, 100):
+            draw.line([(x, 15), (x, 585)], fill=(220, 225, 230), width=1)
+        for y in range(100, 500, 100):
+            draw.line([(15, y), (885, y)], fill=(220, 225, 230), width=1)
+
+        # Store boundary zones
+        draw.rectangle([40, 40, 300, 560], outline=(197, 48, 48), width=3) # Kitchen & Prep
+        draw.rectangle([310, 40, 860, 560], outline=(43, 108, 176), width=3) # Front of House & Dining
+        
         try:
-            draw.text((280, 230), f"LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(50, 50, 50))
+            draw.text((330, 260), f"PROPOSED STORE LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(26, 54, 93))
+            draw.text((80, 280), "KITCHEN & PREP ZONE", fill=(197, 48, 48))
+            draw.text((500, 280), f"DINING AREA ({max_comfortable_seats} SEATS)", fill=(43, 108, 176))
         except Exception:
             pass
+
         bp_byte_arr = io.BytesIO()
         placeholder_img.save(bp_byte_arr, format='JPEG', quality=95)
         bp_byte_arr.seek(0)
-        rl_blueprint = RLImage(bp_byte_arr, width=400, height=300)
+        rl_blueprint = RLImage(bp_byte_arr, width=480, height=320)
         elements.append(rl_blueprint)
 
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(f"<b>Technical Specifications:</b> Internal GLA: {internal_gla:.2f} sqm | External Patio GLA: {external_gla:.2f} sqm | Total Footprint: {total_gla:.2f} sqm. Designed for high operational efficiency and SANHA Halal kitchen compliance.", body_regular))
 
-    # INTERACTIVE CLICKABLE BRAND MENUS TABLE WITH LOGO DIRECTLY ABOVE BRAND TITLE
-    menu_sec_banner = Table([[Paragraph("CLICKABLE BRAND MENUS & CONCEPT CATALOGS (GOOGLE DRIVE)", sec_banner_style)]], colWidths=[551])
-    menu_sec_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 2.5)]))
+    elements.append(PageBreak())
+
+    # PAGE 6: DEDICATED BRAND MENUS & GOOGLE DRIVE DOWNLOAD LINKS
+    elements.append(Paragraph("<b>PHATBUNS BRAND PORTFOLIO & CONCEPT CATALOGS</b>", blueprint_header_style))
+    elements.append(Paragraph("<b>CLICKABLE GOOGLE DRIVE DOWNLOAD LINKS FOR ALL SUB-BRANDS</b>", blueprint_subheader_style))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
+
+    menu_sec_banner = Table([[Paragraph("CLICKABLE BRAND MENUS & CONCEPT CATALOGS (GOOGLE DRIVE)", sec_banner_style)]], colWidths=[558])
+    menu_sec_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(menu_sec_banner)
 
     menu_table_rows = [
@@ -1159,7 +1181,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
         if logo_path and os.path.exists(logo_path):
             try:
-                rl_logo = RLImage(logo_path, width=45, height=30)
+                rl_logo = RLImage(logo_path, width=42, height=28)
                 brand_cell_elements = [
                     rl_logo,
                     Spacer(1, 2),
@@ -1176,7 +1198,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             Paragraph(btn_html, ParagraphStyle('MenuLinkStyle', parent=body_regular, alignment=1))
         ])
 
-    t_menu_links = Table(menu_table_rows, colWidths=[130, 281, 140])
+    t_menu_links = Table(menu_table_rows, colWidths=[130, 288, 140])
     t_menu_links.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), ORANGE_BRAND),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -1185,15 +1207,56 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
     ]))
     elements.append(t_menu_links)
+
+    elements.append(PageBreak())
+
+    # PAGE 7: FULL MASTER NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)
+    ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=NAVY_HEADER, alignment=1)
+    elements.append(Paragraph("<b>MASTER NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)</b>", ncnda_header_style))
+    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
+
+    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=6.5, leading=8.5, textColor=DARK_TEXT)
+    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=NAVY_HEADER)
+
+    # Pre-populated party details
+    parties_box_data = [
+        [Paragraph("<b>DISCLOSING PARTY (SENDER):</b>", ncnda_title_style), Paragraph("<b>RECEIVING PARTY (PROSPECTIVE INVESTOR):</b>", ncnda_title_style)],
+        [
+            Paragraph("<b>Phatbuns South Africa Holding Co. PTY LTD</b><br/>Address: JHB 2092, Republic of South Africa<br/>Represented By: Nisaar Ally (SA Master Rights Holder)<br/>Email: nisaar@fantastic1.com | Tel: +27 68 710 1939", ncnda_legal_body),
+            Paragraph(f"<b>Applicant Name:</b> {applicant_name}<br/><b>Email:</b> {applicant_email}<br/><b>Mobile:</b> {applicant_mobile}<br/><b>Target Location:</b> {loc_name} (Shop {shop})", ncnda_legal_body)
+        ]
+    ]
+    t_parties = Table(parties_box_data, colWidths=[279, 279])
+    t_parties.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('PADDING', (0,0), (-1,-1), 4)
+    ]))
+    elements.append(t_parties)
+    elements.append(Spacer(1, 6))
+
+    elements.append(Paragraph("<b>1. PURPOSE & CONFIDENTIAL INFORMATION:</b> Disclosing Party agrees to share sensitive commercial, operational, financial, and recipe details regarding Phatbuns South Africa for the sole purpose of evaluating a prospective franchise partnership at the designated site. Confidential Information includes but is not limited to trade secrets, financial models, site selection data, supply chain contacts, and kitchen manuals.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
+    elements.append(Paragraph("<b>2. NON-DISCLOSURE:</b> Receiving Party agrees to maintain strict confidentiality and shall not disclose, reproduce, or distribute any Confidential Information to third parties without prior written approval from Phatbuns South Africa Holding Co. PTY LTD.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
+    elements.append(Paragraph("<b>3. NON-CIRCUMVENTION:</b> Receiving Party irrevocably agrees not to circumvent, bypass, or avoid Disclosing Party regarding the commercial site lease, landlord negotiations, or brand deployment at the specified location or any surrounding commercial node for a period of 24 months.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
+    elements.append(Paragraph("<b>4. INTELLECTUAL PROPERTY:</b> All recipes, logos, architectural renders, brand collateral, and operating systems remain the exclusive intellectual property of Phatbuns South Africa Holding Co. PTY LTD.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
+    elements.append(Paragraph("<b>5. GOVERNING LAW & ARBITRATION:</b> This Agreement shall be governed by and construed in accordance with the laws of the Republic of South Africa. Any disputes shall be submitted to binding arbitration in Johannesburg.", ncnda_legal_body))
     elements.append(Spacer(1, 8))
 
-    sig_p2 = [
-        [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_regular), Paragraph("<b>CEO Signature (Nisaar Ally):</b> ____________________", body_regular)],
-        [Paragraph("<b>Date:</b> ____ / ____ / 2026", body_regular), Paragraph("<b>Date:</b> ____ / ____ / 2026", body_regular)]
+    sig_p_ncnda = [
+        [Paragraph(f"<b>Signed for Disclosing Party:</b><br/><br/>____________________________________<br/><b>Nisaar Ally</b><br/>Phatbuns South Africa Holding Co. PTY LTD<br/>Date: ____ / ____ / 2026", body_regular),
+         Paragraph(f"<b>Signed for Receiving Party:</b><br/><br/>____________________________________<br/><b>{applicant_name}</b><br/>Prospective Franchisee Investor<br/>Date: ____ / ____ / 2026", body_regular)]
     ]
-    t_sig_p2 = Table(sig_p2, colWidths=[270, 271], hAlign='CENTER')
-    t_sig_p2.setStyle(TableStyle([('PADDING', (0,0), (-1,-1), 2)]))
-    elements.append(t_sig_p2)
+    t_sig_ncnda = Table(sig_p_ncnda, colWidths=[279, 279], hAlign='CENTER')
+    t_sig_ncnda.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
+        ('PADDING', (0,0), (-1,-1), 6)
+    ]))
+    elements.append(t_sig_ncnda)
 
     doc.build(elements, canvasmaker=NumberedCanvas)
     buffer.seek(0)
@@ -1201,7 +1264,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
 def generate_pipeline_pdf(df_pipeline):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=25, bottomMargin=25)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=15, leftMargin=15, topMargin=20, bottomMargin=20)
     styles = getSampleStyleSheet()
     
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, textColor=colors.HexColor('#111111'), leading=18, alignment=1)
@@ -1240,7 +1303,7 @@ def generate_pipeline_pdf(df_pipeline):
                 Paragraph(str(row['ceo_approval']), body_style)
             ])
 
-        t_pipe = Table(table_data, colWidths=[20, 75, 70, 110, 85, 75, 55, 40, 45], hAlign='CENTER')
+        t_pipe = Table(table_data, colWidths=[20, 80, 75, 115, 90, 80, 55, 40, 45], hAlign='CENTER')
         t_pipe.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')),
             ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
@@ -1401,7 +1464,7 @@ with tab1:
     if blueprint_pil_img is not None:
         st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
     else:
-        st.info(f"ℹ️ **Blueprint Status:** No custom blueprint uploaded for {location_name}. A standardized professional layout schematic will be automatically generated and embedded.")
+        st.info(f"ℹ️ **Blueprint Status:** No custom blueprint uploaded for {location_name}. A standardized professional layout schematic will be automatically generated and embedded on Page 5.")
 
     st.divider()
 
@@ -1562,7 +1625,6 @@ with tab1:
 
     selected_menus = st.session_state.get("selected_brand_menus", get_available_brand_menus())
 
-    # Save to SQLite database whenever target fields are completed
     if target_applicant_name and target_applicant_email:
         save_investor_lead({
             "full_name": target_applicant_name,
@@ -1585,7 +1647,11 @@ with tab1:
     pdf_buffer = generate_pdf_report(
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
         max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
-        ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img, selected_menus=selected_menus
+        ops_cost_sqm, total_lease_outlay_monthly, 7.42, df_payback_matrix, annual_pnl, blueprint_pil_img,
+        applicant_name=target_applicant_name if target_applicant_name else "Prospective Investor",
+        applicant_email=target_applicant_email if target_applicant_email else "N/A",
+        applicant_mobile=target_applicant_mobile if target_applicant_mobile else "N/A",
+        selected_menus=selected_menus
     )
     pdf_bytes = pdf_buffer.getvalue()
 
