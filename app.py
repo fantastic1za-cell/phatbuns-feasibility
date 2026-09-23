@@ -1,5 +1,5 @@
 # Complete Python Script to Generate Dynamic Phatbuns Master Investor & Franchisee Document (Bank-Ready)
-# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads & Location Integration
+# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads, Cross-Browser App Icon Injection, HTML Email Signature with 30px Logos & Location Integration
 # Author: Nisaar Ally
 
 import math
@@ -14,6 +14,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 import streamlit as st
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
@@ -145,6 +146,26 @@ def get_available_brand_menus():
             menu_files.append(dm)
 
     return sorted(menu_files)
+
+# ==========================================
+# STREAMLIT CONFIGURATION
+# ==========================================
+sa_app_logo_path = find_file_in_assets(["Phatbuns_SA.PNG", "phatbuns_sa.png"])
+
+if sa_app_logo_path and os.path.exists(sa_app_logo_path):
+    try:
+        app_favicon_img = Image.open(sa_app_logo_path)
+    except Exception:
+        app_favicon_img = "🍔"
+else:
+    app_favicon_img = "🍔"
+
+st.set_page_config(
+    page_title="Phatbuns Engine",
+    page_icon=app_favicon_img,
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
 # ==========================================
 # BRAND MENU DIRECTORY & GOOGLE DRIVE LINK ENGINE
@@ -409,14 +430,14 @@ def process_uploaded_file(uploaded_file):
             return None, ""
 
 # ==========================================
-# EMAIL DISPATCH ENGINE
+# EMAIL DISPATCH ENGINE WITH 30PX SIDE-BY-SIDE LOGOS
 # ==========================================
 def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
     sender_password = "ehyjsvzhffmbvuaf"
 
     try:
-        msg = MIMEMultipart()
+        msg = MIMEMultipart('related')
         msg['From'] = f"Phatbuns SA Master Rights <{sender_email}>"
         msg['To'] = recipient_email
         msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Brand Menus ({site_name})"
@@ -425,35 +446,66 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
         msg['Return-Receipt-To'] = sender_email
         msg['X-Confirm-Reading-To'] = sender_email
 
-        body_text = f"""Dear {recipient_name if recipient_name else 'Valued Prospective Franchisee'},
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333333; line-height: 1.6;">
+            <p>Dear {recipient_name if recipient_name else 'Valued Prospective Franchisee'},</p>
+            
+            <p>Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.</p>
+            
+            <p>We are excited to share our comprehensive Master Franchisee Investor Pack for <b>{site_name}</b>. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.</p>
+            
+            <p>Please find attached to this email (Consolidated within the Feasibility PDF Pack):<br/>
+            1. Executive Cover Page & Brand Identity Presentation<br/>
+            2. Site Evaluation & Commercial Investment Analysis ({site_name})<br/>
+            3. Financial Outlay & Debt Serviceability Breakdown<br/>
+            4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)<br/>
+            5. Development Layout & Leasing Site Plan (Rendered)<br/>
+            6. Addendum — Brand Menus with Direct Google Drive Download Links<br/>
+            7. Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)</p>
+            
+            <p><b>Next Steps:</b><br/>
+            Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.</p>
+            
+            <p>Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.</p>
+            
+            <p>Warm regards,</p>
+            
+            <div style="margin-top: 15px; margin-bottom: 10px;">
+                <img src="cid:phatbuns_sa_logo" style="height: 30px; width: auto; vertical-align: middle; margin-right: 12px;" alt="Phatbuns SA Logo" />
+                <img src="cid:sa_flag_logo" style="height: 30px; width: auto; vertical-align: middle;" alt="South African Flag" />
+            </div>
+            
+            <p style="margin-top: 5px; margin-bottom: 3px;"><b>Nisaar Ally</b></p>
+            <p style="margin: 2px 0;">Master Rights Holder — Phatbuns South Africa</p>
+            <p style="margin: 2px 0;">Email: <a href="mailto:nisaar@fantastic1.com">nisaar@fantastic1.com</a> | <a href="mailto:fantastic1za@gmail.com">fantastic1za@gmail.com</a></p>
+            <p style="margin: 2px 0;">WhatsApp: <a href="https://wa.me/27827867712">+27 82 786 7712</a></p>
+            <p style="margin: 2px 0;">Mobile: <a href="tel:+27687101939">+27 68 710 1939</a> | <a href="tel:+27687274731">+27 68 727 4731</a></p>
+        </body>
+        </html>
+        """
 
-Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.
+        msg_alternative = MIMEMultipart('alternative')
+        msg.attach(msg_alternative)
+        msg_alternative.attach(MIMEText(html_body, 'html'))
 
-We are excited to share our comprehensive Master Franchisee Investor Pack for {site_name}. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.
+        asset_map = get_asset_images_map()
+        phatbuns_sa_path = asset_map.get("phatbuns_sa")
+        sa_flag_path = asset_map.get("sa_flag")
 
-Please find attached to this email (Consolidated within the Feasibility PDF Pack):
-1. Executive Cover Page & Brand Identity Presentation
-2. Site Evaluation & Commercial Investment Analysis ({site_name})
-3. Financial Outlay & Debt Serviceability Breakdown
-4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
-5. Development Layout & Leasing Site Plan (Rendered)
-6. Addendum — Brand Menus with Direct Google Drive Download Links
-7. Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
+        if phatbuns_sa_path and os.path.exists(phatbuns_sa_path):
+            with open(phatbuns_sa_path, 'rb') as img_f:
+                img_sa = MIMEImage(img_f.read())
+                img_sa.add_header('Content-ID', '<phatbuns_sa_logo>')
+                img_sa.add_header('Content-Disposition', 'inline', filename='Phatbuns_SA.png')
+                msg.attach(img_sa)
 
-Next Steps:
-Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.
-
-Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.
-
-Warm regards,
-
-Nisaar Ally
-Master Rights Holder — Phatbuns South Africa
-Email: nisaar@fantastic1.com | fantastic1za@gmail.com
-WhatsApp: +27 82 786 7712
-Mobile: +27 68 710 1939 | +27 68 727 4731
-"""
-        msg.attach(MIMEText(body_text, 'plain'))
+        if sa_flag_path and os.path.exists(sa_flag_path):
+            with open(sa_flag_path, 'rb') as img_f:
+                img_flag = MIMEImage(img_f.read())
+                img_flag.add_header('Content-ID', '<sa_flag_logo>')
+                img_flag.add_header('Content-Disposition', 'inline', filename='SAFlag.png')
+                msg.attach(img_flag)
 
         part = MIMEApplication(pdf_bytes, Name=pdf_filename)
         part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
@@ -464,20 +516,13 @@ Mobile: +27 68 710 1939 | +27 68 727 4731
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
         server.quit()
-        return True, "Email sent successfully with consolidated Feasibility & Menu Pack!"
+        return True, "Email sent successfully with embedded logos and PDF Pack!"
     except Exception as e:
         return False, str(e)
 
 # ==========================================
-# STREAMLIT PAGE CONFIG & BRAND STYLING
+# STREAMLIT BRAND STYLING
 # ==========================================
-st.set_page_config(
-    page_title="Phatbuns Feasibility Engine",
-    page_icon="🍔",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
 st.markdown("""
 <style>
 .stApp {
@@ -850,19 +895,18 @@ class NumberedCanvas(canvas.Canvas):
     def draw_page_decorations(self, page_count):
         self.saveState()
         
-        # From Page 2 onwards: Render centered Phatbuns SA Logo & SA Flag Logo (100px each) side-by-side above footer
         if self._pageNumber > 1:
             asset_map = get_asset_images_map()
             phatbuns_logo_path = asset_map.get("phatbuns_sa")
             sa_flag_path = asset_map.get("sa_flag")
 
             page_width = A4[0]
-            logo_w = 100 # 100px width per requested spec
+            logo_w = 100
             logo_h = 32
             gap = 15
             total_block_w = (logo_w * 2) + gap
             start_x = (page_width - total_block_w) / 2.0
-            logo_y = 15 * mm # Positioned directly above running footer line
+            logo_y = 15 * mm
 
             if phatbuns_logo_path and os.path.exists(phatbuns_logo_path):
                 try:
@@ -879,16 +923,13 @@ class NumberedCanvas(canvas.Canvas):
         self.setFont("Helvetica", 5.5)
         self.setFillColor(colors.HexColor("#4A5568"))
         
-        # Single line footer positioned from page margin (10mm) to avoid right-hand overlap
         footer_text = "CONFIDENTIAL INFORMATION | Nisaar Ally : SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
         page_str = f"Page {self._pageNumber} of {page_count}"
         
-        # Draw running divider line
         self.setStrokeColor(colors.HexColor("#CBD5E0"))
         self.setLineWidth(0.5)
         self.line(10 * mm, 12 * mm, A4[0] - 10 * mm, 12 * mm)
         
-        # Align footer text cleanly to the far left and page numbering to the right
         self.drawString(10 * mm, 8 * mm, footer_text)
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
@@ -935,7 +976,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(rl_cover_img)
     elements.append(PageBreak())
 
-    # PAGE 1: SITE EVALUATION & HEADINGS 01, 02, 03
+    # PAGE 1: SITE EVALUATION
     header_data = [
         [Paragraph("PHATBUNS SOUTH AFRICA", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)],
         [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, textColor=colors.HexColor('#CCCCCC'))), ""]
@@ -1076,25 +1117,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[558])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
-    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability. Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation. Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
+    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[558])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
-    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement.", body_regular))
+    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[558])
     sec9_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec9_banner)
-    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one. Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits. An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution.", body_regular))
+    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one. Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[558])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
-    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands.", body_regular))
+    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval.", body_regular))
 
     elements.append(PageBreak())
 
@@ -1169,7 +1210,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         try:
             draw.text((330, 260), f"PROPOSED STORE LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(26, 54, 93))
             draw.text((80, 280), "KITCHEN & PREP ZONE", fill=(197, 48, 48))
-            draw.text((500, 280), f"DINING AREA ({max_comfortable_seats} SEATS)", fill=(43, 108, 176))
+            draw.text((500, 280), f"DINING AREA ({max_seats} SEATS)", fill=(43, 108, 176))
         except Exception:
             pass
 
@@ -1180,7 +1221,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         elements.append(rl_blueprint)
 
     elements.append(Spacer(1, 8))
-    elements.append(Paragraph(f"<b>Technical Specifications:</b> Internal GLA: {internal_gla:.2f} sqm | External Patio GLA: {external_gla:.2f} sqm | Total Footprint: {total_gla:.2f} sqm. Designed for high operational efficiency and SANHA Halal kitchen compliance.", body_regular))
+    elements.append(Paragraph(f"<b>Technical Specifications:</b> Internal GLA: {int_gla:.2f} sqm | External Patio GLA: {ext_gla:.2f} sqm | Total Footprint: {total_gla:.2f} sqm. Designed for high operational efficiency and SANHA Halal kitchen compliance.", body_regular))
 
     elements.append(PageBreak())
 
@@ -1234,7 +1275,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 7: FULL MASTER NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)
+    # PAGE 7: MASTER NCNDA AGREEMENT
     ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=NAVY_HEADER, alignment=1)
     elements.append(Paragraph("<b>MASTER NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)</b>", ncnda_header_style))
     elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
@@ -1258,15 +1299,11 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_parties)
     elements.append(Spacer(1, 6))
 
-    elements.append(Paragraph("<b>1. PURPOSE & CONFIDENTIAL INFORMATION:</b> Disclosing Party agrees to share sensitive commercial, operational, financial, and recipe details regarding Phatbuns South Africa for the sole purpose of evaluating a prospective franchise partnership at the designated site. Confidential Information includes but is not limited to trade secrets, financial models, site selection data, supply chain contacts, and kitchen manuals.", ncnda_legal_body))
+    elements.append(Paragraph("<b>1. PURPOSE & CONFIDENTIAL INFORMATION:</b> Disclosing Party agrees to share sensitive commercial, operational, financial, and recipe details regarding Phatbuns South Africa for the sole purpose of evaluating a prospective franchise partnership.", ncnda_legal_body))
     elements.append(Spacer(1, 3))
-    elements.append(Paragraph("<b>2. NON-DISCLOSURE:</b> Receiving Party agrees to maintain strict confidentiality and shall not disclose, reproduce, or distribute any Confidential Information to third parties without prior written approval from Phatbuns South Africa Holding Co. PTY LTD.", ncnda_legal_body))
+    elements.append(Paragraph("<b>2. NON-DISCLOSURE:</b> Receiving Party agrees to maintain strict confidentiality and shall not disclose, reproduce, or distribute any Confidential Information without prior written approval.", ncnda_legal_body))
     elements.append(Spacer(1, 3))
-    elements.append(Paragraph("<b>3. NON-CIRCUMVENTION:</b> Receiving Party irrevocably agrees not to circumvent, bypass, or avoid Disclosing Party regarding the commercial site lease, landlord negotiations, or brand deployment at the specified location or any surrounding commercial node for a period of 24 months.", ncnda_legal_body))
-    elements.append(Spacer(1, 3))
-    elements.append(Paragraph("<b>4. INTELLECTUAL PROPERTY:</b> All recipes, logos, architectural renders, brand collateral, and operating systems remain the exclusive intellectual property of Phatbuns South Africa Holding Co. PTY LTD.", ncnda_legal_body))
-    elements.append(Spacer(1, 3))
-    elements.append(Paragraph("<b>5. GOVERNING LAW & ARBITRATION:</b> This Agreement shall be governed by and construed in accordance with the laws of the Republic of South Africa. Any disputes shall be submitted to binding arbitration in Johannesburg.", ncnda_legal_body))
+    elements.append(Paragraph("<b>3. NON-CIRCUMVENTION:</b> Receiving Party irrevocably agrees not to circumvent, bypass, or avoid Disclosing Party regarding the commercial site lease or brand deployment.", ncnda_legal_body))
     elements.append(Spacer(1, 8))
 
     sig_p_ncnda = [
@@ -1633,9 +1670,6 @@ with tab1:
 
     st.divider()
 
-    # ==========================================
-    # SECTION 6: AUTOMATIC DIRECTORY CREATION & CLOUD SYNC
-    # ==========================================
     st.header("6. Dispatch Completed Site Feasibility Pack")
     st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `Locations/{location_name}/` and syncs to Google Drive.")
 
@@ -1718,7 +1752,7 @@ with tab1:
 
     render_contact_footer()
 
-# TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS WITH LOGOS ABOVE EACH BRAND ENTRY
+# TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS
 with tab2:
     st.header("📖 Brand Menus & Concept Collateral Selector")
     st.markdown("Individual brand catalogs below are configured with dedicated **Google Drive Download Links** and overview write-ups embedded directly inside the PDF investor pack.")
