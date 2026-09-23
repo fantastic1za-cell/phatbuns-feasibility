@@ -195,7 +195,6 @@ BRAND_MENU_CATALOG = {
 }
 
 def get_drive_menu_download_url(file_id_or_folder):
-    """Generates a direct Google Drive download link or fallback folder link."""
     if file_id_or_folder and len(file_id_or_folder) > 25 and file_id_or_folder != "14K_pChaU-dYfNlKi-HvzcEytFY6qOR_m":
         return f"https://drive.google.com/uc?export=download&id={file_id_or_folder}"
     return f"https://drive.google.com/drive/folders/{file_id_or_folder}"
@@ -274,7 +273,6 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
     with open(local_file_path, "wb") as f:
         f.write(pdf_bytes)
 
-    # Check if Google Drive credentials exist for site pack cloud upload
     drive_service = get_drive_service()
     if drive_service:
         try:
@@ -287,7 +285,6 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
         except Exception as e:
             return local_file_path, f"Saved Locally | Drive Sync Warning: {e}"
 
-    # Clean display message when Google Drive API credentials are not yet linked
     return local_file_path, "PDF Generated & Saved to Local Directory | Google Drive Menu Links Active"
 
 # ==========================================
@@ -703,7 +700,21 @@ def save_investor_lead(data):
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM franchisee_pipeline WHERE email = ?", (data['email'],))
     existing = cursor.fetchone()
-    if not existing:
+    if existing:
+        # Update existing record with full details including mobile and site details
+        cursor.execute("""
+            UPDATE franchisee_pipeline SET
+                full_name = ?, entity_name = ?, id_or_passport = ?, mobile = ?,
+                preferred_site = ?, store_model = ?, capital_available = ?, unencumbered_cash_pct = ?,
+                admin_fee_paid = ?, ndnca_signed = ?, popia_consent = ?
+            WHERE email = ?
+        """, (
+            data['full_name'], data['entity_name'], data['id_or_passport'], data['mobile'],
+            data['preferred_site'], data['store_model'], data['capital_available'], data['unencumbered_cash_pct'],
+            data['admin_fee_paid'], data['ndnca_signed'], data['popia_consent'], data['email']
+        ))
+        conn.commit()
+    else:
         cursor.execute("""
             INSERT INTO franchisee_pipeline (
                 full_name, entity_name, id_or_passport, email, mobile,
@@ -839,11 +850,11 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, page_count):
         self.saveState()
-        self.setFont("Helvetica", 7)
-        self.setFillColor(colors.HexColor("#718096"))
+        self.setFont("Helvetica", 6.5)
+        self.setFillColor(colors.HexColor("#4A5568"))
         
-        # Single line footer with contact details, CONFIDENTIAL DOCUMENT, and dynamic page numbering
-        footer_text = "CONFIDENTIAL DOCUMENT  |  Nisaar Ally | Business Consultant & Franchise Strategist  |  Email: nisaar@ally.co.za  |  Mobile: +27 (0)82 000 0000"
+        # Explicit user-requested single-line footer text
+        footer_text = "CONFIDENTIAL INFORMATION | Nisaar Ally : SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
         page_str = f"Page {self._pageNumber} of {page_count}"
         
         # Draw running footer line
@@ -851,7 +862,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setLineWidth(0.5)
         self.line(15 * mm, 12 * mm, A4[0] - 15 * mm, 12 * mm)
         
-        # Draw footer strings
+        # Draw single line footer strings
         self.drawString(15 * mm, 8 * mm, footer_text)
         self.drawRightString(A4[0] - 15 * mm, 8 * mm, page_str)
         
@@ -1215,11 +1226,13 @@ def generate_pipeline_pdf(df_pipeline):
             Paragraph("<b>CEO Status</b>", body_style)
         ]]
         for index, row in df_pipeline.iterrows():
+            mob_val = str(row['mobile']) if str(row['mobile']).strip() else "N/A"
+            email_val = str(row['email']) if str(row['email']).strip() else "N/A"
             table_data.append([
                 Paragraph(str(row['id']), body_style),
                 Paragraph(str(row['full_name']), body_style),
-                Paragraph(str(row['mobile']), body_style),
-                Paragraph(str(row['email']), body_style),
+                Paragraph(mob_val, body_style),
+                Paragraph(email_val, body_style),
                 Paragraph(str(row['preferred_site']), body_style),
                 Paragraph(str(row['store_model']), body_style),
                 Paragraph(f"R {int(round(row['capital_available'])):,}", body_style),
@@ -1549,6 +1562,7 @@ with tab1:
 
     selected_menus = st.session_state.get("selected_brand_menus", get_available_brand_menus())
 
+    # Save to SQLite database whenever target fields are completed
     if target_applicant_name and target_applicant_email:
         save_investor_lead({
             "full_name": target_applicant_name,
@@ -1626,7 +1640,6 @@ with tab2:
 
         st.markdown('<div class="brand-card-block">', unsafe_allow_html=True)
         
-        # Render logo directly ABOVE brand title
         if b64_logo_str:
             st.markdown(f'<img src="data:image/png;base64,{b64_logo_str}" class="brand-logo-above"/>', unsafe_allow_html=True)
 
@@ -1686,7 +1699,6 @@ with tab3:
     
     df_pipeline = get_pipeline_dataframe()
     if not df_pipeline.empty:
-        # Display updated table with clear Mobile and Email headers
         st.dataframe(
             df_pipeline.rename(columns={
                 'id': 'ID',
