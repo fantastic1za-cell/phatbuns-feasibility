@@ -1190,29 +1190,36 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
 def generate_pipeline_pdf(df_pipeline):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=25, leftMargin=25, topMargin=30, bottomMargin=30)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=25, bottomMargin=25)
     styles = getSampleStyleSheet()
     
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=16, textColor=colors.HexColor('#111111'), leading=20, alignment=1)
-    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=colors.HexColor('#8B0000'), leading=14, spaceBefore=10, spaceAfter=5)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, textColor=colors.HexColor('#222222'))
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, textColor=colors.HexColor('#111111'), leading=18, alignment=1)
+    section_heading = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=10, textColor=colors.HexColor('#8B0000'), leading=12, spaceBefore=8, spaceAfter=4)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=9.5, textColor=colors.HexColor('#222222'))
 
     elements = []
     elements.append(Paragraph("PHATBUNS SOUTH AFRICA", title_style))
     elements.append(Paragraph("Franchisee & Investor Pipeline Audit Report", section_heading))
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#8B0000'), spaceBefore=5, spaceAfter=10))
+    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#8B0000'), spaceBefore=4, spaceAfter=8))
 
     if not df_pipeline.empty:
         table_data = [[
-            Paragraph("<b>ID</b>", body_style), Paragraph("<b>Applicant</b>", body_style),
-            Paragraph("<b>Preferred Site</b>", body_style), Paragraph("<b>Model</b>", body_style),
-            Paragraph("<b>Capital Available</b>", body_style), Paragraph("<b>Cash Equity %</b>", body_style),
+            Paragraph("<b>ID</b>", body_style),
+            Paragraph("<b>Applicant</b>", body_style),
+            Paragraph("<b>Mobile / Tel</b>", body_style),
+            Paragraph("<b>Email Address</b>", body_style),
+            Paragraph("<b>Preferred Site</b>", body_style),
+            Paragraph("<b>Model</b>", body_style),
+            Paragraph("<b>Capital</b>", body_style),
+            Paragraph("<b>Equity %</b>", body_style),
             Paragraph("<b>CEO Status</b>", body_style)
         ]]
         for index, row in df_pipeline.iterrows():
             table_data.append([
                 Paragraph(str(row['id']), body_style),
-                Paragraph(f"{row['full_name']}<br/>{row['mobile']}", body_style),
+                Paragraph(str(row['full_name']), body_style),
+                Paragraph(str(row['mobile']), body_style),
+                Paragraph(str(row['email']), body_style),
                 Paragraph(str(row['preferred_site']), body_style),
                 Paragraph(str(row['store_model']), body_style),
                 Paragraph(f"R {int(round(row['capital_available'])):,}", body_style),
@@ -1220,8 +1227,13 @@ def generate_pipeline_pdf(df_pipeline):
                 Paragraph(str(row['ceo_approval']), body_style)
             ])
 
-        t_pipe = Table(table_data, colWidths=[25, 100, 110, 85, 90, 65, 65], hAlign='CENTER')
-        t_pipe.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')), ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')), ('PADDING', (0,0), (-1,-1), 4)]))
+        t_pipe = Table(table_data, colWidths=[20, 75, 70, 110, 85, 75, 55, 40, 45], hAlign='CENTER')
+        t_pipe.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EFEFEF')),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CCCCCC')),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('PADDING', (0,0), (-1,-1), 3)
+        ]))
         elements.append(t_pipe)
     else:
         elements.append(Paragraph("No applicant records available in database.", body_style))
@@ -1674,7 +1686,22 @@ with tab3:
     
     df_pipeline = get_pipeline_dataframe()
     if not df_pipeline.empty:
-        st.dataframe(df_pipeline, use_container_width=True)
+        # Display updated table with clear Mobile and Email headers
+        st.dataframe(
+            df_pipeline.rename(columns={
+                'id': 'ID',
+                'full_name': 'Applicant Name',
+                'mobile': 'Mobile / Tel',
+                'email': 'Email Address',
+                'preferred_site': 'Preferred Site',
+                'store_model': 'Store Model',
+                'capital_available': 'Capital Available (ZAR)',
+                'unencumbered_cash_pct': 'Unencumbered Cash %',
+                'ceo_approval': 'CEO Status',
+                'created_at': 'Registration Date'
+            }),
+            use_container_width=True
+        )
         pipeline_pdf_file = generate_pipeline_pdf(df_pipeline)
         st.download_button(label="📥 Download CEO Pipeline Audit PDF Report", data=pipeline_pdf_file, file_name="Phatbuns_Investor_Pipeline_Report.pdf", mime="application/pdf", use_container_width=True)
     else:
