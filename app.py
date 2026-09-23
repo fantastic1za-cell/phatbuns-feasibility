@@ -134,9 +134,11 @@ def get_available_brand_menus():
     
     default_menus = [
         "Phatbuns_Smash_Burger_Main_Menu.pdf",
-        "Phatville_Sliders_Loaded_Range_Menu.pdf",
-        "Doorstep_Desserts_Artisan_Catalog.pdf",
-        "Butter_Brulee_Patisserie_Menu.pdf"
+        "Phatbuns_Menu_2_Sliders_and_Sides.pdf",
+        "Butter_Brulee_Signature_Drinks.pdf",
+        "Butter_Brulee_Classic_Exclusive_Cookies.pdf",
+        "Butter_Brulee_Seasonal_Menu_Item.pdf",
+        "Doorstep_Desserts_Artisan_Catalog.pdf"
     ]
     for dm in default_menus:
         if dm not in menu_files:
@@ -150,35 +152,47 @@ def get_available_brand_menus():
 BRAND_MENU_CATALOG = {
     "Phatbuns Smash Burgers": {
         "filename": "Phatbuns_Smash_Burger_Main_Menu.pdf",
-        "drive_file_id": "1A2b3C4d5E6f7G8h9I0j1K2l3M4n5O6p",
+        "drive_file_id": "1Goe4yS1E5R0KiZt6N_cQ4HcCad9OUJgr",
         "tagline": "Artisan Smash Burgers & Signature Buns",
         "description": "Hand-pressed Angus beef smash patties served on seeded brioche, topped with proprietary secret sauces, Cheesy Doritos, Fiery Cheetos ranges, and buttermilk fried chicken."
     },
     "PhatVille Sliders & Sides": {
-        "filename": "Phatville_Sliders_Loaded_Range_Menu.pdf",
-        "drive_file_id": "2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q",
+        "filename": "Phatbuns_Menu_2_Sliders_and_Sides.pdf",
+        "drive_file_id": "1lLGjL73SJeRfXXJKFl0a8ZnhfFQb1ich",
         "tagline": "Nashville Hot Sliders & Loaded Sides",
         "description": "Nashville-style sliders, crispy tender boxes, dusted crinkle fries, and specialized dipping sauces optimized for rapid kitchen assembly and delivery channels."
     },
+    "Butter Brûlée Signature Drinks": {
+        "filename": "Butter_Brulee_Signature_Drinks.pdf",
+        "drive_file_id": "1dUxvPSZTyWfbjDXRxuBNFhFSOYc5ctWc",
+        "tagline": "Signature Beverages & Artisanal Mocktails",
+        "description": "Hand-crafted specialty iced teas, indulgent gourmet milkshakes, artisanal refresher coolers, and barista specialty coffees designed to complement sweet and savory offerings."
+    },
+    "Butter Brûlée Cookies & Desserts": {
+        "filename": "Butter_Brulee_Classic_Exclusive_Cookies.pdf",
+        "drive_file_id": "1nc1I7_-bLZkq4oJDE5wHwic8DZ8QCVxE",
+        "tagline": "Classic & Exclusive Artisanal Cookies",
+        "description": "Gourmet freshly baked classic cookies, stuffed exclusive artisan ranges, cookie caviar tiramisu, and specialty sweet pairings engineered for high average ticket yield."
+    },
+    "Butter Brûlée Seasonal Specials": {
+        "filename": "Butter_Brulee_Seasonal_Menu_Item.pdf",
+        "drive_file_id": "1OaWyRBwvoQQX-OZMQNlbdpXBgXQaFAZs",
+        "tagline": "Luxury Milk Cakes, Seasonal Specials & Fine Shakes",
+        "description": "Artisanal seasonal dessert offerings, caramelized french toast, pistachio kunafa treats, and high-margin signature drinks."
+    },
     "Doorstep Desserts": {
         "filename": "Doorstep_Desserts_Artisan_Catalog.pdf",
-        "drive_file_id": "3C4d5E6f7G8h9I0j1K2l3M4n5O6p7Q8r",
-        "tagline": "Gourmet Warm Desserts & Waffles",
-        "description": "Indulgent double-stick waffles, freshly baked cookie doughs, Lotus Biscoff crunch cakes, and hand-crafted gelato sundaes."
-    },
-    "Butter Brûlée": {
-        "filename": "Butter_Brulee_Patisserie_Menu.pdf",
-        "drive_file_id": "4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R9s",
-        "tagline": "Luxury Milk Cakes & Fine Shakes",
-        "description": "Artisanal milk cakes, caramelized french toast, pistachio kunafa desserts, and rich gourmet milkshakes that boost sweet-tooth ticket values."
+        "drive_file_id": "1rghEVeNi5SRgy9NbTVp6UwbHgn_4pSHY",
+        "tagline": "Gourmet Warm Desserts, Waffles & Sundaes",
+        "description": "Indulgent double-stick waffle sticks, freshly baked dough tubs, Lotus Biscoff crunch cakes, gelato sundaes, and dessert delivery boxes."
     }
 }
 
-def get_drive_menu_download_url(file_id_or_name):
-    # Generates a direct Google Drive force-download link
-    if file_id_or_name and len(file_id_or_name) > 15 and not file_id_or_name.endswith(".pdf"):
-        return f"https://drive.google.com/uc?export=download&id={file_id_or_name}"
-    return f"https://drive.google.com/drive/folders/phatbuns_master_menus?q={urllib.parse.quote(str(file_id_or_name))}"
+def get_drive_menu_download_url(file_id_or_folder):
+    """Generates a direct Google Drive download link or fallback folder link."""
+    if file_id_or_folder and len(file_id_or_folder) > 25 and file_id_or_folder != "14K_pChaU-dYfNlKi-HvzcEytFY6qOR_m":
+        return f"https://drive.google.com/uc?export=download&id={file_id_or_folder}"
+    return f"https://drive.google.com/drive/folders/{file_id_or_folder}"
 
 # ==========================================
 # STRICT GOOGLE DRIVE API & LOCAL SYNC ENGINE
@@ -523,7 +537,7 @@ st.markdown("""
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    justify-content: space-around !important;
+    justify-space: space-around !important;
     align-items: center !important;
     width: 100% !important;
     padding: 10px 0 !important;
