@@ -96,7 +96,7 @@ def get_asset_images_map():
         "butter_brulee": find_file_in_assets(["ButterBruleeLogo.PNG", "butterbrulee.png"]),
         "doorstep": find_file_in_assets(["Doorstep Logo.PNG", "doorstep.png"]),
         "adega": find_file_in_assets(["Adega.PNG", "adega.png"]),
-        "sa_flag": find_file_in_assets(["SAFlag.PNG", "saflag.png"]),
+        "sa_flag": find_file_in_assets(["SAFlag.PNG", "saflag.png", "sa_flag.png"]),
         "cover_bg": find_file_in_assets(["coverSA.JPG", "coversa.jpg", "cover.jpg", "Cover.JPG", "IMG_5357.jpeg", "img_5357.jpeg"])
     }
     return asset_map
@@ -574,16 +574,60 @@ st.markdown("""
     display: block;
     margin-bottom: 10px;
 }
+.contact-footer-box {
+    background-color: #181818;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 30px;
+}
+.contact-header-flex {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.contact-mini-img {
+    height: 25px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 3px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 logo_map = get_asset_images_map()
 
 b64_sa = get_image_base64(logo_map.get("phatbuns_sa"))
+b64_flag = get_image_base64(logo_map.get("sa_flag"))
 b64_ds = get_image_base64(logo_map.get("doorstep"))
 b64_bb = get_image_base64(logo_map.get("butter_brulee"))
 b64_pv = get_image_base64(logo_map.get("phatville"))
 b64_pb = get_image_base64(logo_map.get("phatbuns"))
+
+def render_contact_footer():
+    sa_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="contact-mini-img"/>' if b64_sa else '🍔'
+    flag_logo_html = f'<img src="data:image/png;base64,{b64_flag}" class="contact-mini-img"/>' if b64_flag else '🇿🇦'
+
+    st.markdown(f"""
+    <div class="contact-footer-box">
+        <h3 style="margin-top:0; margin-bottom:10px; font-size:20px; font-weight:700;">Master Rights Holder Contact Information</h3>
+        <div class="contact-header-flex">
+            {sa_logo_html}
+            {flag_logo_html}
+            <span style="font-size:15px; font-weight:600; color:#CCCCCC;">Master Rights Holder – South Africa</span>
+        </div>
+        <p style="margin: 6px 0; font-size:14px;">
+            📧 <b>Email:</b> <a href="mailto:nisaar@fantastic1.com" style="color:#66B2FF;">nisaar@fantastic1.com</a> | <a href="mailto:fantastic1za@gmail.com" style="color:#66B2FF;">fantastic1za@gmail.com</a>
+        </p>
+        <p style="margin: 6px 0; font-size:14px;">
+            💬 <b>WhatsApp:</b> <a href="https://wa.me/27827867712" target="_blank" style="color:#25D366; font-weight:bold;">+27 82 786 7712</a>
+        </p>
+        <p style="margin: 6px 0; font-size:14px;">
+            📲 <b>Mobile:</b> <a href="tel:+27687101939" style="color:#66B2FF;">+27 68 710 1939</a> | <a href="tel:+27687274731" style="color:#66B2FF;">+27 68 727 4731</a>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
 
@@ -995,25 +1039,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[551])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
-    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_0](start_span)[span_0](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_1](start_span)[span_1](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_2](start_span)[span_2](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
+    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability. Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation. Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[551])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
-    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_3](start_span)[span_3](end_span).", body_regular))
+    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[551])
     sec9_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec9_banner)
-    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_4](start_span)[span_4](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_5](start_span)[span_5](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_6](start_span)[span_6](end_span).", body_regular))
+    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one. Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits. An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[551])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
-    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_7](start_span)[span_7](end_span).", body_regular))
+    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands.", body_regular))
 
     elements.append(PageBreak())
 
@@ -1557,6 +1601,8 @@ with tab1:
         </a>
         """, unsafe_allow_html=True)
 
+    render_contact_footer()
+
 # TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS WITH LOGOS ABOVE EACH BRAND ENTRY
 with tab2:
     st.header("📖 Brand Menus & Concept Collateral Selector")
@@ -1579,6 +1625,8 @@ with tab2:
         st.markdown(f"🔗 **Google Drive Direct Download Link:** [{brand_info['filename']}]({drive_dl_url})")
         
         st.markdown('</div>', unsafe_allow_html=True)
+
+    render_contact_footer()
 
 # TAB 3: INVESTOR & FRANCHISEE REGISTRY
 with tab3:
@@ -1632,12 +1680,4 @@ with tab3:
     else:
         st.info("No franchisee applications currently recorded in database.")
 
-st.divider()
-
-st.subheader("Master Rights Holder Contact Information")
-st.markdown("""
-**Master Rights Holder – South Africa**  
-📧 **Email:** [nisaar@fantastic1.com](mailto:nisaar@fantastic1.com) | [fantastic1za@gmail.com](mailto:fantastic1za@gmail.com)  
-💬 **WhatsApp:** [+27 82 786 7712](https://wa.me/27827867712)  
-📲 **Mobile:** [+27 68 710 1939](tel:+27687101939) | [+27 68 727 4731](tel:+27687274731)  
-""")
+    render_contact_footer()
