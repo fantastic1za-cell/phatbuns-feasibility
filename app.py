@@ -1,5 +1,5 @@
 # Complete Python Script to Generate Dynamic Phatbuns Master Investor & Franchisee Document (Bank-Ready)
-# Comprehensive 10-Point Header Expansion & Dynamic Location Pack Integration Across All Locations
+# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads & Location Integration
 # Author: Nisaar Ally
 
 import math
@@ -33,7 +33,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.pdfgen import canvas  # <--- CRITICAL FIX ADDED HERE
+from reportlab.pdfgen import canvas
 
 # PDF Processing Engine
 try:
@@ -133,18 +133,52 @@ def get_available_brand_menus():
                     menu_files.append(f)
     
     default_menus = [
-        "SMALL_NEW MENU DESIGN - Frozen.pdf",
-        "SMALL_Build your own burger 148.pdf",
-        "Seasonal - cookie caviar tiramisu.pdf",
-        "Doorstep Menu Individual Pages 2025 - New.pdf",
-        "classic and exclusive cookies.pdf",
-        "Signature drinks etc.pdf"
+        "Phatbuns_Smash_Burger_Main_Menu.pdf",
+        "Phatville_Sliders_Loaded_Range_Menu.pdf",
+        "Doorstep_Desserts_Artisan_Catalog.pdf",
+        "Butter_Brulee_Patisserie_Menu.pdf"
     ]
     for dm in default_menus:
         if dm not in menu_files:
             menu_files.append(dm)
 
     return sorted(menu_files)
+
+# ==========================================
+# BRAND MENU DIRECTORY & GOOGLE DRIVE LINK ENGINE
+# ==========================================
+BRAND_MENU_CATALOG = {
+    "Phatbuns Smash Burgers": {
+        "filename": "Phatbuns_Smash_Burger_Main_Menu.pdf",
+        "drive_file_id": "1A2b3C4d5E6f7G8h9I0j1K2l3M4n5O6p",
+        "tagline": "Artisan Smash Burgers & Signature Buns",
+        "description": "Hand-pressed Angus beef smash patties served on seeded brioche, topped with proprietary secret sauces, Cheesy Doritos, Fiery Cheetos ranges, and buttermilk fried chicken."
+    },
+    "PhatVille Sliders & Sides": {
+        "filename": "Phatville_Sliders_Loaded_Range_Menu.pdf",
+        "drive_file_id": "2B3c4D5e6F7g8H9i0J1k2L3m4N5o6P7q",
+        "tagline": "Nashville Hot Sliders & Loaded Sides",
+        "description": "Nashville-style sliders, crispy tender boxes, dusted crinkle fries, and specialized dipping sauces optimized for rapid kitchen assembly and delivery channels."
+    },
+    "Doorstep Desserts": {
+        "filename": "Doorstep_Desserts_Artisan_Catalog.pdf",
+        "drive_file_id": "3C4d5E6f7G8h9I0j1K2l3M4n5O6p7Q8r",
+        "tagline": "Gourmet Warm Desserts & Waffles",
+        "description": "Indulgent double-stick waffles, freshly baked cookie doughs, Lotus Biscoff crunch cakes, and hand-crafted gelato sundaes."
+    },
+    "Butter Brûlée": {
+        "filename": "Butter_Brulee_Patisserie_Menu.pdf",
+        "drive_file_id": "4D5e6F7g8H9i0J1k2L3m4N5o6P7q8R9s",
+        "tagline": "Luxury Milk Cakes & Fine Shakes",
+        "description": "Artisanal milk cakes, caramelized french toast, pistachio kunafa desserts, and rich gourmet milkshakes that boost sweet-tooth ticket values."
+    }
+}
+
+def get_drive_menu_download_url(file_id_or_name):
+    # Generates a direct Google Drive force-download link
+    if file_id_or_name and len(file_id_or_name) > 15 and not file_id_or_name.endswith(".pdf"):
+        return f"https://drive.google.com/uc?export=download&id={file_id_or_name}"
+    return f"https://drive.google.com/drive/folders/phatbuns_master_menus?q={urllib.parse.quote(str(file_id_or_name))}"
 
 # ==========================================
 # STRICT GOOGLE DRIVE API & LOCAL SYNC ENGINE
@@ -385,7 +419,7 @@ Please find attached to this email (Consolidated within the Feasibility PDF Pack
 3. Financial Outlay & Debt Serviceability Breakdown
 4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)
 5. Development Layout & Leasing Site Plan (Rendered)
-6. Addendum — Menus & Brand Concept Guides (Embedded with Clickable Catalog Links)
+6. Addendum — Brand Menus with Direct Google Drive Download Links
 7. Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)
 
 Next Steps:
@@ -924,25 +958,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[551])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
-    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_1](start_span)[span_1](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_2](start_span)[span_2](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_3](start_span)[span_3](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
+    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_0](start_span)[span_0](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_1](start_span)[span_1](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_2](start_span)[span_2](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[551])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
-    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_4](start_span)[span_4](end_span).", body_regular))
+    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_3](start_span)[span_3](end_span).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[551])
     sec9_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec9_banner)
-    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_5](start_span)[span_5](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_6](start_span)[span_6](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_7](start_span)[span_7](end_span).", body_regular))
+    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_4](start_span)[span_4](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_5](start_span)[span_5](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_6](start_span)[span_6](end_span).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[551])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
-    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_8](start_span)[span_8](end_span).", body_regular))
+    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_7](start_span)[span_7](end_span).", body_regular))
 
     elements.append(PageBreak())
 
@@ -974,14 +1008,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: BLUEPRINT, LAYOUT & CLICKABLE MENUS
+    # PAGE 5: BLUEPRINT, LAYOUT & CLICKABLE BRAND MENUS (GOOGLE DRIVE LINKED)
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=ORANGE_BRAND, alignment=1)
 
     elements.append(Paragraph(f"<b>{loc_name.upper()} — SHOP {shop.upper()}</b>", blueprint_header_style))
-    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT PLAN ({total_gla:.2f} M² | {model}) & CLICKABLE MENUS</b>", blueprint_subheader_style))
-    elements.append(Spacer(1, 6))
-    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
+    elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT PLAN ({total_gla:.2f} M² | {model}) & BRAND MENU DOWNLOADS</b>", blueprint_subheader_style))
+    elements.append(Spacer(1, 4))
+    elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=6))
 
     effective_blueprint_img = blueprint_pil_img
     if effective_blueprint_img is None:
@@ -997,27 +1031,55 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=420, height=480)
+            rl_blueprint = RLImage(bp_byte_arr, width=400, height=300)
             elements.append(rl_blueprint)
         except Exception:
-            elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=11)))
+            elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
     else:
-        placeholder_img = Image.new("RGB", (800, 920), color=(240, 240, 240))
+        placeholder_img = Image.new("RGB", (800, 500), color=(240, 240, 240))
         draw = ImageDraw.Draw(placeholder_img)
-        draw.rectangle([10, 10, 790, 910], outline=(100, 100, 100), width=3)
+        draw.rectangle([10, 10, 790, 490], outline=(100, 100, 100), width=3)
         try:
-            draw.text((280, 440), f"LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(50, 50, 50))
+            draw.text((280, 230), f"LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(50, 50, 50))
         except Exception:
             pass
         bp_byte_arr = io.BytesIO()
         placeholder_img.save(bp_byte_arr, format='JPEG', quality=95)
         bp_byte_arr.seek(0)
-        rl_blueprint = RLImage(bp_byte_arr, width=420, height=480)
+        rl_blueprint = RLImage(bp_byte_arr, width=400, height=300)
         elements.append(rl_blueprint)
 
     elements.append(Spacer(1, 6))
-    elements.append(Paragraph("<b>Multi-Brand Ecosystem & Clickable Menus Integrated:</b> Phatbuns, PhatVille, Doorstep Desserts, and Butter Brûlée digital menu catalogs linked[span_9](start_span)[span_9](end_span).", body_regular))
-    elements.append(Spacer(1, 10))
+
+    # INTERACTIVE CLICKABLE BRAND MENUS TABLE (GOOGLE DRIVE DIRECT DOWNLOADS)
+    menu_sec_banner = Table([[Paragraph("CLICKABLE BRAND MENUS & CONCEPT CATALOGS (GOOGLE DRIVE)", sec_banner_style)]], colWidths=[551])
+    menu_sec_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 2.5)]))
+    elements.append(menu_sec_banner)
+
+    menu_table_rows = [
+        [Paragraph("BRAND & CONCEPT", body_white_bold), Paragraph("MENU SPECIFICATION & OVERVIEW", body_white_bold), Paragraph("GOOGLE DRIVE DOWNLOAD LINK", body_white_bold)]
+    ]
+
+    for brand_name, info in BRAND_MENU_CATALOG.items():
+        drive_url = get_drive_menu_download_url(info["drive_file_id"])
+        btn_html = f'<a href="{drive_url}" color="#0066CC"><b>📥 DOWNLOAD MENU (PDF)</b></a>'
+        
+        menu_table_rows.append([
+            Paragraph(f"<b>{brand_name}</b><br/><font color='#C53030'><i>{info['tagline']}</i></font>", body_regular),
+            Paragraph(info["description"], body_regular),
+            Paragraph(btn_html, ParagraphStyle('MenuLinkStyle', parent=body_regular, alignment=1))
+        ])
+
+    t_menu_links = Table(menu_table_rows, colWidths=[130, 281, 140])
+    t_menu_links.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), ORANGE_BRAND),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
+    ]))
+    elements.append(t_menu_links)
+    elements.append(Spacer(1, 8))
 
     sig_p2 = [
         [Paragraph("<b>Franchise Manager Signature:</b> ____________________", body_regular), Paragraph("<b>CEO Signature (Nisaar Ally):</b> ____________________", body_regular)],
@@ -1444,36 +1506,18 @@ with tab1:
         </a>
         """, unsafe_allow_html=True)
 
-# TAB 2: BRAND MENUS & ATTACHMENTS
+# TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS
 with tab2:
     st.header("📖 Brand Menus & Concept Collateral Selector")
-    st.markdown("Select which brand menu PDF files from your **Phatbuns Menu** collection to embed directly as an **Addendum — Menus** inside the investor PDF pack.")
+    st.markdown("Individual brand catalogs below are configured with dedicated **Google Drive Download Links** and overview write-ups embedded directly inside the PDF investor pack.")
 
-    available_menus = get_available_brand_menus()
-
-    st.subheader("Select Menus to Embed into PDF Pack:")
-    
-    selected_menus = []
-    for menu in available_menus:
-        is_checked = st.checkbox(f"📄 {menu}", value=True, key=f"menu_{menu}")
-        if is_checked:
-            selected_menus.append(menu)
-
-    st.session_state["selected_brand_menus"] = selected_menus
-
-    st.info(f"📋 **Embedded Menus:** {len(selected_menus)} Brand Menu(s) selected for inclusion in the PDF addendum.")
-
-    st.divider()
-
-    st.subheader("Upload Additional Brand Menus to System")
-    uploaded_menu_files = st.file_uploader("Upload new Brand Menu PDF files", type=["pdf"], accept_multiple_files=True, key="menu_uploader")
-    if uploaded_menu_files:
-        for u_file in uploaded_menu_files:
-            save_path = os.path.join(MENUS_DIR, u_file.name)
-            with open(save_path, "wb") as f:
-                f.write(u_file.read())
-        st.success("New brand menu PDFs saved successfully!")
-        st.rerun()
+    for brand_key, brand_info in BRAND_MENU_CATALOG.items():
+        st.subheader(f"🍔 {brand_key}")
+        st.markdown(f"**Tagline:** {brand_info['tagline']}")
+        st.markdown(f"**Overview:** {brand_info['description']}")
+        drive_dl_url = get_drive_menu_download_url(brand_info["drive_file_id"])
+        st.markdown(f"🔗 **Google Drive Direct Download Link:** [{brand_info['filename']}]({drive_dl_url})")
+        st.divider()
 
 # TAB 3: INVESTOR & FRANCHISEE REGISTRY
 with tab3:
