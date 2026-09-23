@@ -828,7 +828,7 @@ STORE_MODELS = {
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
 
 # ==========================================
-# NUMBERED CANVAS WITH FIXED MARGIN ALIGNMENT
+# NUMBERED CANVAS WITH CENTERED DUAL LOGOS ABOVE FOOTER
 # ==========================================
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
@@ -849,6 +849,33 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, page_count):
         self.saveState()
+        
+        # From Page 2 onwards: Render centered Phatbuns SA Logo & SA Flag Logo (100px each) side-by-side above footer
+        if self._pageNumber > 1:
+            asset_map = get_asset_images_map()
+            phatbuns_logo_path = asset_map.get("phatbuns_sa")
+            sa_flag_path = asset_map.get("sa_flag")
+
+            page_width = A4[0]
+            logo_w = 100 # 100px width per requested spec
+            logo_h = 32
+            gap = 15
+            total_block_w = (logo_w * 2) + gap
+            start_x = (page_width - total_block_w) / 2.0
+            logo_y = 15 * mm # Positioned directly above running footer line
+
+            if phatbuns_logo_path and os.path.exists(phatbuns_logo_path):
+                try:
+                    self.drawImage(phatbuns_logo_path, start_x, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+                except Exception:
+                    pass
+
+            if sa_flag_path and os.path.exists(sa_flag_path):
+                try:
+                    self.drawImage(sa_flag_path, start_x + logo_w + gap, logo_y, width=logo_w, height=logo_h, preserveAspectRatio=True, mask='auto')
+                except Exception:
+                    pass
+
         self.setFont("Helvetica", 5.5)
         self.setFillColor(colors.HexColor("#4A5568"))
         
@@ -861,7 +888,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setLineWidth(0.5)
         self.line(10 * mm, 12 * mm, A4[0] - 10 * mm, 12 * mm)
         
-        # Align footer text cleanly to the far left
+        # Align footer text cleanly to the far left and page numbering to the right
         self.drawString(10 * mm, 8 * mm, footer_text)
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
@@ -882,7 +909,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     asset_map = get_asset_images_map()
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18, leftMargin=18, topMargin=18, bottomMargin=22)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18, leftMargin=18, topMargin=18, bottomMargin=28)
     styles = getSampleStyleSheet()
 
     NAVY_HEADER = colors.HexColor('#1A365D')
@@ -1117,13 +1144,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             except Exception:
                 pass
 
-    # High-clarity store layout rendering engine
     if effective_blueprint_img is not None:
         try:
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=480, height=320)
+            rl_blueprint = RLImage(bp_byte_arr, width=480, height=310)
             elements.append(rl_blueprint)
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
@@ -1132,15 +1158,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         draw = ImageDraw.Draw(placeholder_img)
         draw.rectangle([15, 15, 885, 585], outline=(26, 54, 93), width=4)
         
-        # Grid lines for store plan schematic
         for x in range(100, 800, 100):
             draw.line([(x, 15), (x, 585)], fill=(220, 225, 230), width=1)
         for y in range(100, 500, 100):
             draw.line([(15, y), (885, y)], fill=(220, 225, 230), width=1)
 
-        # Store boundary zones
-        draw.rectangle([40, 40, 300, 560], outline=(197, 48, 48), width=3) # Kitchen & Prep
-        draw.rectangle([310, 40, 860, 560], outline=(43, 108, 176), width=3) # Front of House & Dining
+        draw.rectangle([40, 40, 300, 560], outline=(197, 48, 48), width=3)
+        draw.rectangle([310, 40, 860, 560], outline=(43, 108, 176), width=3)
         
         try:
             draw.text((330, 260), f"PROPOSED STORE LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(26, 54, 93))
@@ -1152,10 +1176,10 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         bp_byte_arr = io.BytesIO()
         placeholder_img.save(bp_byte_arr, format='JPEG', quality=95)
         bp_byte_arr.seek(0)
-        rl_blueprint = RLImage(bp_byte_arr, width=480, height=320)
+        rl_blueprint = RLImage(bp_byte_arr, width=480, height=310)
         elements.append(rl_blueprint)
 
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 8))
     elements.append(Paragraph(f"<b>Technical Specifications:</b> Internal GLA: {internal_gla:.2f} sqm | External Patio GLA: {external_gla:.2f} sqm | Total Footprint: {total_gla:.2f} sqm. Designed for high operational efficiency and SANHA Halal kitchen compliance.", body_regular))
 
     elements.append(PageBreak())
@@ -1218,7 +1242,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=6.5, leading=8.5, textColor=DARK_TEXT)
     ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=NAVY_HEADER)
 
-    # Pre-populated party details
     parties_box_data = [
         [Paragraph("<b>DISCLOSING PARTY (SENDER):</b>", ncnda_title_style), Paragraph("<b>RECEIVING PARTY (PROSPECTIVE INVESTOR):</b>", ncnda_title_style)],
         [
