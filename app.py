@@ -151,36 +151,42 @@ def get_available_brand_menus():
 # ==========================================
 BRAND_MENU_CATALOG = {
     "Phatbuns Smash Burgers": {
+        "logo_key": "phatbuns_sa",
         "filename": "Phatbuns_Smash_Burger_Main_Menu.pdf",
         "drive_file_id": "1Goe4yS1E5R0KiZt6N_cQ4HcCad9OUJgr",
         "tagline": "Artisan Smash Burgers & Signature Buns",
         "description": "Hand-pressed Angus beef smash patties served on seeded brioche, topped with proprietary secret sauces, Cheesy Doritos, Fiery Cheetos ranges, and buttermilk fried chicken."
     },
     "PhatVille Sliders & Sides": {
+        "logo_key": "phatville",
         "filename": "Phatbuns_Menu_2_Sliders_and_Sides.pdf",
         "drive_file_id": "1lLGjL73SJeRfXXJKFl0a8ZnhfFQb1ich",
         "tagline": "Nashville Hot Sliders & Loaded Sides",
         "description": "Nashville-style sliders, crispy tender boxes, dusted crinkle fries, and specialized dipping sauces optimized for rapid kitchen assembly and delivery channels."
     },
     "Butter Brûlée Signature Drinks": {
+        "logo_key": "butter_brulee",
         "filename": "Butter_Brulee_Signature_Drinks.pdf",
         "drive_file_id": "1dUxvPSZTyWfbjDXRxuBNFhFSOYc5ctWc",
         "tagline": "Signature Beverages & Artisanal Mocktails",
         "description": "Hand-crafted specialty iced teas, indulgent gourmet milkshakes, artisanal refresher coolers, and barista specialty coffees designed to complement sweet and savory offerings."
     },
     "Butter Brûlée Cookies & Desserts": {
+        "logo_key": "butter_brulee",
         "filename": "Butter_Brulee_Classic_Exclusive_Cookies.pdf",
         "drive_file_id": "1nc1I7_-bLZkq4oJDE5wHwic8DZ8QCVxE",
         "tagline": "Classic & Exclusive Artisanal Cookies",
         "description": "Gourmet freshly baked classic cookies, stuffed exclusive artisan ranges, cookie caviar tiramisu, and specialty sweet pairings engineered for high average ticket yield."
     },
     "Butter Brûlée Seasonal Specials": {
+        "logo_key": "butter_brulee",
         "filename": "Butter_Brulee_Seasonal_Menu_Item.pdf",
         "drive_file_id": "1OaWyRBwvoQQX-OZMQNlbdpXBgXQaFAZs",
         "tagline": "Luxury Milk Cakes, Seasonal Specials & Fine Shakes",
         "description": "Artisanal seasonal dessert offerings, caramelized french toast, pistachio kunafa treats, and high-margin signature drinks."
     },
     "Doorstep Desserts": {
+        "logo_key": "doorstep",
         "filename": "Doorstep_Desserts_Artisan_Catalog.pdf",
         "drive_file_id": "1rghEVeNi5SRgy9NbTVp6UwbHgn_4pSHY",
         "tagline": "Gourmet Warm Desserts, Waffles & Sundaes",
@@ -538,7 +544,7 @@ st.markdown("""
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    justify-content: space-around !important;
+    justify-space: space-around !important;
     align-items: center !important;
     width: 100% !important;
     padding: 10px 0 !important;
@@ -553,6 +559,20 @@ st.markdown("""
     object-fit: contain !important;
     display: block !important;
     margin: 0 auto !important;
+}
+.brand-card-block {
+    background-color: #1A1A1A;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    margin-bottom: 20px;
+}
+.brand-logo-above {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -805,6 +825,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         "competitors": "Woolworths Cafe, Ocean Basket, Spur, Nando's"
     })
 
+    asset_map = get_asset_images_map()
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=22, leftMargin=22, topMargin=22, bottomMargin=25)
     styles = getSampleStyleSheet()
@@ -973,25 +995,25 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[551])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
-    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_1](start_span)[span_1](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_2](start_span)[span_2](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_3](start_span)[span_3](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
+    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market[span_0](start_span)[span_0](end_span). After extensive research and multiple trips to the United States, the home of smash burgers, our founders developed a unique beef blend and operational model designed around quality, speed, and scalability[span_1](start_span)[span_1](end_span). Phatbuns is more than a burger brand; it's a modern food and culture brand built for the next generation[span_2](start_span)[span_2](end_span). Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[551])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
-    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_4](start_span)[span_4](end_span).", body_regular))
+    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D). Regular limited-time product drops and app-exclusive promotions maintain high brand freshness and sustained customer engagement[span_3](start_span)[span_3](end_span).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[551])
     sec9_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec9_banner)
-    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_5](start_span)[span_5](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_6](start_span)[span_6](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_7](start_span)[span_7](end_span).", body_regular))
+    elements.append(Paragraph(f"Every Phatbuns franchise partner receives extensive onboarding and operational training to ensure successful store performance from day one[span_4](start_span)[span_4](end_span). Comprehensive initial training covers a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality. Support includes head office operational training, in-store launch support, staff training systems, supplier onboarding, delivery platform integration, and ongoing operational audits[span_5](start_span)[span_5](end_span). An experienced Phatbuns operative supports your store during the launch phase to ensure seamless execution[span_6](start_span)[span_6](end_span).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[551])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
-    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_8](start_span)[span_8](end_span).", body_regular))
+    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval. Complete the franchise application form and begin your journey with one of the fastest-growing food brands[span_7](start_span)[span_7](end_span).", body_regular))
 
     elements.append(PageBreak())
 
@@ -1023,7 +1045,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: BLUEPRINT, LAYOUT & CLICKABLE BRAND MENUS (GOOGLE DRIVE LINKED)
+    # PAGE 5: BLUEPRINT, LAYOUT & CLICKABLE BRAND MENUS WITH LOGOS ABOVE EACH ENTRY
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=ORANGE_BRAND, alignment=1)
 
@@ -1066,7 +1088,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(Spacer(1, 6))
 
-    # INTERACTIVE CLICKABLE BRAND MENUS TABLE (GOOGLE DRIVE DIRECT DOWNLOADS)
+    # INTERACTIVE CLICKABLE BRAND MENUS TABLE WITH LOGO DIRECTLY ABOVE BRAND TITLE
     menu_sec_banner = Table([[Paragraph("CLICKABLE BRAND MENUS & CONCEPT CATALOGS (GOOGLE DRIVE)", sec_banner_style)]], colWidths=[551])
     menu_sec_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 2.5)]))
     elements.append(menu_sec_banner)
@@ -1078,9 +1100,23 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     for brand_name, info in BRAND_MENU_CATALOG.items():
         drive_url = get_drive_menu_download_url(info["drive_file_id"])
         btn_html = f'<a href="{drive_url}" color="#0066CC"><b>📥 DOWNLOAD MENU (PDF)</b></a>'
-        
+        logo_path = asset_map.get(info.get("logo_key", "phatbuns_sa"))
+
+        if logo_path and os.path.exists(logo_path):
+            try:
+                rl_logo = RLImage(logo_path, width=45, height=30)
+                brand_cell_elements = [
+                    rl_logo,
+                    Spacer(1, 2),
+                    Paragraph(f"<b>{brand_name}</b><br/><font color='#C53030'><i>{info['tagline']}</i></font>", body_regular)
+                ]
+            except Exception:
+                brand_cell_elements = Paragraph(f"<b>{brand_name}</b><br/><font color='#C53030'><i>{info['tagline']}</i></font>", body_regular)
+        else:
+            brand_cell_elements = Paragraph(f"<b>{brand_name}</b><br/><font color='#C53030'><i>{info['tagline']}</i></font>", body_regular)
+
         menu_table_rows.append([
-            Paragraph(f"<b>{brand_name}</b><br/><font color='#C53030'><i>{info['tagline']}</i></font>", body_regular),
+            brand_cell_elements,
             Paragraph(info["description"], body_regular),
             Paragraph(btn_html, ParagraphStyle('MenuLinkStyle', parent=body_regular, alignment=1))
         ])
@@ -1090,7 +1126,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         ('BACKGROUND', (0,0), (-1,0), ORANGE_BRAND),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('PADDING', (0,0), (-1,-1), 3),
         ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
     ]))
     elements.append(t_menu_links)
@@ -1521,18 +1557,28 @@ with tab1:
         </a>
         """, unsafe_allow_html=True)
 
-# TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS
+# TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS WITH LOGOS ABOVE EACH BRAND ENTRY
 with tab2:
     st.header("📖 Brand Menus & Concept Collateral Selector")
     st.markdown("Individual brand catalogs below are configured with dedicated **Google Drive Download Links** and overview write-ups embedded directly inside the PDF investor pack.")
 
     for brand_key, brand_info in BRAND_MENU_CATALOG.items():
-        st.subheader(f"🍔 {brand_key}")
+        logo_file = logo_map.get(brand_info.get("logo_key", "phatbuns_sa"))
+        b64_logo_str = get_image_base64(logo_file)
+
+        st.markdown('<div class="brand-card-block">', unsafe_allow_html=True)
+        
+        # Render logo directly ABOVE brand title
+        if b64_logo_str:
+            st.markdown(f'<img src="data:image/png;base64,{b64_logo_str}" class="brand-logo-above"/>', unsafe_allow_html=True)
+
+        st.markdown(f"### {brand_key}")
         st.markdown(f"**Tagline:** {brand_info['tagline']}")
         st.markdown(f"**Overview:** {brand_info['description']}")
         drive_dl_url = get_drive_menu_download_url(brand_info["drive_file_id"])
         st.markdown(f"🔗 **Google Drive Direct Download Link:** [{brand_info['filename']}]({drive_dl_url})")
-        st.divider()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # TAB 3: INVESTOR & FRANCHISEE REGISTRY
 with tab3:
