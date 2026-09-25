@@ -78,6 +78,8 @@ def find_file_in_assets(target_names):
     return None
 
 def find_site_blueprint(loc_name):
+    if not loc_name:
+        return None
     clean_target = re.sub(r'[^a-zA-Z0-9]', '', loc_name.lower())
     search_dirs = [LOCATIONS_DIR, ASSETS_DIR, os.getcwd()]
     for d in search_dirs:
@@ -287,7 +289,8 @@ def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
         return None
 
 def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
-    loc_sub_dir = os.path.join(LOCATIONS_DIR, location_name.strip())
+    loc_clean = location_name.strip() if location_name else "Unassigned_Location"
+    loc_sub_dir = os.path.join(LOCATIONS_DIR, loc_clean)
     os.makedirs(loc_sub_dir, exist_ok=True)
     local_file_path = os.path.join(loc_sub_dir, pdf_filename)
     
@@ -299,10 +302,10 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
         try:
             locations_root_id = get_or_create_drive_folder(drive_service, "Locations")
             if locations_root_id:
-                site_folder_id = get_or_create_drive_folder(drive_service, location_name.strip(), parent_id=locations_root_id)
+                site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=locations_root_id)
                 if site_folder_id:
                     upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
-                    return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{location_name.strip()}/{pdf_filename}"
+                    return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{loc_clean}/{pdf_filename}"
         except Exception as e:
             return local_file_path, f"Saved Locally | Drive Sync Warning: {e}"
 
@@ -849,6 +852,7 @@ SITE_PROFILES = {
 }
 
 LOCATION_LOOKUP = {
+    "Select Commercial Location...": "",
     "Clearwater Mall": "Strubensvalley, Roodepoort",
     "Sandton City Shopping Centre": "Sandton Central, Johannesburg",
     "Mall of Africa": "Waterfall City, Midrand",
@@ -870,7 +874,7 @@ STORE_MODELS = {
         "working_capital": 250000.0,
         "est_monthly_turnover": 350000.0,
         "labor_monthly": 45000.0,
-        "foh_pct": 0.20,
+        "foh_pct": 0.00,
         "default_gla": 40.0,
         "min_footfall_req": 300000,
         "ideal_lsm": "LSM 6-10+"
@@ -881,7 +885,7 @@ STORE_MODELS = {
         "working_capital": 450000.0,
         "est_monthly_turnover": 650000.0,
         "labor_monthly": 85000.0,
-        "foh_pct": 0.60,
+        "foh_pct": 0.10,
         "default_gla": 70.0,
         "min_footfall_req": 500000,
         "ideal_lsm": "LSM 7-10+"
@@ -892,7 +896,7 @@ STORE_MODELS = {
         "working_capital": 750000.0,
         "est_monthly_turnover": 950000.0,
         "labor_monthly": 125000.0,
-        "foh_pct": 0.60,
+        "foh_pct": 0.40,
         "default_gla": 120.0,
         "min_footfall_req": 650000,
         "ideal_lsm": "LSM 8-10+"
@@ -1019,7 +1023,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     # PAGE 1: SITE EVALUATION
     header_data = [
         [Paragraph("PHATBUNS SOUTH AFRICA", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)],
-        [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, textColor=colors.HexColor('#CCCCCC'))), ""]
+        [Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper() if loc_name else 'TARGET SITE'}", ParagraphStyle('H2Style', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, textColor=colors.HexColor('#CCCCCC'))), ""]
     ]
     t_header = Table(header_data, colWidths=[370, 188])
     t_header.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
@@ -1043,7 +1047,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     sec1_table_data = [
         [Paragraph("SITE PARAMETER", body_white_bold), Paragraph("SPECIFICATION", body_white_bold), Paragraph("TURNKEY CAPITAL SCHEDULE (EXCL. VAT)", body_white_bold), Paragraph("AMOUNT", body_white_bold)],
-        [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name} (Shop {shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {int(round(capital*0.50)):,}", body_regular)],
+        [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name if loc_name else 'Unassigned'} (Shop {shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {int(round(capital*0.50)):,}", body_regular)],
         [Paragraph("Address / Node", body_bold), Paragraph(str(suburb), body_regular), Paragraph("40% Beneficial Occupation (BO)", body_regular), Paragraph(f"R {int(round(capital*0.40)):,}", body_regular)],
         [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {int(round(capital*0.10)):,}", body_regular)],
         [Paragraph("Managing Agent", body_bold), Paragraph(site_p["landlord"], body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {int(round(capital)):,}", body_regular)],
@@ -1092,7 +1096,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(PageBreak())
     # PAGE 2: HEADINGS 04, 05, 06
     p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, textColor=DARK_TEXT, alignment=1)
-    elements.append(Paragraph(f"PHATBUNS SOUTH AFRICA — {loc_name.upper()} PROSPECTUS", p2_title))
+    elements.append(Paragraph(f"PHATBUNS SOUTH AFRICA — {loc_name.upper() if loc_name else 'TARGET SITE'} PROSPECTUS", p2_title))
     elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=2, spaceAfter=5))
 
     # 04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX
@@ -1156,13 +1160,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec7_banner = Table([[Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", sec_banner_style)]], colWidths=[558])
     sec7_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec7_banner)
-    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. Phatbuns brings a premier culinary disruption to {loc_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
+    elements.append(Paragraph(f"Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. Phatbuns brings a premier culinary disruption to {loc_name if loc_name else 'the selected market'}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles across the store.", body_regular))
     elements.append(Spacer(1, 3))
 
     sec8_banner = Table([[Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", sec_banner_style)]], colWidths=[558])
     sec8_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec8_banner)
-    elements.append(Paragraph(f"Franchisees at {loc_name} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D).", body_regular))
+    elements.append(Paragraph(f"Franchisees at {loc_name if loc_name else 'this location'} benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D).", body_regular))
     elements.append(Spacer(1, 3))
 
     sec9_banner = Table([[Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", sec_banner_style)]], colWidths=[558])
@@ -1174,7 +1178,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     sec10_banner = Table([[Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", sec_banner_style)]], colWidths=[558])
     sec10_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec10_banner)
-    elements.append(Paragraph(f"To proceed with site allocation at {loc_name}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval.", body_regular))
+    elements.append(Paragraph(f"To proceed with site allocation at {loc_name if loc_name else 'the targeted site'}, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval.", body_regular))
 
     elements.append(PageBreak())
 
@@ -1210,13 +1214,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=ORANGE_BRAND, alignment=1)
 
-    elements.append(Paragraph(f"<b>{loc_name.upper()} — SHOP {shop.upper()}</b>", blueprint_header_style))
+    elements.append(Paragraph(f"<b>{loc_name.upper() if loc_name else 'TARGET LOCATION'} — SHOP {shop.upper()}</b>", blueprint_header_style))
     elements.append(Paragraph(f"<b>DEVELOPMENT LEASING LAYOUT PLAN ({total_gla:.2f} M² | {model})</b>", blueprint_subheader_style))
     elements.append(Spacer(1, 4))
     elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
 
     effective_blueprint_img = blueprint_pil_img
-    if effective_blueprint_img is None:
+    if effective_blueprint_img is None and loc_name:
         auto_bp_path = find_site_blueprint(loc_name)
         if auto_bp_path and os.path.exists(auto_bp_path):
             try:
@@ -1247,8 +1251,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         draw.rectangle([310, 40, 860, 560], outline=(43, 108, 176), width=3)
         
         try:
-            draw.text((330, 260), f"PROPOSED STORE LAYOUT PLAN: {loc_name} (Shop {shop})", fill=(26, 54, 93))
-            draw.text((80, 280), "KITCHEN & PREP ZONE", fill=(197, 48, 48))
+            draw.text((330, 260), f"PROPOSED STORE LAYOUT PLAN: {loc_name if loc_name else 'Select Location'} (Shop {shop})", fill=(26, 54, 93))
+            draw.text((80, 280), "KITCHEN & PREP ZONE (60 SQM OPTIMAL)", fill=(197, 48, 48))
             draw.text((500, 280), f"DINING AREA ({max_seats} SEATS)", fill=(43, 108, 176))
         except Exception:
             pass
@@ -1260,7 +1264,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         elements.append(rl_blueprint)
 
     elements.append(Spacer(1, 8))
-    elements.append(Paragraph(f"<b>Technical Specifications:</b> Internal GLA: {int_gla:.2f} sqm | External Patio GLA: {ext_gla:.2f} sqm | Total Footprint: {total_gla:.2f} sqm. Designed for high operational efficiency and SANHA Halal kitchen compliance.", body_regular))
+    elements.append(Paragraph(f"<b>Technical Specifications:</b> Internal GLA: {int_gla:.2f} sqm | External Patio GLA: {ext_gla:.2f} sqm | Total Footprint: {total_gla:.2f} sqm. Kitchen space engineered around preferred 60.00 sqm layout for SANHA Halal compliance.", body_regular))
 
     elements.append(PageBreak())
 
@@ -1327,7 +1331,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("<b>DISCLOSING PARTY (FRANCHISOR):</b>", ncnda_title_style), Paragraph("<b>RECEIVING PARTY (PROSPECTIVE FRANCHISEE):</b>", ncnda_title_style)],
         [
             Paragraph("<b>PHATBUNS SOUTH AFRICA</b><br/>Sector: Fast-Food Franchise / QSR (Republic of South Africa)<br/>Represented By: Nisaar Ally (SA Master Rights Holder)<br/>Email: nisaar@fantastic1.com | Tel: +27 68 710 1939", ncnda_legal_body),
-            Paragraph(f"<b>Applicant Name:</b> {applicant_name}<br/><b>Email:</b> {applicant_email}<br/><b>Mobile:</b> {applicant_mobile}<br/><b>Target Location:</b> {loc_name} (Shop {shop})", ncnda_legal_body)
+            Paragraph(f"<b>Applicant Name:</b> {applicant_name}<br/><b>Email:</b> {applicant_email}<br/><b>Mobile:</b> {applicant_mobile}<br/><b>Target Location:</b> {loc_name if loc_name else 'Unassigned'} (Shop {shop})", ncnda_legal_body)
         ]
     ]
     t_parties = Table(parties_box_data, colWidths=[279, 279])
@@ -1478,9 +1482,14 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
-        location_name = st.text_input("Enter Custom Location Name", value="New Store Site") if selected_location == "Custom / Other Site..." else selected_location
+        if selected_location == "Select Commercial Location...":
+            location_name = ""
+        elif selected_location == "Custom / Other Site...":
+            location_name = st.text_input("Enter Custom Location Name", value="", placeholder="e.g. Menlyn Maine")
+        else:
+            location_name = selected_location
 
-    site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower())
+    site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower()) if location_name else "unassigned_site"
     
     def get_site_state(key, default_val):
         full_key = f"{site_key}_{key}"
@@ -1493,12 +1502,12 @@ with tab1:
         st.session_state[full_key] = val
 
     site_default_info = SITE_PROFILES.get(location_name, {
-        "suburb": LOCATION_LOOKUP.get(selected_location, "Johannesburg"),
-        "shop": "U01",
+        "suburb": LOCATION_LOOKUP.get(selected_location, ""),
+        "shop": "",
         "default_rent": 180.0,
         "default_ops": 35.0,
-        "default_gla": 120.0,
-        "model": "Full Sit-Down Model",
+        "default_gla": 70.0,
+        "model": "Express Model",
         "footfall": "~500,000 visits/month",
         "households": "100,000 Active Households (10 km Radius)",
         "competitors": "Nando's, Steers, Debonairs",
@@ -1528,7 +1537,7 @@ with tab1:
         rec_model = "Kiosk Model"
         rec_reason = "Lower footfall (<350k) requires a low-overhead Kiosk model to maintain profitability."
 
-    if "2. No Proposal" in analysis_mode:
+    if "2. No Proposal" in analysis_mode and location_name:
         st.markdown(f"""
         <div style="background-color:#1c2333; padding:15px; border-radius:8px; border-left:5px solid {rec_color}; margin-bottom:15px;">
             <h4 style="margin:0; color:#FFFFFF;">💡 Automated Site Recommendation: <b>{rec_model}</b></h4>
@@ -1547,29 +1556,29 @@ with tab1:
         if 'generator' in extracted_parsed_res: set_site_state("generator", float(extracted_parsed_res['generator']))
         if 'escalation' in extracted_parsed_res: set_site_state("escalation", float(extracted_parsed_res['escalation']))
         if 'mktg' in extracted_parsed_res: set_site_state("mktg", float(extracted_parsed_res['mktg']))
-        st.success(f"Lease terms successfully extracted and isolated for {location_name}!")
+        st.success(f"Lease terms successfully extracted and isolated for {location_name if location_name else 'Target Site'}!")
 
     with col2:
-        default_shop = get_site_state("shop_code", site_default_info.get("shop", "U01"))
-        shop_code = st.text_input("Shop / Unit Code", value=default_shop, key=f"{site_key}_shop_input")
+        default_shop = get_site_state("shop_code", site_default_info.get("shop", ""))
+        shop_code = st.text_input("Shop / Unit Code", value=default_shop, placeholder="e.g. G12B", key=f"{site_key}_shop_input")
         set_site_state("shop_code", shop_code)
 
     col_suburb, col_dummy = st.columns(2)
     with col_suburb:
-        suburb_node = st.text_input("Suburb / Node (Auto-Populated)", value=site_default_info.get("suburb", ""))
+        suburb_node = st.text_input("Suburb / Node (Auto-Populated)", value=site_default_info.get("suburb", ""), placeholder="e.g. Roodepoort / Sandton")
 
     st.subheader("Store Model Type")
 
     def on_model_changed():
         m_choice = st.session_state.get(f"{site_key}_model_radio", site_default_info.get("model", rec_model))
-        m_info = STORE_MODELS.get(m_choice, STORE_MODELS["Full Sit-Down Model"])
+        m_info = STORE_MODELS.get(m_choice, STORE_MODELS["Express Model"])
         st.session_state[f"{site_key}_capex_input"] = m_info["turnkey_capital"]
         st.session_state[f"{site_key}_wc_input"] = m_info["working_capital"]
-        st.session_state[f"{site_key}_int_gla_input"] = site_default_info.get("default_gla", m_info["default_gla"])
+        st.session_state[f"{site_key}_int_gla_input"] = m_info["default_gla"]
 
-    default_model_name = rec_model if "2. No Proposal" in analysis_mode else site_default_info.get("model", "Full Sit-Down Model")
+    default_model_name = rec_model if "2. No Proposal" in analysis_mode else site_default_info.get("model", "Express Model")
     model_keys_list = list(STORE_MODELS.keys())
-    default_radio_idx = model_keys_list.index(default_model_name) if default_model_name in model_keys_list else 2
+    default_radio_idx = model_keys_list.index(default_model_name) if default_model_name in model_keys_list else 1
 
     selected_model = st.radio(
         "Select Model Type",
@@ -1579,10 +1588,10 @@ with tab1:
         key=f"{site_key}_model_radio",
         on_change=on_model_changed
     )
-    model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Full Sit-Down Model"])
+    model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
     if f"{site_key}_int_gla_input" not in st.session_state:
-        st.session_state[f"{site_key}_int_gla_input"] = site_default_info.get("default_gla", model_data["default_gla"])
+        st.session_state[f"{site_key}_int_gla_input"] = model_data["default_gla"]
     if f"{site_key}_external_gla" not in st.session_state:
         st.session_state[f"{site_key}_external_gla"] = 0.0
     if f"{site_key}_capex_input" not in st.session_state:
@@ -1593,22 +1602,40 @@ with tab1:
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        internal_gla = st.number_input("Internal Area (sqm)", step=1.0, key=f"{site_key}_int_gla_input")
+        internal_gla = st.number_input("Internal Area (sqm)", min_value=0.0, step=1.0, key=f"{site_key}_int_gla_input")
     with col_ext_gla:
-        external_gla = st.number_input("External / Patio Area (sqm)", step=1.0, key=f"{site_key}_external_gla")
+        external_gla = st.number_input("External / Patio Area (sqm)", min_value=0.0, step=1.0, key=f"{site_key}_external_gla")
 
     total_gla = internal_gla + external_gla
-    st.caption(f"📐 **Total Combined Store Footprint ({location_name}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
+    st.caption(f"📐 **Total Combined Store Footprint ({location_name if location_name else 'Unassigned'}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
-    internal_foh_sqm = internal_gla * model_data["foh_pct"]
-    total_dining_sqm = internal_foh_sqm + external_gla
-    max_comfortable_seats = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
-    high_density_seats = math.floor(total_dining_sqm / 1.20) if total_dining_sqm > 0 else 0
+    # DYNAMIC SEATING & KITCHEN ALLOCATION ENGINE
+    model_foh_pct_map = {
+        "Kiosk Model": 0.00,
+        "Express Model": 0.10,
+        "Full Sit-Down Model": 0.40,
+        "Multi-Brand Kitchen Model": 0.40
+    }
+    foh_ratio = model_foh_pct_map.get(selected_model, 0.10)
+    internal_dining_sqm = internal_gla * foh_ratio
+    total_dining_sqm = internal_dining_sqm + external_gla
 
-    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🪑 **Est. Total Dining Footprint:** {total_dining_sqm:.2f} sqm | 🪑 **Suggested Seating:** {max_comfortable_seats} Seats (Standard) / {high_density_seats} Seats (High Density)")
+    preferred_kitchen_size = 60.0
+    actual_kitchen_sqm = min(preferred_kitchen_size, internal_gla - internal_dining_sqm) if internal_gla > 0 else 0.0
+
+    std_seats_calc = math.floor(total_dining_sqm / 1.40) if total_dining_sqm > 0 else 0
+    high_seats_calc = math.floor(total_dining_sqm / 1.20) if total_dining_sqm > 0 else 0
+
+    col_seat1, col_seat2 = st.columns(2)
+    with col_seat1:
+        max_comfortable_seats = st.number_input("Standard Seating Capacity", min_value=0, value=std_seats_calc, step=1, help="Calculated using standard 1.4m² per diner allocation.")
+    with col_seat2:
+        high_density_seats = st.number_input("High-Density Seating Capacity", min_value=0, value=high_seats_calc, step=1, help="Calculated using 1.2m² high-density diner allocation.")
+
+    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🍳 **Recommended Kitchen Footprint:** {actual_kitchen_sqm:.2f} sqm (Preferred target: {preferred_kitchen_size:.0f} sqm) | 🪑 **Dining Footprint ({foh_ratio*100:.0f}% Internal):** {total_dining_sqm:.2f} sqm")
 
     st.subheader("Site Blueprint & Development Layout Plan")
-    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name} ({shop_code})", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
+    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name if location_name else 'Target Site'} ({shop_code if shop_code else 'Unit'})", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
     
     if blueprint_file is not None:
         pil_img, pdf_text = process_uploaded_file(blueprint_file)
@@ -1620,7 +1647,7 @@ with tab1:
     if blueprint_pil_img is not None:
         st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
     else:
-        st.info(f"ℹ️ **Blueprint Status:** No custom blueprint uploaded for {location_name}. A standardized professional layout schematic will be automatically generated and embedded on Page 5.")
+        st.info(f"ℹ️ **Blueprint Status:** No custom blueprint uploaded for {location_name if location_name else 'Target Site'}. A standardized professional layout schematic will be automatically generated and embedded on Page 5.")
 
     st.divider()
 
@@ -1677,7 +1704,7 @@ with tab1:
         monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
 
     total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
-    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay ({location_name}):** R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)")
+    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay ({location_name if location_name else 'Target Site'}):** R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)")
 
     st.divider()
 
@@ -1767,7 +1794,7 @@ with tab1:
     st.divider()
 
     st.header("6. Dispatch Completed Site Feasibility Pack")
-    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `Locations/{location_name}/` and syncs to Google Drive.")
+    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `Locations/{location_name if location_name else 'Unassigned'}/` and syncs to Google Drive.")
 
     col_inv1, col_inv2 = st.columns(2)
     with col_inv1:
@@ -1785,7 +1812,7 @@ with tab1:
             "id_or_passport": "Pending / Unassigned",
             "email": target_applicant_email,
             "mobile": target_applicant_mobile if target_applicant_mobile else "N/A",
-            "preferred_site": location_name,
+            "preferred_site": location_name if location_name else "Unassigned Site",
             "store_model": selected_model,
             "capital_available": turnkey_capital + working_capital,
             "unencumbered_cash_pct": 50.0,
@@ -1794,8 +1821,8 @@ with tab1:
             "popia_consent": 1
         })
 
-    clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
-    pdf_filename = f"{clean_site_slug}_{shop_code}_Phatbuns_Master_Investor_Pack.pdf"
+    clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip()) if location_name else "Unassigned_Site"
+    pdf_filename = f"{clean_site_slug}_{shop_code if shop_code else 'Unit'}_Phatbuns_Master_Investor_Pack.pdf"
 
     pdf_buffer = generate_pdf_report(
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
@@ -1825,7 +1852,7 @@ with tab1:
                 st.error("Please enter a valid Franchisee Email Address above.")
             else:
                 sent_ok, send_msg = send_franchisee_email_pack(
-                    target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename
+                    target_applicant_email, target_applicant_name, location_name if location_name else "Target Site", pdf_bytes, pdf_filename
                 )
                 if sent_ok:
                     st.success(f"✅ {send_msg}")
@@ -1834,7 +1861,7 @@ with tab1:
 
     if target_applicant_mobile:
         formatted_wa_mobile = format_sa_mobile_number(target_applicant_mobile)
-        wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, thank you for showing interest in Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name} to your email ({target_applicant_email}). Please review the attached pack, brand menus, and NCNDA."
+        wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, thank you for showing interest in Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name if location_name else 'your target site'} to your email ({target_applicant_email}). Please review the attached pack, brand menus, and NCNDA."
         encoded_wa_text = urllib.parse.quote(wa_text)
         wa_url = f"https://api.whatsapp.com/send?phone={formatted_wa_mobile}&text={encoded_wa_text}"
 
@@ -1885,9 +1912,9 @@ with tab3:
             email = st.text_input("Email Address *")
         with f_col2:
             mobile = st.text_input("Mobile / WhatsApp Number *")
-            preferred_site = st.text_input("Preferred Target Site / Node *", value="Clearwater Mall")
-            store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()), index=2)
-            capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=3250000.0, step=100000.0)
+            preferred_site = st.text_input("Preferred Target Site / Node *", value="")
+            store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()), index=1)
+            capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=2500000.0, step=100000.0)
 
         unencumbered_cash_pct = st.slider("Verified Unencumbered Cash (%)", min_value=0.0, max_value=100.0, value=50.0)
         c_col1, c_col2, c_col3 = st.columns(3)
