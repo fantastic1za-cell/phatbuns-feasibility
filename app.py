@@ -925,7 +925,7 @@ SITE_PROFILES = {
 }
 
 LOCATION_LOOKUP = {
-    "Select Commercial Location...": "",
+    "Custom / Other Site...": "",
     "Clearwater Mall": "Strubensvalley, Roodepoort",
     "Sandton City Shopping Centre": "Sandton Central, Johannesburg",
     "Mall of Africa": "Waterfall City, Midrand",
@@ -936,8 +936,7 @@ LOCATION_LOOKUP = {
     "The Glen Shopping Centre": "Oakdene, Johannesburg South",
     "Eastgate Shopping Centre": "Bedfordview, Ekurhuleni",
     "Gateway Theatre of Shopping": "Umhlanga, Durban",
-    "V&A Waterfront": "Green Point, Cape Town",
-    "Custom / Other Site...": ""
+    "V&A Waterfront": "Green Point, Cape Town"
 }
 
 STORE_MODELS = {
@@ -1555,9 +1554,7 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
-        if selected_location == "Select Commercial Location...":
-            location_name = ""
-        elif selected_location == "Custom / Other Site...":
+        if selected_location == "Custom / Other Site...":
             custom_input = st.text_input("Enter Custom Location Name", value="", placeholder="e.g. Campus Square", key="custom_site_name_input")
             location_name = custom_input
             
