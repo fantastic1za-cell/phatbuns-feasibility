@@ -367,6 +367,7 @@ def get_drive_menu_download_url(file_id_or_folder):
 # STRICT GOOGLE DRIVE API & LOCAL SYNC ENGINE
 # ==========================================
 GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
+LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
 
 def get_drive_service():
     if not HAS_GDRIVE:
@@ -374,6 +375,8 @@ def get_drive_service():
     try:
         if "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
             creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=GDRIVE_SCOPES)
             return build('drive', 'v3', credentials=creds)
         elif os.path.exists("service_account.json"):
@@ -441,17 +444,14 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
     drive_service = get_drive_service()
     if drive_service:
         try:
-            locations_root_id = get_or_create_drive_folder(drive_service, "Locations")
-            if locations_root_id:
-                site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=locations_root_id)
-                if site_folder_id:
-                    upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
-                    return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{loc_clean}/{pdf_filename}"
+            site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
+            if site_folder_id:
+                upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
+                return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{loc_clean}/{pdf_filename}"
         except Exception as e:
             return local_file_path, f"Saved Locally | Drive Sync Warning: {e}"
 
     return local_file_path, "PDF Generated & Saved to Local Directory | Google Drive Menu Links Active"
-
 # ==========================================
 # COVER PAGE COMPOSITOR
 # ==========================================
@@ -1567,7 +1567,6 @@ def generate_pipeline_pdf(df_pipeline):
     doc.build(elements, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
-
 # ==========================================
 # NAVIGATION TABS
 # ==========================================
