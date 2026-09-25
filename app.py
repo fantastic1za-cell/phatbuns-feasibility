@@ -177,10 +177,10 @@ st.set_page_config(
 )
 
 # ==========================================
-# ADVANCED GEO & SUBURB NODE RESOLUTION ENGINE
+# ADVANCED UNIVERSAL GEO & RENTAL INTELLIGENCE ENGINE
 # ==========================================
 def research_location_online(location_name):
-    search_query = f"{location_name} shopping centre mall suburb town city province South Africa"
+    search_query = f"{location_name} shopping centre mall suburb food tenants rental rate per sqm South Africa"
     results_text = ""
     
     if HAS_DDGS:
@@ -197,13 +197,14 @@ def research_location_online(location_name):
         "options": [],
         "landlord": "Property Developers / Landlord",
         "mall_size": "Regional Retail Centre",
-        "footfall": "~450,000 visits/month",
+        "footfall": "~500,000 visits/month",
         "households": "85,000 Active Households (10 km Radius)",
-        "competitors": "Nando's, Steers, Debonairs, Pick n Pay, Woolworths",
-        "lsm_profile": "LSM 7-10+"
+        "competitors": "Nando's, Steers, Debonairs, Wimpy, RocoMamas",
+        "lsm_profile": "LSM 7–10 / High Purchasing Power Node",
+        "default_rent": 220.0
     }
 
-    # High-accuracy South African geographic mapping lookup dictionary (Strictly Audited)
+    # Audited South African geographic mapping lookup dictionary
     SA_GEO_DICTIONARY = {
         "scottburgh": {
             "suburb": "Scottburgh, KwaZulu-Natal",
@@ -211,7 +212,8 @@ def research_location_online(location_name):
             "footfall": "~350,000 visits/month",
             "households": "45,000 Active Households (10 km Radius)",
             "competitors": "Nando's, Steers, Debonairs, Wimpy, Fishaways",
-            "lsm_profile": "LSM 6–9 / Coastal Regional Retail Hub"
+            "lsm_profile": "LSM 6–9 / Coastal Regional Retail Hub",
+            "default_rent": 160.0
         },
         "campus square": {
             "suburb": "Auckland Park, Johannesburg",
@@ -219,7 +221,8 @@ def research_location_online(location_name):
             "footfall": "~650,000 visits/month",
             "households": "110,000 Active Households (10 km Radius)",
             "competitors": "RocoMamas, Nando's, Chicken Licken, Wimpy, Roman's Pizza, Anat, Bossies Pies",
-            "lsm_profile": "LSM 6–9 / Student, Academic & Urban Youth Hub (UJ & Wits Corridor)"
+            "lsm_profile": "LSM 6–9 / Student, Academic & Urban Youth Hub (UJ & Wits Corridor)",
+            "default_rent": 180.0
         },
         "clearwater": {
             "suburb": "Strubensvalley, Roodepoort",
@@ -227,7 +230,8 @@ def research_location_online(location_name):
             "footfall": "~700,000 visits/month",
             "households": "135,000 Active Households (10 km Radius)",
             "competitors": "Burger King, Panarottis, Steers, Debonairs, Mochachos, Ocean Basket",
-            "lsm_profile": "LSM 8–10+ / High Purchasing Power Suburb"
+            "lsm_profile": "LSM 8–10+ / High Purchasing Power Suburb",
+            "default_rent": 181.0
         },
         "cresta": {
             "suburb": "Cresta, Johannesburg",
@@ -235,7 +239,8 @@ def research_location_online(location_name):
             "footfall": "~850,000 visits/month",
             "households": "140,000 Active Households (10 km Radius)",
             "competitors": "RocoMamas, Spur, Nando's, Ocean Basket, McDonald's",
-            "lsm_profile": "LSM 7–10 / Major Metropolitan Node"
+            "lsm_profile": "LSM 7–10 / Major Metropolitan Node",
+            "default_rent": 250.0
         },
         "pavilion": {
             "suburb": "Westville, Durban",
@@ -243,7 +248,8 @@ def research_location_online(location_name):
             "footfall": "~1,100,000 visits/month",
             "households": "150,000 Active Households (10 km Radius)",
             "competitors": "Nando's, RocoMamas, Spur, Debonairs, KFC",
-            "lsm_profile": "LSM 7–10 / Super-Regional KZN Corridor"
+            "lsm_profile": "LSM 7–10 / Super-Regional KZN Corridor",
+            "default_rent": 280.0
         },
         "ballito": {
             "suburb": "Ballito, KwaDukuza, KZN",
@@ -251,7 +257,8 @@ def research_location_online(location_name):
             "footfall": "~550,000 visits/month",
             "households": "65,000 Active Households (10 km Radius)",
             "competitors": "Mugg & Bean, Nando's, Ocean Basket, Turn 'n Tender",
-            "lsm_profile": "LSM 8–10+ / Affluent North Coast Hub"
+            "lsm_profile": "LSM 8–10+ / Affluent North Coast Hub",
+            "default_rent": 240.0
         },
         "canal walk": {
             "suburb": "Century City, Cape Town",
@@ -259,7 +266,8 @@ def research_location_online(location_name):
             "footfall": "~1,300,000 visits/month",
             "households": "160,000 Active Households (10 km Radius)",
             "competitors": "RocoMamas, Burger King, Nando's, Spur, Simply Asia",
-            "lsm_profile": "LSM 8–10+ / Western Cape Flagship Node"
+            "lsm_profile": "LSM 8–10+ / Western Cape Flagship Node",
+            "default_rent": 320.0
         },
         "tyger valley": {
             "suburb": "Bellville, Cape Town",
@@ -267,7 +275,8 @@ def research_location_online(location_name):
             "footfall": "~900,000 visits/month",
             "households": "130,000 Active Households (10 km Radius)",
             "competitors": "Panarottis, Spur, Nando's, Kauai, McDonald's",
-            "lsm_profile": "LSM 8–10 / Northern Suburbs Hub"
+            "lsm_profile": "LSM 8–10 / Northern Suburbs Hub",
+            "default_rent": 260.0
         }
     }
 
@@ -280,6 +289,7 @@ def research_location_online(location_name):
             extracted_info["households"] = geo_data["households"]
             extracted_info["competitors"] = geo_data.get("competitors", extracted_info["competitors"])
             extracted_info["lsm_profile"] = geo_data.get("lsm_profile", extracted_info["lsm_profile"])
+            extracted_info["default_rent"] = geo_data.get("default_rent", 220.0)
             return extracted_info
 
     if HAS_GENAI:
@@ -289,19 +299,20 @@ def research_location_online(location_name):
                 client = genai.Client(api_key=api_key)
                 prompt = f"""
                 You are an expert South African commercial property analyst.
-                Identify the exact suburb, town/city, and province for: '{location_name}'.
+                Identify the exact suburb, town/city, province, actual food tenants, and realistic QSR gross rental rate per sqm for: '{location_name}'.
                 Web Search Context: {results_text}
 
                 Return ONLY a valid JSON object:
                 {{
                   "suburb": "Primary Suburb and Province (e.g. Scottburgh, KwaZulu-Natal)",
-                  "options": ["Option 1 (e.g. Scottburgh, KwaZulu-Natal)", "Option 2 (e.g. Scottburgh South, Ugu District)", "Option 3 (Custom Node)"],
+                  "options": ["Option 1", "Option 2"],
                   "landlord": "Managing agent or landlord if known",
                   "mall_size": "Estimated GLA e.g. 35,000 m² Regional Centre",
                   "footfall": "Estimated monthly visits e.g. ~350,000 visits/month",
                   "households": "Estimated catchment e.g. 50,000 Active Households (10 km Radius)",
-                  "competitors": "Key actual food tenants present in the mall",
-                  "lsm_profile": "Accurate LSM profile e.g. LSM 6–9 / Student & Urban Youth Hub"
+                  "competitors": "Key actual food tenants present in the mall (AUDITED & ACCURATE)",
+                  "lsm_profile": "Accurate LSM profile e.g. LSM 6–9 / Student & Urban Youth Hub",
+                  "default_rent": float (Realistic market rent target per sqm e.g. 210.0)
                 }}
                 """
                 response = client.models.generate_content(
@@ -315,7 +326,6 @@ def research_location_online(location_name):
             except Exception:
                 pass
 
-    # Regex search inside snippet for province / suburb patterns
     prov_match = re.search(r'(KwaZulu-Natal|Gauteng|Western Cape|Eastern Cape|Free State|Mpumalanga|Limpopo|North West|Northern Cape)', results_text, re.IGNORECASE)
     detected_prov = prov_match.group(1).title() if prov_match else "South Africa"
     
@@ -329,7 +339,7 @@ def research_location_online(location_name):
     return extracted_info
 
 # ==========================================
-# BRAND MENU DIRECTORY & GOOGLE DRIVE LINK ENGINE
+# BRAND MENU DIRECTORY & MEDIA SHOWCASE CATALOG
 # ==========================================
 BRAND_MENU_CATALOG = {
     "Phatbuns Smash Burgers": {
@@ -374,6 +384,14 @@ BRAND_MENU_CATALOG = {
         "tagline": "Gourmet Warm Desserts, Waffles & Sundaes",
         "description": "Indulgent double-stick waffle sticks, freshly baked dough tubs, Lotus Biscoff crunch cakes, gelato sundaes, and dessert delivery boxes."
     }
+}
+
+# EMBEDDED STORE MEDIA LINKS
+STORE_MEDIA_LINKS = {
+    "store_photos": "https://drive.google.com/file/d/1qbJ6kvaBxja2gBWoaoHLWme0MEA1omOH/view?usp=drivesdk",
+    "uk_video_1": "https://drive.google.com/file/d/1txmElx_qkUeY6gJS8P5h7Diqoa_uRGr7/view?usp=drivesdk",
+    "dubai_video": "https://drive.google.com/file/d/1mH-4NOQpqCv8oeft0FjOV-6JSjGfT1VK/view?usp=drivesdk",
+    "uk_video_2": "https://drive.google.com/file/d/1XYpOF-_aKlzcEgaUouhE8Ewlvdpn7nFI/view?usp=drivesdk"
 }
 
 def get_drive_menu_download_url(file_id_or_folder):
@@ -1204,7 +1222,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         "footfall": "~550,000 visits/month (~6.6M Annually)",
         "households": "95,000–115,000 Active Households (10 km Radius)",
         "competitors": "Nando's, Steers, Debonairs, Wimpy, RocoMamas",
-        "lsm_profile": "LSM 7–10 / High Purchasing Power Corridor"
+        "lsm_profile": "LSM 7–10 / High Purchasing Power Corridor",
+        "default_rent": 220.0
     })
 
     asset_map = get_asset_images_map()
@@ -1426,7 +1445,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: DEDICATED STORE DEVELOPMENT LEASING LAYOUT PLAN
+    # PAGE 5: DEDICATED STORE DEVELOPMENT LEASING LAYOUT PLAN (PROPORTIONAL VECTOR SCALING)
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=ORANGE_BRAND, alignment=1)
 
@@ -1454,6 +1473,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
     else:
+        # PROPORTIONAL RATIO VECTOR DRAWING (MODE 2 / NO PROPOSAL LAYOUT GENERATOR)
         placeholder_img = Image.new("RGB", (900, 600), color=(245, 247, 250))
         draw = ImageDraw.Draw(placeholder_img)
         draw.rectangle([15, 15, 885, 585], outline=(26, 54, 93), width=4)
@@ -1463,13 +1483,21 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         for y in range(100, 500, 100):
             draw.line([(15, y), (885, y)], fill=(220, 225, 230), width=1)
 
-        draw.rectangle([40, 40, 300, 560], outline=(197, 48, 48), width=3)
-        draw.rectangle([310, 40, 860, 560], outline=(43, 108, 176), width=3)
+        # Dynamic Kitchen vs Dining proportional split
+        total_internal = max(int_gla, 1.0)
+        kitchen_ratio = min(60.0 / total_internal, 0.65) if total_internal > 0 else 0.40
+        kitchen_width_px = int(845 * kitchen_ratio)
+        
+        kitchen_box_end = 40 + kitchen_width_px
+        dining_box_start = kitchen_box_end + 10
+
+        draw.rectangle([40, 40, kitchen_box_end, 560], outline=(197, 48, 48), width=3)
+        draw.rectangle([dining_box_start, 40, 860, 560], outline=(43, 108, 176), width=3)
         
         try:
             draw.text((330, 260), f"PROPOSED STORE LAYOUT PLAN: {loc_name if loc_name else 'Select Location'} (Shop {shop})", fill=(26, 54, 93))
-            draw.text((80, 280), "KITCHEN & PREP ZONE (60 SQM OPTIMAL)", fill=(197, 48, 48))
-            draw.text((500, 280), f"DINING AREA ({max_seats} SEATS)", fill=(43, 108, 176))
+            draw.text((50, 280), f"KITCHEN & PREP ZONE ({min(60.0, total_internal*kitchen_ratio):.1f} SQM)", fill=(197, 48, 48))
+            draw.text((dining_box_start + 20, 280), f"DINING & FOH AREA ({max_seats} SEATS)", fill=(43, 108, 176))
         except Exception:
             pass
 
@@ -1484,9 +1512,9 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 6: DEDICATED BRAND MENUS & GOOGLE DRIVE DOWNLOAD LINKS
-    elements.append(Paragraph("<b>PHATBUNS BRAND PORTFOLIO & CONCEPT CATALOGS</b>", blueprint_header_style))
-    elements.append(Paragraph("<b>CLICKABLE GOOGLE DRIVE DOWNLOAD LINKS FOR ALL SUB-BRANDS</b>", blueprint_subheader_style))
+    # PAGE 6: DEDICATED BRAND MENUS & MEDIA SHOWCASE LINKS
+    elements.append(Paragraph("<b>PHATBUNS BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE</b>", blueprint_header_style))
+    elements.append(Paragraph("<b>CLICKABLE DOWNLOAD LINKS FOR BRAND MENUS, STORE VISUALS & VIDEO WALK-THROUGHS</b>", blueprint_subheader_style))
     elements.append(Spacer(1, 4))
     elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
 
@@ -1531,67 +1559,78 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
     ]))
     elements.append(t_menu_links)
+    elements.append(Spacer(1, 6))
+
+    # GLOBAL STORE SHOWCASE & VIDEO LINKS TABLE
+    media_sec_banner = Table([[Paragraph("GLOBAL STORE VISUALS & VIDEO WALK-THROUGHS", sec_banner_style)]], colWidths=[558])
+    media_sec_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
+    elements.append(media_sec_banner)
+
+    media_table_rows = [
+        [Paragraph("STORE LOCATION / MEDIA TYPE", body_white_bold), Paragraph("VISUAL CONTENT DESCRIPTION", body_white_bold), Paragraph("DIRECT WATCH / VIEW LINK", body_white_bold)],
+        [Paragraph("<b>Sample Store Gallery & Photos</b>", body_regular), Paragraph("High-resolution photos of operational Phatbuns stores, interiors & lighting.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["store_photos"]}" color="#0066CC"><b>🖼️ VIEW PHOTO GALLERY</b></a>', ParagraphStyle('M1', parent=body_regular, alignment=1))],
+        [Paragraph("<b>Phatbuns UK Store Video 1</b>", body_regular), Paragraph("Full video walk-through of active UK franchise store operations.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["uk_video_1"]}" color="#0066CC"><b>🎬 WATCH UK VIDEO 1</b></a>', ParagraphStyle('M2', parent=body_regular, alignment=1))],
+        [Paragraph("<b>Phatbuns UK Store Video 2</b>", body_regular), Paragraph("Secondary UK store video showcasing peak trading & kitchen throughput.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["uk_video_2"]}" color="#0066CC"><b>🎬 WATCH UK VIDEO 2</b></a>', ParagraphStyle('M3', parent=body_regular, alignment=1))],
+        [Paragraph("<b>Phatbuns Dubai Flagship Video</b>", body_regular), Paragraph("Flagship Dubai store layout, luxury finishes & customer experience.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["dubai_video"]}" color="#0066CC"><b>🎬 WATCH DUBAI VIDEO</b></a>', ParagraphStyle('M4', parent=body_regular, alignment=1))]
+    ]
+    t_media_links = Table(media_table_rows, colWidths=[140, 278, 140])
+    t_media_links.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING', (0,0), (-1,-1), 3),
+        ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
+    ]))
+    elements.append(t_media_links)
 
     elements.append(PageBreak())
 
-    # PAGE 7 & 8: RESTORED OFFICIAL 2-PAGE MASTER NCNDA LEGAL TEMPLATE
-    ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
+    # PAGE 7: FULL 1-PAGE CONSOLIDATED MASTER NCNDA LEGAL TEMPLATE (CLAUSES 1 - 6 & SIGNATURES)
+    ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=NAVY_HEADER, alignment=1)
     elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", ncnda_header_style))
-    elements.append(Paragraph("<b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b>", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, textColor=ORANGE_BRAND, alignment=1)))
-    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
+    elements.append(Paragraph("<b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b>", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, alignment=1)))
+    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=2, spaceAfter=4))
 
-    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10.5, textColor=DARK_TEXT)
-    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=NAVY_HEADER)
+    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=6.8, leading=8.8, textColor=DARK_TEXT)
+    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9.5, textColor=NAVY_HEADER)
 
     elements.append(Paragraph("<b>Entered into by and between:</b>", ncnda_title_style))
-    elements.append(Spacer(1, 2))
-    elements.append(Paragraph("<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), a commercial entity operating within the fast-food franchise sector of the Republic of South Africa; and", ncnda_legal_body))
-    elements.append(Spacer(1, 2))
-    elements.append(Paragraph(f"<b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), full legal details: <b>{applicant_name}</b> | Email: <b>{applicant_email}</b> | Tel: <b>{applicant_mobile}</b> | Target Node: <b>{loc_name if loc_name else 'Unassigned'} ({shop})</b>.", ncnda_legal_body))
-    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), and <b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), full legal details: <b>{applicant_name}</b> | Email: <b>{applicant_email}</b> | Tel: <b>{applicant_mobile}</b> | Target Node: <b>{loc_name if loc_name else 'Unassigned'} ({shop})</b>.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>1. PURPOSE & SCOPE OF DISCUSSION</b>", ncnda_title_style))
     elements.append(Paragraph("The Parties wish to enter into discussions concerning a potential business relationship relating to a fast-food franchise opportunity under the Phatbuns brand in South Africa (the 'Permitted Purpose'). In connection with this, the Disclosing Party will share proprietary business systems, financial models, recipes, operational manuals, and strategic information.", ncnda_legal_body))
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>2. FASA COMPLIANCE & ETHICAL STANDARDS</b>", ncnda_title_style))
     elements.append(Paragraph("The Parties acknowledge that this Agreement and subsequent franchise disclosures are intended to comply with the ethical frameworks and guidelines established by the Franchise Association of South Africa (FASA) and the Consumer Protection Act, No. 68 of 2008 (CPA). All negotiations, document exchanges, and disclosures shall be carried out in good faith and transparency.", ncnda_legal_body))
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>3. PROTECTION OF PERSONAL INFORMATION (POPIA)</b>", ncnda_title_style))
-    elements.append(Paragraph("Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA) in relation to any personal information processed under this Agreement:", ncnda_legal_body))
-    elements.append(Spacer(1, 2))
-    elements.append(Paragraph("• The Receiving Party shall only process personal information of the Disclosing Party's employees, agents, or consumers strictly for the Permitted Purpose.", ncnda_legal_body))
-    elements.append(Paragraph("• Appropriate technical and organisational security measures shall be maintained to prevent unauthorised access, loss, or processing of personal information.", ncnda_legal_body))
-    elements.append(Paragraph("• Personal information shall be securely destroyed or returned as soon as it is no longer required for the evaluation of the franchise opportunity.", ncnda_legal_body))
-    elements.append(Spacer(1, 6))
+    elements.append(Paragraph("Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA) in relation to any personal information processed under this Agreement: (a) The Receiving Party shall only process personal information strictly for the Permitted Purpose; (b) Appropriate technical security measures shall be maintained; (c) Information shall be securely destroyed when no longer required.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>4. CONFIDENTIALITY OBLIGATIONS</b>", ncnda_title_style))
-    elements.append(Paragraph("The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa. This includes, without limitation, financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies. The Receiving Party shall not copy, duplicate, or disclose this information to any third party without express written consent.", ncnda_legal_body))
-
-    elements.append(PageBreak())
-
-    # NCNDA PAGE 2 (CLAUSES 5, 6 & EXECUTIVE SIGNATURE BLOCKS)
-    elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA) — PAGE 2</b>", ncnda_header_style))
-    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
+    elements.append(Paragraph("The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa, including financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>5. NON-CIRCUMVENTION</b>", ncnda_title_style))
-    elements.append(Paragraph("The Receiving Party covenants that it will not, directly or indirectly, circumvent, bypass, or avoid Phatbuns South Africa to enter into any business transaction, franchise system, or contract with suppliers, landlords, or partners introduced by the Disclosing Party during discussions. The Receiving Party shall not use the Disclosing Party's concepts or operational models to establish a competing fast-food business for a period of 24 months following the termination of discussions.", ncnda_legal_body))
-    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("The Receiving Party covenants that it will not, directly or indirectly, circumvent, bypass, or avoid Phatbuns South Africa to enter into any business transaction, franchise system, or contract with suppliers, landlords, or partners introduced by the Disclosing Party during discussions. The Receiving Party shall not use the Disclosing Party's concepts to establish a competing business for 24 months following termination.", ncnda_legal_body))
+    elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>6. GOVERNING LAW AND JURISDICTION</b>", ncnda_title_style))
-    elements.append(Paragraph("This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa. Any disputes arising from this Agreement shall be subject to the exclusive jurisdiction of the High Court of South Africa.", ncnda_legal_body))
-    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa under the exclusive jurisdiction of the High Court of South Africa.", ncnda_legal_body))
+    elements.append(Spacer(1, 8))
 
     sig_p_ncnda = [
-        [Paragraph(f"<b>For: PHATBUNS SOUTH AFRICA</b><br/><br/><br/>____________________________________<br/><b>Authorized Signature</b><br/><br/><b>Name:</b> Nisaar Ally<br/><b>Title:</b> SA Master Rights Holder<br/><b>Date:</b> ____ / ____ / 2026<br/><b>Place:</b> Johannesburg", body_regular),
-         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/><br/>____________________________________<br/><b>Authorized Signature</b><br/><br/><b>Name:</b> {applicant_name}<br/><b>Title:</b> Prospective Franchisee<br/><b>Date:</b> ____ / ____ / 2026<br/><b>ID / Reg No:</b> _______________________", body_regular)]
+        [Paragraph(f"<b>For: PHATBUNS SOUTH AFRICA</b><br/><br/>____________________________________<br/><b>Authorized Signature</b><br/><b>Name:</b> Nisaar Ally<br/><b>Title:</b> SA Master Rights Holder<br/><b>Date:</b> ____ / ____ / 2026 | <b>Place:</b> Johannesburg", body_regular),
+         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/>____________________________________<br/><b>Authorized Signature</b><br/><b>Name:</b> {applicant_name}<br/><b>Title:</b> Prospective Franchisee<br/><b>Date:</b> ____ / ____ / 2026 | <b>ID:</b> _______________________", body_regular)]
     ]
     t_sig_ncnda = Table(sig_p_ncnda, colWidths=[270, 270], hAlign='CENTER')
     t_sig_ncnda.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
-        ('PADDING', (0,0), (-1,-1), 8)
+        ('PADDING', (0,0), (-1,-1), 5)
     ]))
     elements.append(t_sig_ncnda)
 
@@ -1660,7 +1699,7 @@ def generate_pipeline_pdf(df_pipeline):
 # ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📊 Feasibility & Bank Model",
-    "📖 Brand Menus & Attachments",
+    "📖 Brand Menus & Media Showcase",
     "📋 Investor & Franchisee Registry"
 ])
 
@@ -1726,7 +1765,7 @@ with tab1:
                         st.session_state["suburb_node_input_key"] = suburb_val
                         st.session_state[f"{re.sub(r'[^a-zA-Z0-9]', '_', custom_input.lower())}_suburb_val"] = suburb_val
                         
-                        st.success(f"Location data retrieved for **{custom_input}**! Primary Suburb Node: **{suburb_val}**")
+                        st.success(f"Location intelligence retrieved for **{custom_input}**! Suburb Node: **{suburb_val}** | Market Rent Target: **R {web_intel.get('default_rent', 220.0)}/m²**")
         else:
             location_name = selected_location
 
@@ -1745,7 +1784,7 @@ with tab1:
     site_default_info = SITE_PROFILES.get(location_name, {
         "suburb": LOCATION_LOOKUP.get(selected_location, ""),
         "shop": "",
-        "default_rent": 180.0,
+        "default_rent": 220.0,
         "default_ops": 35.0,
         "default_gla": 70.0,
         "model": "Express Model",
@@ -1754,6 +1793,9 @@ with tab1:
         "competitors": "Nando's, Steers, Debonairs",
         "lsm_profile": "LSM 7-10+"
     })
+
+    # DYNAMIC RENTAL INTELLIGENCE EXTRACTION FOR MODE 2
+    area_market_rent = site_default_info.get("default_rent", 220.0)
 
     # AUTO-RECOMMENDATION ENGINE FOR OPTION 2
     footfall_raw = site_default_info.get("footfall", "500000")
@@ -1920,12 +1962,12 @@ with tab1:
     with col_wc:
         working_capital = st.number_input("Suggested Working Capital Requirement", step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
 
-    # CONDITIONAL LEASE UI (MODE 1: MANUAL INPUTS | MODE 2: PROPOSED TARGET PROJECTIONS)
+    # CONDITIONAL LEASE UI (MODE 1: MANUAL INPUTS | MODE 2: DYNAMIC LOCALIZED STARTING OFFER TARGET)
     if "1. I have a Landlord Proposal" in analysis_mode:
         st.subheader("Landlord Lease Breakdown (Per SQM)")
         col_int_rent, col_ext_rent = st.columns(2)
         with col_int_rent:
-            def_int_rent = get_site_state("internal_rent", site_default_info.get("default_rent", 180.0))
+            def_int_rent = get_site_state("internal_rent", area_market_rent)
             internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=def_int_rent, step=10.0, format="%.2f", key=f"{site_key}_int_rent_input")
             set_site_state("internal_rent", internal_rent_sqm)
             total_internal_rent = internal_gla * internal_rent_sqm
@@ -1976,8 +2018,8 @@ with tab1:
         """, unsafe_allow_html=True)
 
     else:
-        # MODE 2: PROPOSED STARTING OFFER PROJECTIONS (UI HIDDEN ON-SCREEN)
-        internal_rent_sqm = site_default_info.get("default_rent", 180.0)
+        # MODE 2: DYNAMIC LOCALIZED MARKET RENTAL STARTING OFFER TARGET (UI HIDDEN ON-SCREEN)
+        internal_rent_sqm = area_market_rent
         external_rent_sqm = 0.00
         ops_cost_sqm = site_default_info.get("default_ops", 35.0)
         rates_taxes_sqm = 0.00
@@ -1990,7 +2032,7 @@ with tab1:
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
         total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_landlord_marketing
 
-        st.success(f"🎯 **Mode 2 Active:** Projected baseline lease rate target set to **R {int(round(internal_rent_sqm))}/m²** for P&L calculations and landlord negotiation offer sheet.")
+        st.success(f"🎯 **Mode 2 Active:** Localized market intelligence lease target set to **R {int(round(internal_rent_sqm))}/m²** for **{location_name if location_name else 'Selected Area'}** P&L calculations and landlord offer sheet.")
 
     st.divider()
 
@@ -2161,10 +2203,10 @@ with tab1:
 
     render_contact_footer()
 
-# TAB 2: BRAND MENUS & GOOGLE DRIVE ATTACHMENTS
+# TAB 2: BRAND MENUS & MEDIA SHOWCASE
 with tab2:
-    st.header("📖 Brand Menus & Concept Collateral Selector")
-    st.markdown("Individual brand catalogs below are configured with dedicated **Google Drive Download Links** and overview write-ups embedded directly inside the PDF investor pack.")
+    st.header("📖 Brand Menus & Global Media Showcase")
+    st.markdown("Individual brand catalogs and global store walk-throughs below are configured with dedicated **Google Drive Download & Streaming Links**.")
 
     for brand_key, brand_info in BRAND_MENU_CATALOG.items():
         logo_file = logo_map.get(brand_info.get("logo_key", "phatbuns_sa"))
@@ -2182,6 +2224,15 @@ with tab2:
         st.markdown(f"🔗 **Google Drive Direct Download Link:** [{brand_info['filename']}]({drive_dl_url})")
         
         st.markdown('</div>', unsafe_allow_html=True)
+
+    st.subheader("🎬 Global Store Video Walk-Throughs & Visual Gallery")
+    m_col1, m_col2 = st.columns(2)
+    with m_col1:
+        st.markdown(f"🖼️ **Sample Store Photos Gallery:** [View Google Drive Gallery]({STORE_MEDIA_LINKS['store_photos']})")
+        st.markdown(f"🎬 **Phatbuns UK Walk-Through 1:** [Watch Video]({STORE_MEDIA_LINKS['uk_video_1']})")
+    with m_col2:
+        st.markdown(f"🎬 **Phatbuns UK Walk-Through 2:** [Watch Video]({STORE_MEDIA_LINKS['uk_video_2']})")
+        st.markdown(f"🎬 **Phatbuns Dubai Flagship:** [Watch Video]({STORE_MEDIA_LINKS['dubai_video']})")
 
     render_contact_footer()
 
