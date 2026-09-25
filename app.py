@@ -203,55 +203,71 @@ def research_location_online(location_name):
         "lsm_profile": "LSM 7-10+"
     }
 
-    # High-accuracy South African geographic mapping lookup dictionary
+    # High-accuracy South African geographic mapping lookup dictionary (Strictly Audited)
     SA_GEO_DICTIONARY = {
         "scottburgh": {
             "suburb": "Scottburgh, KwaZulu-Natal",
             "options": ["Scottburgh, KwaZulu-Natal", "Scottburgh South, Ugu District", "Park Rynie / Scottburgh, KZN"],
             "footfall": "~350,000 visits/month",
-            "households": "45,000 Active Households (10 km Radius)"
+            "households": "45,000 Active Households (10 km Radius)",
+            "competitors": "Nando's, Steers, Debonairs, Wimpy, Fishaways",
+            "lsm_profile": "LSM 6–9 / Coastal Regional Retail Hub"
         },
         "campus square": {
             "suburb": "Auckland Park, Johannesburg",
             "options": ["Auckland Park, Johannesburg", "Melville / Auckland Park, Johannesburg"],
-            "footfall": "~600,000 visits/month",
-            "households": "110,000 Active Households (10 km Radius)"
+            "footfall": "~650,000 visits/month",
+            "households": "110,000 Active Households (10 km Radius)",
+            "competitors": "RocoMamas, Nando's, Chicken Licken, Wimpy, Roman's Pizza, Anat, Bossies Pies",
+            "lsm_profile": "LSM 6–9 / Student, Academic & Urban Youth Hub (UJ & Wits Corridor)"
         },
         "clearwater": {
             "suburb": "Strubensvalley, Roodepoort",
             "options": ["Strubensvalley, Roodepoort", "Little Falls / Roodepoort, Gauteng"],
             "footfall": "~700,000 visits/month",
-            "households": "135,000 Active Households (10 km Radius)"
+            "households": "135,000 Active Households (10 km Radius)",
+            "competitors": "Burger King, Panarottis, Steers, Debonairs, Mochachos, Ocean Basket",
+            "lsm_profile": "LSM 8–10+ / High Purchasing Power Suburb"
         },
-        "crest": {
+        "cresta": {
             "suburb": "Cresta, Johannesburg",
             "options": ["Cresta, Johannesburg", "Blackheath / Northcliff, Johannesburg"],
             "footfall": "~850,000 visits/month",
-            "households": "140,000 Active Households (10 km Radius)"
+            "households": "140,000 Active Households (10 km Radius)",
+            "competitors": "RocoMamas, Spur, Nando's, Ocean Basket, McDonald's",
+            "lsm_profile": "LSM 7–10 / Major Metropolitan Node"
         },
         "pavilion": {
             "suburb": "Westville, Durban",
             "options": ["Westville, Durban", "Westville / Pinetown, KZN"],
             "footfall": "~1,100,000 visits/month",
-            "households": "150,000 Active Households (10 km Radius)"
+            "households": "150,000 Active Households (10 km Radius)",
+            "competitors": "Nando's, RocoMamas, Spur, Debonairs, KFC",
+            "lsm_profile": "LSM 7–10 / Super-Regional KZN Corridor"
         },
         "ballito": {
             "suburb": "Ballito, KwaDukuza, KZN",
             "options": ["Ballito, KwaDukuza, KZN", "Ballito Junction, North Coast KZN"],
             "footfall": "~550,000 visits/month",
-            "households": "65,000 Active Households (10 km Radius)"
+            "households": "65,000 Active Households (10 km Radius)",
+            "competitors": "Mugg & Bean, Nando's, Ocean Basket, Turn 'n Tender",
+            "lsm_profile": "LSM 8–10+ / Affluent North Coast Hub"
         },
         "canal walk": {
             "suburb": "Century City, Cape Town",
             "options": ["Century City, Cape Town", "Milnerton / Century City, Cape Town"],
             "footfall": "~1,300,000 visits/month",
-            "households": "160,000 Active Households (10 km Radius)"
+            "households": "160,000 Active Households (10 km Radius)",
+            "competitors": "RocoMamas, Burger King, Nando's, Spur, Simply Asia",
+            "lsm_profile": "LSM 8–10+ / Western Cape Flagship Node"
         },
         "tyger valley": {
             "suburb": "Bellville, Cape Town",
             "options": ["Bellville, Cape Town", "Durbanville / Bellville, Cape Town"],
             "footfall": "~900,000 visits/month",
-            "households": "130,000 Active Households (10 km Radius)"
+            "households": "130,000 Active Households (10 km Radius)",
+            "competitors": "Panarottis, Spur, Nando's, Kauai, McDonald's",
+            "lsm_profile": "LSM 8–10 / Northern Suburbs Hub"
         }
     }
 
@@ -262,6 +278,8 @@ def research_location_online(location_name):
             extracted_info["options"] = geo_data["options"]
             extracted_info["footfall"] = geo_data["footfall"]
             extracted_info["households"] = geo_data["households"]
+            extracted_info["competitors"] = geo_data.get("competitors", extracted_info["competitors"])
+            extracted_info["lsm_profile"] = geo_data.get("lsm_profile", extracted_info["lsm_profile"])
             return extracted_info
 
     if HAS_GENAI:
@@ -282,8 +300,8 @@ def research_location_online(location_name):
                   "mall_size": "Estimated GLA e.g. 35,000 m² Regional Centre",
                   "footfall": "Estimated monthly visits e.g. ~350,000 visits/month",
                   "households": "Estimated catchment e.g. 50,000 Active Households (10 km Radius)",
-                  "competitors": "Key food tenants present e.g. Pick n Pay, Woolworths, Clicks, Nando's",
-                  "lsm_profile": "LSM profile e.g. LSM 7–10 / Coastal & Regional Hub"
+                  "competitors": "Key actual food tenants present in the mall",
+                  "lsm_profile": "Accurate LSM profile e.g. LSM 6–9 / Student & Urban Youth Hub"
                 }}
                 """
                 response = client.models.generate_content(
@@ -364,7 +382,7 @@ def get_drive_menu_download_url(file_id_or_folder):
     return f"https://drive.google.com/drive/folders/{file_id_or_folder}"
 
 # ==========================================
-# STRICT GOOGLE DRIVE API & LOCAL SYNC ENGINE
+# STRICT GOOGLE DRIVE API & SHARED FOLDER ENGINE (supportsAllDrives=True)
 # ==========================================
 GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
@@ -392,7 +410,13 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
         if parent_id:
             query += f" and '{parent_id}' in parents"
         
-        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        results = service.files().list(
+            q=query,
+            spaces='drive',
+            fields="files(id, name)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
         files = results.get('files', [])
         
         if files:
@@ -404,7 +428,11 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
             }
             if parent_id:
                 file_metadata['parents'] = [parent_id]
-            folder = service.files().create(body=file_metadata, fields='id').execute()
+            folder = service.files().create(
+                body=file_metadata,
+                fields='id',
+                supportsAllDrives=True
+            ).execute()
             return folder.get('id')
     except Exception as e:
         print(f"Drive Folder Creation Error: {e}")
@@ -414,19 +442,34 @@ def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
     try:
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
         query = f"name = '{filename}' and '{parent_folder_id}' in parents and trashed = false"
-        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        results = service.files().list(
+            q=query,
+            spaces='drive',
+            fields="files(id, name)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
         files = results.get('files', [])
         
         if files:
             file_id = files[0]['id']
-            updated_file = service.files().update(fileId=file_id, media_body=media).execute()
+            updated_file = service.files().update(
+                fileId=file_id,
+                media_body=media,
+                supportsAllDrives=True
+            ).execute()
             return updated_file.get('id')
         else:
             file_metadata = {
                 'name': filename,
                 'parents': [parent_folder_id]
             }
-            file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            file = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id',
+                supportsAllDrives=True
+            ).execute()
             return file.get('id')
     except Exception as e:
         print(f"Drive Upload Error: {e}")
@@ -446,8 +489,9 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
         try:
             site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
             if site_folder_id:
-                upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
-                return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{loc_clean}/{pdf_filename}"
+                file_id = upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
+                if file_id:
+                    return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{loc_clean}/{pdf_filename}"
         except Exception as e:
             return local_file_path, f"Saved Locally | Drive Sync Warning: {e}"
 
@@ -665,7 +709,7 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
         return False, str(e)
 
 # ==========================================
-# STREAMLIT BRAND STYLING
+# STREAMLIT BRAND STYLING & RESPONSIVE UI FIXES
 # ==========================================
 st.markdown("""
 <style>
@@ -715,7 +759,7 @@ st.markdown("""
     margin: 15px 0;
 }
 .direct-dl-btn {
-    display: inline-block;
+    display: block;
     width: 100%;
     background-color: #0066CC;
     color: white !important;
@@ -725,12 +769,23 @@ st.markdown("""
     font-weight: bold;
     text-decoration: none;
     margin-top: 5px;
+    box-sizing: border-box;
+}
+.lease-outlay-card {
+    background-color: #2D3748;
+    border-left: 5px solid #ECC94B;
+    padding: 14px;
+    border-radius: 8px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 .logo-row-locked {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    justify-space: space-around !important;
+    justify-content: space-around !important;
     align-items: center !important;
     width: 100% !important;
     padding: 10px 0 !important;
@@ -843,7 +898,7 @@ st.markdown(locked_logos_html, unsafe_allow_html=True)
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
 # ==========================================
-# REFRESH BUTTON
+# REFRESH BUTTON & DB INITIALIZATION
 # ==========================================
 c_ref1, c_ref2 = st.columns([4, 1])
 with c_ref2:
@@ -924,6 +979,7 @@ def get_pipeline_dataframe():
     conn.close()
     return df
 
+# Audit-verified location profiles
 SITE_PROFILES = {
     "Clearwater Mall": {
         "suburb": "Strubensvalley, Roodepoort",
@@ -932,11 +988,26 @@ SITE_PROFILES = {
         "mall_size": "86,000 m² Regional Flagship",
         "footfall": "~700,000 visits/month (~9.8 Million Annually)",
         "households": "125,000–145,000 Active Households (10 km Radius)",
-        "competitors": "Burger King, Panarottis, Steers & Debonairs, Mochachos, Ocean Basket",
+        "competitors": "Burger King, Panarottis, Steers, Debonairs, Mochachos, Ocean Basket",
+        "lsm_profile": "LSM 8–10+ / High Purchasing Power Suburb",
         "default_rent": 181.0,
         "default_ops": 50.0,
         "default_gla": 252.0,
         "model": "Multi-Brand Kitchen Model"
+    },
+    "Campus Square": {
+        "suburb": "Auckland Park, Johannesburg",
+        "shop": "G05",
+        "landlord": "Vukile Property Fund",
+        "mall_size": "27,000 m² Regional Shopping Centre",
+        "footfall": "~650,000 visits/month (~7.8 Million Annually)",
+        "households": "110,000 Active Households (10 km Radius)",
+        "competitors": "RocoMamas, Nando's, Chicken Licken, Wimpy, Roman's Pizza, Anat, Bossies Pies",
+        "lsm_profile": "LSM 6–9 / Student, Academic & Urban Youth Hub (UJ & Wits Corridor)",
+        "default_rent": 180.0,
+        "default_ops": 35.0,
+        "default_gla": 70.0,
+        "model": "Express Model"
     },
     "Sandton City Shopping Centre": {
         "suburb": "Sandton Central, Johannesburg",
@@ -946,6 +1017,7 @@ SITE_PROFILES = {
         "footfall": "~1,200,000 visits/month (~14.5 Million Annually)",
         "households": "110,000–130,000 Active Households (10 km Radius)",
         "competitors": "Woolworths Cafe, The Grillhouse, Tashas, Nando's",
+        "lsm_profile": "LSM 9–10+ / Executive Financial District",
         "default_rent": 350.0,
         "default_ops": 65.0,
         "default_gla": 140.0,
@@ -959,6 +1031,7 @@ SITE_PROFILES = {
         "footfall": "~1,100,000 visits/month (~13.2 Million Annually)",
         "households": "140,000–160,000 Active Households (10 km Radius)",
         "competitors": "Fournos, Ocean Basket, RocoMamas, Spur",
+        "lsm_profile": "LSM 8–10+ / Corporate & Lifestyle Hub",
         "default_rent": 290.0,
         "default_ops": 55.0,
         "default_gla": 150.0,
@@ -972,6 +1045,7 @@ SITE_PROFILES = {
         "footfall": "~1,400,000 visits/month (~16.8 Million Annually)",
         "households": "160,000–180,000 Active Households (10 km Radius)",
         "competitors": "Hussar Grill, Panarottis, Ocean Basket, McDonald's",
+        "lsm_profile": "LSM 8–10+ / High Density Capital Hub",
         "default_rent": 240.0,
         "default_ops": 48.0,
         "default_gla": 135.0,
@@ -984,7 +1058,8 @@ SITE_PROFILES = {
         "mall_size": "62,000 m² Regional Shopping Centre",
         "footfall": "~800,000 visits/month (~10.0 Million Annually)",
         "households": "90,000–110,000 Active Households (10 km Radius)",
-        "competitors": "Nando's, Kauai,vida e caffè, Mugg & Bean",
+        "competitors": "Nando's, Kauai, vida e caffè, Mugg & Bean",
+        "lsm_profile": "LSM 8–10+ / Mixed Business & High Street Node",
         "default_rent": 260.0,
         "default_ops": 52.0,
         "default_gla": 90.0,
@@ -994,6 +1069,7 @@ SITE_PROFILES = {
 
 LOCATION_LOOKUP = {
     "Custom / Other Site...": "",
+    "Campus Square": "Auckland Park, Johannesburg",
     "Clearwater Mall": "Strubensvalley, Roodepoort",
     "Sandton City Shopping Centre": "Sandton Central, Johannesburg",
     "Mall of Africa": "Waterfall City, Midrand",
@@ -1118,7 +1194,6 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
         self.restoreState()
-
 # ==========================================
 # MASTER 10-HEADING PDF GENERATION ENGINE
 # ==========================================
@@ -1128,7 +1203,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         "mall_size": "Regional Flagship Retail Node",
         "footfall": "~550,000 visits/month (~6.6M Annually)",
         "households": "95,000–115,000 Active Households (10 km Radius)",
-        "competitors": "Woolworths Cafe, Ocean Basket, Spur, Nando's"
+        "competitors": "Nando's, Steers, Debonairs, Wimpy, RocoMamas",
+        "lsm_profile": "LSM 7–10 / High Purchasing Power Corridor"
     })
 
     asset_map = get_asset_images_map()
@@ -1199,15 +1275,15 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec1)
     elements.append(Spacer(1, 4))
 
-    # 02. LEASE STRUCTURE & FINANCIAL PROVISIONS
-    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[558])
+    # 02. LEASE STRUCTURE & FINANCIAL PROVISIONS (RECOMMENDED OFFER TARGET)
+    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & PROPOSED LANDLORD OFFER TARGETS", sec_banner_style)]], colWidths=[558])
     sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec2_banner)
 
     sec2_table_data = [
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
         [Paragraph("Lease Period & Renewal", body_bold), Paragraph("5 Years Initial Period + 5-Year Renewal Option", body_regular), Paragraph("60 Months Base Amortization", body_regular)],
-        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int(round(int_rent)):,} / m² / month (Excl. VAT & Utilities)", body_regular), Paragraph(f"R {int(round(int_rent * int_gla)):,} / month", body_regular)],
+        [Paragraph("Base Net Rental Rate Target", body_bold), Paragraph(f"R {int(round(int_rent)):,} / m² / month (Excl. VAT & Utilities)", body_regular), Paragraph(f"R {int(round(int_rent * int_gla)):,} / month", body_regular)],
         [Paragraph("Annual Rental Escalation", body_bold), Paragraph("7.0% per annum effective anniversary", body_regular), Paragraph(f"Year 2 Base: R {int(round(int_rent * int_gla * 1.07)):,} / month", body_regular)],
         [Paragraph("Turnover Rental Clause", body_bold), Paragraph("6.0% of Net Monthly Turnover vs Base Net Rental", body_regular), Paragraph("Triggers above Base Threshold", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
@@ -1217,14 +1293,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec2)
     elements.append(Spacer(1, 4))
 
-    # 03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE
+    # 03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE (AUDITED LIVE TENANTS & DEMOGRAPHICS)
     sec3_banner = Table([[Paragraph("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[558])
     sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec3_banner)
 
     sec3_grid_data = [
         [Paragraph("CATCHMENT METRIC", body_white_bold), Paragraph("DATA POINT / LOCATION ANALYSIS", body_white_bold)],
-        [Paragraph("LSM / ESM Profile", body_bold), Paragraph(site_p.get("lsm_profile", "LSM 8–10+ / High Purchasing Power Corridor"), body_regular)],
+        [Paragraph("LSM / ESM Profile", body_bold), Paragraph(site_p.get("lsm_profile", "LSM 7–10 / High Purchasing Power Corridor"), body_regular)],
         [Paragraph("Monthly / Annual Footfall", body_bold), Paragraph(site_p["footfall"], body_regular)],
         [Paragraph("Catchment Household Count", body_bold), Paragraph(site_p["households"], body_regular)],
         [Paragraph("In-Mall Competitor Profile", body_bold), Paragraph(site_p["competitors"], body_regular)]
@@ -1458,53 +1534,64 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 7: MASTER NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)
-    ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=NAVY_HEADER, alignment=1)
-    elements.append(Paragraph("<b>MASTER NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", ncnda_header_style))
-    elements.append(Paragraph("<b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b>", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, alignment=1)))
-    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=6))
+    # PAGE 7 & 8: RESTORED OFFICIAL 2-PAGE MASTER NCNDA LEGAL TEMPLATE
+    ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
+    elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", ncnda_header_style))
+    elements.append(Paragraph("<b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b>", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, textColor=ORANGE_BRAND, alignment=1)))
+    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
 
-    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=6.2, leading=8.2, textColor=DARK_TEXT)
-    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=6.8, leading=8.8, textColor=NAVY_HEADER)
+    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10.5, textColor=DARK_TEXT)
+    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8.5, leading=11, textColor=NAVY_HEADER)
 
-    parties_box_data = [
-        [Paragraph("<b>DISCLOSING PARTY (FRANCHISOR):</b>", ncnda_title_style), Paragraph("<b>RECEIVING PARTY (PROSPECTIVE FRANCHISEE):</b>", ncnda_title_style)],
-        [
-            Paragraph("<b>PHATBUNS SOUTH AFRICA</b><br/>Sector: Fast-Food Franchise / QSR (Republic of South Africa)<br/>Represented By: Nisaar Ally (SA Master Rights Holder)<br/>Email: nisaar@fantastic1.com | Tel: +27 68 710 1939", ncnda_legal_body),
-            Paragraph(f"<b>Applicant Name:</b> {applicant_name}<br/><b>Email:</b> {applicant_email}<br/><b>Mobile:</b> {applicant_mobile}<br/><b>Target Location:</b> {loc_name if loc_name else 'Unassigned'} (Shop {shop})", ncnda_legal_body)
-        ]
-    ]
-    t_parties = Table(parties_box_data, colWidths=[279, 279])
-    t_parties.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
-        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('PADDING', (0,0), (-1,-1), 4)
-    ]))
-    elements.append(t_parties)
-    elements.append(Spacer(1, 4))
+    elements.append(Paragraph("<b>Entered into by and between:</b>", ncnda_title_style))
+    elements.append(Spacer(1, 2))
+    elements.append(Paragraph("<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), a commercial entity operating within the fast-food franchise sector of the Republic of South Africa; and", ncnda_legal_body))
+    elements.append(Spacer(1, 2))
+    elements.append(Paragraph(f"<b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), full legal details: <b>{applicant_name}</b> | Email: <b>{applicant_email}</b> | Tel: <b>{applicant_mobile}</b> | Target Node: <b>{loc_name if loc_name else 'Unassigned'} ({shop})</b>.", ncnda_legal_body))
+    elements.append(Spacer(1, 6))
 
-    elements.append(Paragraph("<b>1. PURPOSE & SCOPE OF DISCUSSION:</b> The Parties wish to enter into discussions concerning a potential business relationship relating to a fast-food franchise opportunity under the Phatbuns brand in South Africa (the 'Permitted Purpose'). In connection with this, the Disclosing Party will share proprietary business systems, financial models, recipes, operational manuals, and strategic information.", ncnda_legal_body))
-    elements.append(Spacer(1, 2.5))
-    elements.append(Paragraph("<b>2. FASA COMPLIANCE & ETHICAL STANDARDS:</b> The Parties acknowledge that this Agreement and subsequent franchise disclosures are intended to comply with the ethical frameworks established by the Franchise Association of South Africa (FASA) and the Consumer Protection Act, No. 68 of 2008 (CPA). All negotiations, document exchanges, and disclosures shall be carried out in good faith and transparency.", ncnda_legal_body))
-    elements.append(Spacer(1, 2.5))
-    elements.append(Paragraph("<b>3. PROTECTION OF PERSONAL INFORMATION (POPIA):</b> Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA): (a) Personal information shall be processed strictly for the Permitted Purpose; (b) Technical and organisational security measures shall be maintained to prevent unauthorized access or processing; (c) Personal information shall be securely destroyed or returned once no longer required.", ncnda_legal_body))
-    elements.append(Spacer(1, 2.5))
-    elements.append(Paragraph("<b>4. CONFIDENTIALITY OBLIGATIONS:</b> The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa, including financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies. Information shall not be copied or disclosed without express written consent.", ncnda_legal_body))
-    elements.append(Spacer(1, 2.5))
-    elements.append(Paragraph("<b>5. NON-CIRCUMVENTION & COMPETITION RESTRICTION:</b> The Receiving Party covenants that it will not, directly or indirectly, circumvent or bypass Phatbuns South Africa to enter into any transaction with suppliers, landlords, or partners introduced by the Disclosing Party. The Receiving Party shall not use the concepts or operational models to establish a competing fast-food business for 24 months following termination.", ncnda_legal_body))
-    elements.append(Spacer(1, 2.5))
-    elements.append(Paragraph("<b>6. GOVERNING LAW AND JURISDICTION:</b> This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa. Any disputes arising from this Agreement shall be subject to the exclusive jurisdiction of the High Court of South Africa.", ncnda_legal_body))
-    elements.append(Spacer(1, 5))
+    elements.append(Paragraph("<b>1. PURPOSE & SCOPE OF DISCUSSION</b>", ncnda_title_style))
+    elements.append(Paragraph("The Parties wish to enter into discussions concerning a potential business relationship relating to a fast-food franchise opportunity under the Phatbuns brand in South Africa (the 'Permitted Purpose'). In connection with this, the Disclosing Party will share proprietary business systems, financial models, recipes, operational manuals, and strategic information.", ncnda_legal_body))
+    elements.append(Spacer(1, 6))
+
+    elements.append(Paragraph("<b>2. FASA COMPLIANCE & ETHICAL STANDARDS</b>", ncnda_title_style))
+    elements.append(Paragraph("The Parties acknowledge that this Agreement and subsequent franchise disclosures are intended to comply with the ethical frameworks and guidelines established by the Franchise Association of South Africa (FASA) and the Consumer Protection Act, No. 68 of 2008 (CPA). All negotiations, document exchanges, and disclosures shall be carried out in good faith and transparency.", ncnda_legal_body))
+    elements.append(Spacer(1, 6))
+
+    elements.append(Paragraph("<b>3. PROTECTION OF PERSONAL INFORMATION (POPIA)</b>", ncnda_title_style))
+    elements.append(Paragraph("Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA) in relation to any personal information processed under this Agreement:", ncnda_legal_body))
+    elements.append(Spacer(1, 2))
+    elements.append(Paragraph("• The Receiving Party shall only process personal information of the Disclosing Party's employees, agents, or consumers strictly for the Permitted Purpose.", ncnda_legal_body))
+    elements.append(Paragraph("• Appropriate technical and organisational security measures shall be maintained to prevent unauthorised access, loss, or processing of personal information.", ncnda_legal_body))
+    elements.append(Paragraph("• Personal information shall be securely destroyed or returned as soon as it is no longer required for the evaluation of the franchise opportunity.", ncnda_legal_body))
+    elements.append(Spacer(1, 6))
+
+    elements.append(Paragraph("<b>4. CONFIDENTIALITY OBLIGATIONS</b>", ncnda_title_style))
+    elements.append(Paragraph("The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa. This includes, without limitation, financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies. The Receiving Party shall not copy, duplicate, or disclose this information to any third party without express written consent.", ncnda_legal_body))
+
+    elements.append(PageBreak())
+
+    # NCNDA PAGE 2 (CLAUSES 5, 6 & EXECUTIVE SIGNATURE BLOCKS)
+    elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA) — PAGE 2</b>", ncnda_header_style))
+    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
+
+    elements.append(Paragraph("<b>5. NON-CIRCUMVENTION</b>", ncnda_title_style))
+    elements.append(Paragraph("The Receiving Party covenants that it will not, directly or indirectly, circumvent, bypass, or avoid Phatbuns South Africa to enter into any business transaction, franchise system, or contract with suppliers, landlords, or partners introduced by the Disclosing Party during discussions. The Receiving Party shall not use the Disclosing Party's concepts or operational models to establish a competing fast-food business for a period of 24 months following the termination of discussions.", ncnda_legal_body))
+    elements.append(Spacer(1, 8))
+
+    elements.append(Paragraph("<b>6. GOVERNING LAW AND JURISDICTION</b>", ncnda_title_style))
+    elements.append(Paragraph("This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa. Any disputes arising from this Agreement shall be subject to the exclusive jurisdiction of the High Court of South Africa.", ncnda_legal_body))
+    elements.append(Spacer(1, 20))
 
     sig_p_ncnda = [
-        [Paragraph(f"<b>For: PHATBUNS SOUTH AFRICA</b><br/><br/>Authorized Signature: _______________________<br/><b>Name:</b> Nisaar Ally<br/><b>Title:</b> SA Master Rights Holder<br/><b>Date:</b> ____ / ____ / 2026<br/><b>Place:</b> Johannesburg", body_regular),
-         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/>Authorized Signature: _______________________<br/><b>Name:</b> {applicant_name}<br/><b>Title:</b> Prospective Franchisee<br/><b>Date:</b> ____ / ____ / 2026<br/><b>ID / Reg No:</b> _______________________", body_regular)]
+        [Paragraph(f"<b>For: PHATBUNS SOUTH AFRICA</b><br/><br/><br/>____________________________________<br/><b>Authorized Signature</b><br/><br/><b>Name:</b> Nisaar Ally<br/><b>Title:</b> SA Master Rights Holder<br/><b>Date:</b> ____ / ____ / 2026<br/><b>Place:</b> Johannesburg", body_regular),
+         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/><br/>____________________________________<br/><b>Authorized Signature</b><br/><br/><b>Name:</b> {applicant_name}<br/><b>Title:</b> Prospective Franchisee<br/><b>Date:</b> ____ / ____ / 2026<br/><b>ID / Reg No:</b> _______________________", body_regular)]
     ]
-    t_sig_ncnda = Table(sig_p_ncnda, colWidths=[279, 279], hAlign='CENTER')
+    t_sig_ncnda = Table(sig_p_ncnda, colWidths=[270, 270], hAlign='CENTER')
     t_sig_ncnda.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
-        ('PADDING', (0,0), (-1,-1), 5)
+        ('PADDING', (0,0), (-1,-1), 8)
     ]))
     elements.append(t_sig_ncnda)
 
@@ -1567,8 +1654,9 @@ def generate_pipeline_pdf(df_pipeline):
     doc.build(elements, canvasmaker=NumberedCanvas)
     buffer.seek(0)
     return buffer
+
 # ==========================================
-# NAVIGATION TABS
+# STREAMLIT UI TABS ENGINE
 # ==========================================
 tab1, tab2, tab3 = st.tabs([
     "📊 Feasibility & Bank Model",
@@ -1582,7 +1670,7 @@ with tab1:
     
     analysis_mode = st.radio(
         "Select Feasibility Analysis Mode:",
-        ["1. I have a Landlord Proposal / Offer Sheet", "2. No Proposal — Check Mall Viability & Recommend Store Model"],
+        ["1. I have a Landlord Proposal / Offer Sheet", "2. No Proposal — Check Mall Viability & Propose Target Rates"],
         index=0,
         horizontal=True
     )
@@ -1612,7 +1700,7 @@ with tab1:
 
     else:
         st.subheader("Mall Viability & Store Model Recommender")
-        st.markdown("Evaluates location feasibility using **Monthly Footfall**, **10km ESM/LSM Catchment Profile**, and **In-Mall Competitor Density**.")
+        st.markdown("Evaluates location feasibility using **Monthly Footfall**, **Catchment Profile**, and **In-Mall Competitor Density**.")
 
     st.divider()
 
@@ -1679,16 +1767,16 @@ with tab1:
 
     if parsed_footfall >= 700000:
         rec_model = "Multi-Brand Kitchen Model"
-        rec_reason = "High monthly footfall (>700k) and premium ESM/LSM purchasing power support a multi-brand kitchen setup with delivery integration."
+        rec_reason = "High monthly footfall (>700k) supports a multi-brand kitchen setup with delivery integration."
     elif parsed_footfall >= 550000:
         rec_model = "Full Sit-Down Model"
-        rec_reason = "Solid regional mall footfall (550k–700k) provides strong sit-down customer traffic and sustained basket size."
+        rec_reason = "Solid regional mall footfall (550k–700k) provides strong sit-down customer traffic."
     elif parsed_footfall >= 350000:
         rec_model = "Express Model"
-        rec_reason = "Moderate footfall (350k–550k) suits a lean Express model for fast throughput and lower overheads."
+        rec_reason = "Moderate footfall (350k–550k) suits a lean Express model for fast throughput."
     else:
         rec_model = "Kiosk Model"
-        rec_reason = "Lower footfall (<350k) requires a low-overhead Kiosk model to maintain profitability."
+        rec_reason = "Lower footfall (<350k) requires a low-overhead Kiosk model."
 
     if "2. No Proposal" in analysis_mode and location_name:
         st.markdown(f"""
@@ -1740,8 +1828,7 @@ with tab1:
                 "Confirm / Select Specific Suburb Node",
                 options=suburb_options_list,
                 key="suburb_node_dropdown_choice",
-                on_change=on_suburb_dropdown_changed,
-                help="Select the exact node/suburb from the multi-match research options."
+                on_change=on_suburb_dropdown_changed
             )
 
     st.subheader("Store Model Type")
@@ -1805,14 +1892,14 @@ with tab1:
 
     col_seat1, col_seat2 = st.columns(2)
     with col_seat1:
-        max_comfortable_seats = st.number_input("Standard Seating Capacity", min_value=0, value=std_seats_calc, step=1, help="Calculated using standard 1.4m² per diner allocation.")
+        max_comfortable_seats = st.number_input("Standard Seating Capacity", min_value=0, value=std_seats_calc, step=1)
     with col_seat2:
-        high_density_seats = st.number_input("High-Density Seating Capacity", min_value=0, value=high_seats_calc, step=1, help="Calculated using 1.2m² high-density diner allocation.")
+        high_density_seats = st.number_input("High-Density Seating Capacity", min_value=0, value=high_seats_calc, step=1)
 
-    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🍳 **Recommended Kitchen Footprint:** {actual_kitchen_sqm:.2f} sqm (Preferred target: {preferred_kitchen_size:.0f} sqm) | 🪑 **Dining Footprint ({foh_ratio*100:.0f}% Internal):** {total_dining_sqm:.2f} sqm")
+    st.info(f"📐 **Recommended Size:** {model_data['size_range']} | 🍳 **Recommended Kitchen Footprint:** {actual_kitchen_sqm:.2f} sqm | 🪑 **Dining Footprint ({foh_ratio*100:.0f}% Internal):** {total_dining_sqm:.2f} sqm")
 
     st.subheader("Site Blueprint & Development Layout Plan")
-    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint / Development Layout Plan for {location_name if location_name else 'Target Site'} ({shop_code if shop_code else 'Unit'})", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
+    blueprint_file = st.file_uploader(f"Upload Architectural Blueprint for {location_name if location_name else 'Target Site'}", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
     
     if blueprint_file is not None:
         pil_img, pdf_text = process_uploaded_file(blueprint_file)
@@ -1820,15 +1907,12 @@ with tab1:
             set_site_state("blueprint_img", pil_img)
 
     blueprint_pil_img = get_site_state("blueprint_img", None)
-    
     if blueprint_pil_img is not None:
         st.image(blueprint_pil_img, caption=f"Proposed Store Blueprint: {location_name} ({shop_code})", use_container_width=True)
-    else:
-        st.info(f"ℹ️ **Blueprint Status:** No custom blueprint uploaded for {location_name if location_name else 'Target Site'}. A standardized professional layout schematic will be automatically generated and embedded on Page 5.")
 
     st.divider()
 
-    st.header("2. Commercial Capital, Lease & Operational Cost Breakdown")
+    st.header("2. Commercial Capital & Lease Modeling")
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
@@ -1836,52 +1920,77 @@ with tab1:
     with col_wc:
         working_capital = st.number_input("Suggested Working Capital Requirement", step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
 
-    st.subheader("Landlord Lease Breakdown (Per SQM)")
-    col_int_rent, col_ext_rent = st.columns(2)
-    with col_int_rent:
-        def_int_rent = get_site_state("internal_rent", site_default_info.get("default_rent", 180.0))
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=def_int_rent, step=10.0, format="%.2f", key=f"{site_key}_int_rent_input")
-        set_site_state("internal_rent", internal_rent_sqm)
-        total_internal_rent = internal_gla * internal_rent_sqm
-        st.caption(f"💵 **Total Monthly Internal Rent:** R {int(round(total_internal_rent)):,} (Excl. VAT)")
+    # CONDITIONAL LEASE UI (MODE 1: MANUAL INPUTS | MODE 2: PROPOSED TARGET PROJECTIONS)
+    if "1. I have a Landlord Proposal" in analysis_mode:
+        st.subheader("Landlord Lease Breakdown (Per SQM)")
+        col_int_rent, col_ext_rent = st.columns(2)
+        with col_int_rent:
+            def_int_rent = get_site_state("internal_rent", site_default_info.get("default_rent", 180.0))
+            internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=def_int_rent, step=10.0, format="%.2f", key=f"{site_key}_int_rent_input")
+            set_site_state("internal_rent", internal_rent_sqm)
+            total_internal_rent = internal_gla * internal_rent_sqm
+            st.caption(f"💵 **Total Monthly Internal Rent:** R {int(round(total_internal_rent)):,} (Excl. VAT)")
 
-    with col_ext_rent:
-        def_ext_rent = get_site_state("external_rent", 0.00)
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=def_ext_rent, step=5.0, format="%.2f", key=f"{site_key}_ext_rent_input")
-        set_site_state("external_rent", external_rent_sqm)
-        total_external_rent = external_gla * external_rent_sqm
-        st.caption(f"💵 **Total Monthly External Rent:** R {int(round(total_external_rent)):,} (Excl. VAT)")
+        with col_ext_rent:
+            def_ext_rent = get_site_state("external_rent", 0.00)
+            external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=def_ext_rent, step=5.0, format="%.2f", key=f"{site_key}_ext_rent_input")
+            set_site_state("external_rent", external_rent_sqm)
+            total_external_rent = external_gla * external_rent_sqm
+            st.caption(f"💵 **Total Monthly External Rent:** R {int(round(total_external_rent)):,} (Excl. VAT)")
 
-    total_base_rent_monthly = total_internal_rent + total_external_rent
+        total_base_rent_monthly = total_internal_rent + total_external_rent
 
-    col_ops, col_rates, col_gen = st.columns(3)
-    with col_ops:
-        def_ops = get_site_state("ops_cost", site_default_info.get("default_ops", 35.0))
-        ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=def_ops, step=1.0, format="%.2f", key=f"{site_key}_ops_input")
-        set_site_state("ops_cost", ops_cost_sqm)
+        col_ops, col_rates, col_gen = st.columns(3)
+        with col_ops:
+            def_ops = get_site_state("ops_cost", site_default_info.get("default_ops", 35.0))
+            ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=def_ops, step=1.0, format="%.2f", key=f"{site_key}_ops_input")
+            set_site_state("ops_cost", ops_cost_sqm)
+            total_ops_cost = ops_cost_sqm * total_gla
+        with col_rates:
+            def_rates = get_site_state("rates_taxes", 0.00)
+            rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=def_rates, step=0.5, format="%.2f", key=f"{site_key}_rates_input")
+            set_site_state("rates_taxes", rates_taxes_sqm)
+            total_rates_taxes = rates_taxes_sqm * total_gla
+        with col_gen:
+            def_gen = get_site_state("generator", 0.00)
+            generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=def_gen, step=0.5, format="%.2f", key=f"{site_key}_gen_input")
+            set_site_state("generator", generator_cost_sqm)
+            total_generator_cost = generator_cost_sqm * total_gla
+
+        col_mktg_pct, col_labor = st.columns(2)
+        with col_mktg_pct:
+            def_mktg = get_site_state("mktg", 5.00)
+            landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=def_mktg, step=0.5, format="%.2f", key=f"{site_key}_mktg_input")
+            set_site_state("mktg", landlord_marketing_pct)
+            total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
+        with col_labor:
+            monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
+
+        total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
+
+        st.markdown(f"""
+        <div class="lease-outlay-card">
+            <b style="color:#FFFFFF; font-size:15px;">🏬 Total Monthly Landlord Lease Outlay ({location_name if location_name else 'Target Site'}):</b><br/>
+            <span style="color:#ECC94B; font-size:18px; font-weight:800;">R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    else:
+        # MODE 2: PROPOSED STARTING OFFER PROJECTIONS (UI HIDDEN ON-SCREEN)
+        internal_rent_sqm = site_default_info.get("default_rent", 180.0)
+        external_rent_sqm = 0.00
+        ops_cost_sqm = site_default_info.get("default_ops", 35.0)
+        rates_taxes_sqm = 0.00
+        generator_cost_sqm = 0.00
+        landlord_marketing_pct = 5.00
+        monthly_labor_cost = model_data["labor_monthly"]
+
+        total_base_rent_monthly = (internal_gla * internal_rent_sqm) + (external_gla * external_rent_sqm)
         total_ops_cost = ops_cost_sqm * total_gla
-    with col_rates:
-        def_rates = get_site_state("rates_taxes", 0.00)
-        rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=def_rates, step=0.5, format="%.2f", key=f"{site_key}_rates_input")
-        set_site_state("rates_taxes", rates_taxes_sqm)
-        total_rates_taxes = rates_taxes_sqm * total_gla
-    with col_gen:
-        def_gen = get_site_state("generator", 0.00)
-        generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=def_gen, step=0.5, format="%.2f", key=f"{site_key}_gen_input")
-        set_site_state("generator", generator_cost_sqm)
-        total_generator_cost = generator_cost_sqm * total_gla
-
-    col_mktg_pct, col_labor = st.columns(2)
-    with col_mktg_pct:
-        def_mktg = get_site_state("mktg", 5.00)
-        landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=def_mktg, step=0.5, format="%.2f", key=f"{site_key}_mktg_input")
-        set_site_state("mktg", landlord_marketing_pct)
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
-    with col_labor:
-        monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
+        total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_landlord_marketing
 
-    total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_rates_taxes + total_generator_cost + total_landlord_marketing
-    st.warning(f"🏬 **Total Monthly Landlord Lease Outlay ({location_name if location_name else 'Target Site'}):** R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)")
+        st.success(f"🎯 **Mode 2 Active:** Projected baseline lease rate target set to **R {int(round(internal_rent_sqm))}/m²** for P&L calculations and landlord negotiation offer sheet.")
 
     st.divider()
 
@@ -1971,7 +2080,6 @@ with tab1:
     st.divider()
 
     st.header("6. Dispatch Completed Site Feasibility Pack")
-    st.markdown(f"Generating and dispatching the pack automatically creates a dedicated subfolder under `Locations/{location_name if location_name else 'Unassigned'}/` and syncs to Google Drive.")
 
     col_inv1, col_inv2 = st.columns(2)
     with col_inv1:
@@ -2012,16 +2120,17 @@ with tab1:
     )
     pdf_bytes = pdf_buffer.getvalue()
 
-    local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename)
-    st.success(f"📂 **Automated Directory Saved:** `{local_saved_path}`")
-    st.info(f"☁️ **Cloud Status:** {sync_status_msg}")
-
     btn_col1, btn_col2 = st.columns(2)
     
     with btn_col1:
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>'
         st.markdown(dl_link_html, unsafe_allow_html=True)
+        
+        # EXPLICIT SYNCHRONOUS DRIVE SYNC ON DOWNLOAD ACTION
+        local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename)
+        st.caption(f"📂 **Local Directory Saved:** `{local_saved_path}`")
+        st.info(f"☁️ **Google Drive Status:** {sync_status_msg}")
 
     with btn_col2:
         if st.button("📧 Dispatch via Email (with Read Receipt)", key=f"{site_key}_email_btn"):
