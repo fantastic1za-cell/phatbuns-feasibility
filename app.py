@@ -201,11 +201,19 @@ def research_location_online(location_name):
         "households": "85,000 Active Households (10 km Radius)",
         "competitors": "Nando's, Steers, Debonairs, Wimpy, RocoMamas",
         "lsm_profile": "LSM 7–10 / High Purchasing Power Node",
-        "default_rent": 220.0
+        "default_rent": 280.0
     }
 
-    # Audited South African geographic mapping lookup dictionary
     SA_GEO_DICTIONARY = {
+        "cedar square": {
+            "suburb": "Fourways, Johannesburg, Gauteng",
+            "options": ["Fourways, Johannesburg, Gauteng", "Fourways / Craigavon, Sandton", "Cedar Lakes / Fourways, JHB"],
+            "footfall": "~550,000 visits/month",
+            "households": "95,000 Active Households (10 km Radius)",
+            "competitors": "Tiger's Milk, Panarottis, Mugg & Bean, Nando's, Salsa Mexican Grill",
+            "lsm_profile": "LSM 8–10+ / Prime Lifestyle & Entertainment Precinct",
+            "default_rent": 300.0
+        },
         "scottburgh": {
             "suburb": "Scottburgh, KwaZulu-Natal",
             "options": ["Scottburgh, KwaZulu-Natal", "Scottburgh South, Ugu District", "Park Rynie / Scottburgh, KZN"],
@@ -216,17 +224,17 @@ def research_location_online(location_name):
             "default_rent": 160.0
         },
         "campus square": {
-            "suburb": "Auckland Park, Johannesburg",
-            "options": ["Auckland Park, Johannesburg", "Melville / Auckland Park, Johannesburg"],
+            "suburb": "Auckland Park, Johannesburg, Gauteng",
+            "options": ["Auckland Park, Johannesburg, Gauteng", "Melville / Auckland Park, Johannesburg"],
             "footfall": "~650,000 visits/month",
             "households": "110,000 Active Households (10 km Radius)",
             "competitors": "RocoMamas, Nando's, Chicken Licken, Wimpy, Roman's Pizza, Anat, Bossies Pies",
             "lsm_profile": "LSM 6–9 / Student, Academic & Urban Youth Hub (UJ & Wits Corridor)",
-            "default_rent": 180.0
+            "default_rent": 210.0
         },
         "clearwater": {
-            "suburb": "Strubensvalley, Roodepoort",
-            "options": ["Strubensvalley, Roodepoort", "Little Falls / Roodepoort, Gauteng"],
+            "suburb": "Strubensvalley, Roodepoort, Gauteng",
+            "options": ["Strubensvalley, Roodepoort, Gauteng", "Little Falls / Roodepoort, Gauteng"],
             "footfall": "~700,000 visits/month",
             "households": "135,000 Active Households (10 km Radius)",
             "competitors": "Burger King, Panarottis, Steers, Debonairs, Mochachos, Ocean Basket",
@@ -234,48 +242,12 @@ def research_location_online(location_name):
             "default_rent": 181.0
         },
         "cresta": {
-            "suburb": "Cresta, Johannesburg",
-            "options": ["Cresta, Johannesburg", "Blackheath / Northcliff, Johannesburg"],
+            "suburb": "Cresta, Johannesburg, Gauteng",
+            "options": ["Cresta, Johannesburg, Gauteng", "Blackheath / Northcliff, Johannesburg"],
             "footfall": "~850,000 visits/month",
             "households": "140,000 Active Households (10 km Radius)",
             "competitors": "RocoMamas, Spur, Nando's, Ocean Basket, McDonald's",
             "lsm_profile": "LSM 7–10 / Major Metropolitan Node",
-            "default_rent": 250.0
-        },
-        "pavilion": {
-            "suburb": "Westville, Durban",
-            "options": ["Westville, Durban", "Westville / Pinetown, KZN"],
-            "footfall": "~1,100,000 visits/month",
-            "households": "150,000 Active Households (10 km Radius)",
-            "competitors": "Nando's, RocoMamas, Spur, Debonairs, KFC",
-            "lsm_profile": "LSM 7–10 / Super-Regional KZN Corridor",
-            "default_rent": 280.0
-        },
-        "ballito": {
-            "suburb": "Ballito, KwaDukuza, KZN",
-            "options": ["Ballito, KwaDukuza, KZN", "Ballito Junction, North Coast KZN"],
-            "footfall": "~550,000 visits/month",
-            "households": "65,000 Active Households (10 km Radius)",
-            "competitors": "Mugg & Bean, Nando's, Ocean Basket, Turn 'n Tender",
-            "lsm_profile": "LSM 8–10+ / Affluent North Coast Hub",
-            "default_rent": 240.0
-        },
-        "canal walk": {
-            "suburb": "Century City, Cape Town",
-            "options": ["Century City, Cape Town", "Milnerton / Century City, Cape Town"],
-            "footfall": "~1,300,000 visits/month",
-            "households": "160,000 Active Households (10 km Radius)",
-            "competitors": "RocoMamas, Burger King, Nando's, Spur, Simply Asia",
-            "lsm_profile": "LSM 8–10+ / Western Cape Flagship Node",
-            "default_rent": 320.0
-        },
-        "tyger valley": {
-            "suburb": "Bellville, Cape Town",
-            "options": ["Bellville, Cape Town", "Durbanville / Bellville, Cape Town"],
-            "footfall": "~900,000 visits/month",
-            "households": "130,000 Active Households (10 km Radius)",
-            "competitors": "Panarottis, Spur, Nando's, Kauai, McDonald's",
-            "lsm_profile": "LSM 8–10 / Northern Suburbs Hub",
             "default_rent": 260.0
         }
     }
@@ -289,7 +261,7 @@ def research_location_online(location_name):
             extracted_info["households"] = geo_data["households"]
             extracted_info["competitors"] = geo_data.get("competitors", extracted_info["competitors"])
             extracted_info["lsm_profile"] = geo_data.get("lsm_profile", extracted_info["lsm_profile"])
-            extracted_info["default_rent"] = geo_data.get("default_rent", 220.0)
+            extracted_info["default_rent"] = geo_data.get("default_rent", 280.0)
             return extracted_info
 
     if HAS_GENAI:
@@ -304,15 +276,15 @@ def research_location_online(location_name):
 
                 Return ONLY a valid JSON object:
                 {{
-                  "suburb": "Primary Suburb and Province (e.g. Scottburgh, KwaZulu-Natal)",
+                  "suburb": "Precise Suburb, City, Province (e.g. Fourways, Johannesburg, Gauteng)",
                   "options": ["Option 1", "Option 2"],
                   "landlord": "Managing agent or landlord if known",
                   "mall_size": "Estimated GLA e.g. 35,000 m² Regional Centre",
                   "footfall": "Estimated monthly visits e.g. ~350,000 visits/month",
                   "households": "Estimated catchment e.g. 50,000 Active Households (10 km Radius)",
                   "competitors": "Key actual food tenants present in the mall (AUDITED & ACCURATE)",
-                  "lsm_profile": "Accurate LSM profile e.g. LSM 6–9 / Student & Urban Youth Hub",
-                  "default_rent": float (Realistic market rent target per sqm e.g. 210.0)
+                  "lsm_profile": "Accurate LSM profile e.g. LSM 8-10 / Upscale Lifestyle Precinct",
+                  "default_rent": float (Realistic market rent target per sqm e.g. 280.0)
                 }}
                 """
                 response = client.models.generate_content(
@@ -327,12 +299,12 @@ def research_location_online(location_name):
                 pass
 
     prov_match = re.search(r'(KwaZulu-Natal|Gauteng|Western Cape|Eastern Cape|Free State|Mpumalanga|Limpopo|North West|Northern Cape)', results_text, re.IGNORECASE)
-    detected_prov = prov_match.group(1).title() if prov_match else "South Africa"
+    detected_prov = prov_match.group(1).title() if prov_match else "Gauteng"
     
     sub_m = re.search(r'(?:in|at|near)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', results_text)
     detected_sub = sub_m.group(1).strip() if sub_m else location_name.title()
 
-    primary_node = f"{detected_sub}, {detected_prov}"
+    primary_node = f"{detected_sub}, Johannesburg, {detected_prov}"
     extracted_info["suburb"] = primary_node
     extracted_info["options"] = [primary_node, f"{location_name.title()} Central, {detected_prov}"]
 
@@ -386,7 +358,6 @@ BRAND_MENU_CATALOG = {
     }
 }
 
-# EMBEDDED STORE MEDIA LINKS
 STORE_MEDIA_LINKS = {
     "store_photos": "https://drive.google.com/file/d/1qbJ6kvaBxja2gBWoaoHLWme0MEA1omOH/view?usp=drivesdk",
     "uk_video_1": "https://drive.google.com/file/d/1txmElx_qkUeY6gJS8P5h7Diqoa_uRGr7/view?usp=drivesdk",
@@ -433,7 +404,8 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
             spaces='drive',
             fields="files(id, name)",
             supportsAllDrives=True,
-            includeItemsFromAllDrives=True
+            includeItemsFromAllDrives=True,
+            corpora='allDrives'
         ).execute()
         files = results.get('files', [])
         
@@ -465,7 +437,8 @@ def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
             spaces='drive',
             fields="files(id, name)",
             supportsAllDrives=True,
-            includeItemsFromAllDrives=True
+            includeItemsFromAllDrives=True,
+            corpora='allDrives'
         ).execute()
         files = results.get('files', [])
         
@@ -999,8 +972,22 @@ def get_pipeline_dataframe():
 
 # Audit-verified location profiles
 SITE_PROFILES = {
+    "Cedar Square": {
+        "suburb": "Fourways, Johannesburg, Gauteng",
+        "shop": "CS12",
+        "landlord": "Redefine Properties",
+        "mall_size": "12,000 m² Lifestyle & Entertainment Centre",
+        "footfall": "~550,000 visits/month (~6.6 Million Annually)",
+        "households": "95,000 Active Households (10 km Radius)",
+        "competitors": "Tiger's Milk, Panarottis, Mugg & Bean, Nando's, Salsa Mexican Grill",
+        "lsm_profile": "LSM 8–10+ / Upscale Lifestyle Precinct",
+        "default_rent": 300.0,
+        "default_ops": 45.0,
+        "default_gla": 80.0,
+        "model": "Express Model"
+    },
     "Clearwater Mall": {
-        "suburb": "Strubensvalley, Roodepoort",
+        "suburb": "Strubensvalley, Roodepoort, Gauteng",
         "shop": "UM017B",
         "landlord": "Hyprop Investments Ltd",
         "mall_size": "86,000 m² Regional Flagship",
@@ -1014,7 +1001,7 @@ SITE_PROFILES = {
         "model": "Multi-Brand Kitchen Model"
     },
     "Campus Square": {
-        "suburb": "Auckland Park, Johannesburg",
+        "suburb": "Auckland Park, Johannesburg, Gauteng",
         "shop": "G05",
         "landlord": "Vukile Property Fund",
         "mall_size": "27,000 m² Regional Shopping Centre",
@@ -1022,13 +1009,13 @@ SITE_PROFILES = {
         "households": "110,000 Active Households (10 km Radius)",
         "competitors": "RocoMamas, Nando's, Chicken Licken, Wimpy, Roman's Pizza, Anat, Bossies Pies",
         "lsm_profile": "LSM 6–9 / Student, Academic & Urban Youth Hub (UJ & Wits Corridor)",
-        "default_rent": 180.0,
+        "default_rent": 210.0,
         "default_ops": 35.0,
         "default_gla": 70.0,
         "model": "Express Model"
     },
     "Sandton City Shopping Centre": {
-        "suburb": "Sandton Central, Johannesburg",
+        "suburb": "Sandton Central, Johannesburg, Gauteng",
         "shop": "S042",
         "landlord": "Liberty Two Degrees / Pareto",
         "mall_size": "145,000 m² Super-Regional Flagship",
@@ -1042,7 +1029,7 @@ SITE_PROFILES = {
         "model": "Full Sit-Down Model"
     },
     "Mall of Africa": {
-        "suburb": "Waterfall City, Midrand",
+        "suburb": "Waterfall City, Midrand, Gauteng",
         "shop": "MOA102",
         "landlord": "Attacq Limited",
         "mall_size": "130,000 m² Super-Regional Flagship",
@@ -1056,7 +1043,7 @@ SITE_PROFILES = {
         "model": "Full Sit-Down Model"
     },
     "Menlyn Park Shopping Centre": {
-        "suburb": "Menlyn, Pretoria East",
+        "suburb": "Menlyn, Pretoria East, Gauteng",
         "shop": "M088",
         "landlord": "Pareto Limited",
         "mall_size": "177,000 m² Super-Regional Flagship",
@@ -1070,7 +1057,7 @@ SITE_PROFILES = {
         "model": "Full Sit-Down Model"
     },
     "Rosebank Mall": {
-        "suburb": "Rosebank, Johannesburg",
+        "suburb": "Rosebank, Johannesburg, Gauteng",
         "shop": "R12B",
         "landlord": "Redefine Properties",
         "mall_size": "62,000 m² Regional Shopping Centre",
@@ -1087,18 +1074,19 @@ SITE_PROFILES = {
 
 LOCATION_LOOKUP = {
     "Custom / Other Site...": "",
-    "Campus Square": "Auckland Park, Johannesburg",
-    "Clearwater Mall": "Strubensvalley, Roodepoort",
-    "Sandton City Shopping Centre": "Sandton Central, Johannesburg",
-    "Mall of Africa": "Waterfall City, Midrand",
-    "Menlyn Park Shopping Centre": "Menlyn, Pretoria East",
-    "Rosebank Mall": "Rosebank, Johannesburg",
-    "Bedford Centre": "Bedfordview, Johannesburg",
-    "Loftus Park, Pretoria": "Arcadia, Pretoria East",
-    "The Glen Shopping Centre": "Oakdene, Johannesburg South",
-    "Eastgate Shopping Centre": "Bedfordview, Ekurhuleni",
-    "Gateway Theatre of Shopping": "Umhlanga, Durban",
-    "V&A Waterfront": "Green Point, Cape Town"
+    "Cedar Square": "Fourways, Johannesburg, Gauteng",
+    "Campus Square": "Auckland Park, Johannesburg, Gauteng",
+    "Clearwater Mall": "Strubensvalley, Roodepoort, Gauteng",
+    "Sandton City Shopping Centre": "Sandton Central, Johannesburg, Gauteng",
+    "Mall of Africa": "Waterfall City, Midrand, Gauteng",
+    "Menlyn Park Shopping Centre": "Menlyn, Pretoria East, Gauteng",
+    "Rosebank Mall": "Rosebank, Johannesburg, Gauteng",
+    "Bedford Centre": "Bedfordview, Johannesburg, Gauteng",
+    "Loftus Park, Pretoria": "Arcadia, Pretoria East, Gauteng",
+    "The Glen Shopping Centre": "Oakdene, Johannesburg South, Gauteng",
+    "Eastgate Shopping Centre": "Bedfordview, Ekurhuleni, Gauteng",
+    "Gateway Theatre of Shopping": "Umhlanga, Durban, KZN",
+    "V&A Waterfront": "Green Point, Cape Town, Western Cape"
 }
 
 STORE_MODELS = {
@@ -1223,7 +1211,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         "households": "95,000–115,000 Active Households (10 km Radius)",
         "competitors": "Nando's, Steers, Debonairs, Wimpy, RocoMamas",
         "lsm_profile": "LSM 7–10 / High Purchasing Power Corridor",
-        "default_rent": 220.0
+        "default_rent": 280.0
     })
 
     asset_map = get_asset_images_map()
@@ -1473,7 +1461,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
     else:
-        # PROPORTIONAL RATIO VECTOR DRAWING (MODE 2 / NO PROPOSAL LAYOUT GENERATOR)
         placeholder_img = Image.new("RGB", (900, 600), color=(245, 247, 250))
         draw = ImageDraw.Draw(placeholder_img)
         draw.rectangle([15, 15, 885, 585], outline=(26, 54, 93), width=4)
@@ -1483,7 +1470,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         for y in range(100, 500, 100):
             draw.line([(15, y), (885, y)], fill=(220, 225, 230), width=1)
 
-        # Dynamic Kitchen vs Dining proportional split
         total_internal = max(int_gla, 1.0)
         kitchen_ratio = min(60.0 / total_internal, 0.65) if total_internal > 0 else 0.40
         kitchen_width_px = int(845 * kitchen_ratio)
@@ -1561,7 +1547,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_menu_links)
     elements.append(Spacer(1, 6))
 
-    # GLOBAL STORE SHOWCASE & VIDEO LINKS TABLE
     media_sec_banner = Table([[Paragraph("GLOBAL STORE VISUALS & VIDEO WALK-THROUGHS", sec_banner_style)]], colWidths=[558])
     media_sec_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(media_sec_banner)
@@ -1595,7 +1580,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9.5, textColor=NAVY_HEADER)
 
     elements.append(Paragraph("<b>Entered into by and between:</b>", ncnda_title_style))
-    elements.append(Paragraph("<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), and <b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), full legal details: <b>{applicant_name}</b> | Email: <b>{applicant_email}</b> | Tel: <b>{applicant_mobile}</b> | Target Node: <b>{loc_name if loc_name else 'Unassigned'} ({shop})</b>.", ncnda_legal_body))
+    elements.append(Paragraph(f"<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), and <b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), full legal details: <b>{applicant_name}</b> | Email: <b>{applicant_email}</b> | Tel: <b>{applicant_mobile}</b> | Target Node: <b>{loc_name if loc_name else 'Unassigned'} ({shop})</b>.", ncnda_legal_body))
     elements.append(Spacer(1, 3))
 
     elements.append(Paragraph("<b>1. PURPOSE & SCOPE OF DISCUSSION</b>", ncnda_title_style))
@@ -1749,7 +1734,7 @@ with tab1:
     with col1:
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
         if selected_location == "Custom / Other Site...":
-            custom_input = st.text_input("Enter Custom Location Name", value="", placeholder="e.g. Scottburgh Mall", key="custom_site_name_input")
+            custom_input = st.text_input("Enter Custom Location Name", value="", placeholder="e.g. Cedar Square", key="custom_site_name_input")
             location_name = custom_input
             
             if custom_input:
@@ -1758,14 +1743,14 @@ with tab1:
                         web_intel = research_location_online(custom_input)
                         SITE_PROFILES[custom_input] = web_intel
                         
-                        suburb_val = web_intel.get("suburb", f"{custom_input.title()}, SA")
+                        suburb_val = web_intel.get("suburb", f"{custom_input.title()}, Johannesburg, Gauteng")
                         suburb_options = web_intel.get("options", [suburb_val])
                         
                         st.session_state["discovered_suburb_options"] = suburb_options
                         st.session_state["suburb_node_input_key"] = suburb_val
                         st.session_state[f"{re.sub(r'[^a-zA-Z0-9]', '_', custom_input.lower())}_suburb_val"] = suburb_val
                         
-                        st.success(f"Location intelligence retrieved for **{custom_input}**! Suburb Node: **{suburb_val}** | Market Rent Target: **R {web_intel.get('default_rent', 220.0)}/m²**")
+                        st.success(f"Location intelligence retrieved for **{custom_input}**! Suburb Node: **{suburb_val}** | Market Rent Target: **R {web_intel.get('default_rent', 280.0)}/m²**")
         else:
             location_name = selected_location
 
@@ -1784,7 +1769,7 @@ with tab1:
     site_default_info = SITE_PROFILES.get(location_name, {
         "suburb": LOCATION_LOOKUP.get(selected_location, ""),
         "shop": "",
-        "default_rent": 220.0,
+        "default_rent": 280.0,
         "default_ops": 35.0,
         "default_gla": 70.0,
         "model": "Express Model",
@@ -1794,10 +1779,8 @@ with tab1:
         "lsm_profile": "LSM 7-10+"
     })
 
-    # DYNAMIC RENTAL INTELLIGENCE EXTRACTION FOR MODE 2
-    area_market_rent = site_default_info.get("default_rent", 220.0)
+    area_market_rent = site_default_info.get("default_rent", 280.0)
 
-    # AUTO-RECOMMENDATION ENGINE FOR OPTION 2
     footfall_raw = site_default_info.get("footfall", "500000")
     footfall_num_match = re.search(r'[\d\,]+', footfall_raw.replace('~', ''))
     parsed_footfall = int(footfall_num_match.group(0).replace(',', '')) if footfall_num_match else 500000
@@ -1854,7 +1837,7 @@ with tab1:
 
         suburb_node = st.text_input(
             "Suburb / Node (Auto-Populated)",
-            placeholder="e.g. Scottburgh, KwaZulu-Natal",
+            placeholder="e.g. Fourways, Johannesburg, Gauteng",
             key="suburb_node_input_key"
         )
 
@@ -1915,7 +1898,6 @@ with tab1:
     total_gla = internal_gla + external_gla
     st.caption(f"📐 **Total Combined Store Footprint ({location_name if location_name else 'Unassigned'}):** {total_gla:.2f} sqm ({internal_gla:.2f} sqm Internal + {external_gla:.2f} sqm External)")
 
-    # DYNAMIC SEATING & KITCHEN ALLOCATION ENGINE
     model_foh_pct_map = {
         "Kiosk Model": 0.00,
         "Express Model": 0.10,
@@ -1962,7 +1944,6 @@ with tab1:
     with col_wc:
         working_capital = st.number_input("Suggested Working Capital Requirement", step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
 
-    # CONDITIONAL LEASE UI (MODE 1: MANUAL INPUTS | MODE 2: DYNAMIC LOCALIZED STARTING OFFER TARGET)
     if "1. I have a Landlord Proposal" in analysis_mode:
         st.subheader("Landlord Lease Breakdown (Per SQM)")
         col_int_rent, col_ext_rent = st.columns(2)
@@ -2018,7 +1999,6 @@ with tab1:
         """, unsafe_allow_html=True)
 
     else:
-        # MODE 2: DYNAMIC LOCALIZED MARKET RENTAL STARTING OFFER TARGET (UI HIDDEN ON-SCREEN)
         internal_rent_sqm = area_market_rent
         external_rent_sqm = 0.00
         ops_cost_sqm = site_default_info.get("default_ops", 35.0)
@@ -2169,7 +2149,6 @@ with tab1:
         dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>'
         st.markdown(dl_link_html, unsafe_allow_html=True)
         
-        # EXPLICIT SYNCHRONOUS DRIVE SYNC ON DOWNLOAD ACTION
         local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename)
         st.caption(f"📂 **Local Directory Saved:** `{local_saved_path}`")
         st.info(f"☁️ **Google Drive Status:** {sync_status_msg}")
