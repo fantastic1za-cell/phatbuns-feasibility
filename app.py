@@ -1,5 +1,5 @@
 # Complete Python Script to Generate Dynamic Phatbuns Master Investor & Franchisee Document (Bank-Ready)
-# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads, Cross-Browser App Icon Injection, HTML Email Signature with 30px Logos & Location Integration
+# Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads, Cross-Browser App Icon Injection, HTML Email Signature with 30px Logos, FASA/POPIA/CPA Compliant NCNDA & Location Integration
 # Author: Nisaar Ally
 
 import math
@@ -864,10 +864,50 @@ LOCATION_LOOKUP = {
 }
 
 STORE_MODELS = {
-    "Kiosk Model": {"size_range": "20 - 60 sqm", "turnkey_capital": 850000.0, "working_capital": 250000.0, "est_monthly_turnover": 350000.0, "labor_monthly": 45000.0, "foh_pct": 0.20, "default_gla": 40.0},
-    "Express Model": {"size_range": "40 - 90 sqm", "turnkey_capital": 2500000.0, "working_capital": 450000.0, "est_monthly_turnover": 650000.0, "labor_monthly": 85000.0, "foh_pct": 0.60, "default_gla": 70.0},
-    "Full Sit-Down Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3250000.0, "working_capital": 750000.0, "est_monthly_turnover": 950000.0, "labor_monthly": 125000.0, "foh_pct": 0.60, "default_gla": 120.0},
-    "Multi-Brand Kitchen Model": {"size_range": "100 - 160 sqm", "turnkey_capital": 3500000.0, "working_capital": 700000.0, "est_monthly_turnover": 1100000.0, "labor_monthly": 135000.0, "foh_pct": 0.40, "default_gla": 130.0},
+    "Kiosk Model": {
+        "size_range": "20 - 60 sqm",
+        "turnkey_capital": 850000.0,
+        "working_capital": 250000.0,
+        "est_monthly_turnover": 350000.0,
+        "labor_monthly": 45000.0,
+        "foh_pct": 0.20,
+        "default_gla": 40.0,
+        "min_footfall_req": 300000,
+        "ideal_lsm": "LSM 6-10+"
+    },
+    "Express Model": {
+        "size_range": "40 - 90 sqm",
+        "turnkey_capital": 2500000.0,
+        "working_capital": 450000.0,
+        "est_monthly_turnover": 650000.0,
+        "labor_monthly": 85000.0,
+        "foh_pct": 0.60,
+        "default_gla": 70.0,
+        "min_footfall_req": 500000,
+        "ideal_lsm": "LSM 7-10+"
+    },
+    "Full Sit-Down Model": {
+        "size_range": "100 - 160 sqm",
+        "turnkey_capital": 3250000.0,
+        "working_capital": 750000.0,
+        "est_monthly_turnover": 950000.0,
+        "labor_monthly": 125000.0,
+        "foh_pct": 0.60,
+        "default_gla": 120.0,
+        "min_footfall_req": 650000,
+        "ideal_lsm": "LSM 8-10+"
+    },
+    "Multi-Brand Kitchen Model": {
+        "size_range": "100 - 160 sqm",
+        "turnkey_capital": 3500000.0,
+        "working_capital": 700000.0,
+        "est_monthly_turnover": 1100000.0,
+        "labor_monthly": 135000.0,
+        "foh_pct": 0.40,
+        "default_gla": 130.0,
+        "min_footfall_req": 700000,
+        "ideal_lsm": "LSM 8-10+"
+    },
 }
 
 SEASONAL_FACTORS = [0.90, 1.00, 1.00, 1.15, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.05, 1.25]
@@ -1040,7 +1080,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     sec3_grid_data = [
         [Paragraph("CATCHMENT METRIC", body_white_bold), Paragraph("DATA POINT / LOCATION ANALYSIS", body_white_bold)],
-        [Paragraph("LSM / ESM Profile", body_bold), Paragraph("LSM 8–10+ / High Purchasing Power Corridor", body_regular)],
+        [Paragraph("LSM / ESM Profile", body_bold), Paragraph(site_p.get("lsm_profile", "LSM 8–10+ / High Purchasing Power Corridor"), body_regular)],
         [Paragraph("Monthly / Annual Footfall", body_bold), Paragraph(site_p["footfall"], body_regular)],
         [Paragraph("Catchment Household Count", body_bold), Paragraph(site_p["households"], body_regular)],
         [Paragraph("In-Mall Competitor Profile", body_bold), Paragraph(site_p["competitors"], body_regular)]
@@ -1050,7 +1090,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec3_grid)
 
     elements.append(PageBreak())
-
     # PAGE 2: HEADINGS 04, 05, 06
     p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, textColor=DARK_TEXT, alignment=1)
     elements.append(Paragraph(f"PHATBUNS SOUTH AFRICA — {loc_name.upper()} PROSPECTUS", p2_title))
@@ -1275,18 +1314,19 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 7: MASTER NCNDA AGREEMENT
+    # PAGE 7: MASTER NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)
     ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=NAVY_HEADER, alignment=1)
-    elements.append(Paragraph("<b>MASTER NON-CIRCUMVENTION, NON-DISCLOSURE & CONFIDENTIALITY AGREEMENT (NCNDA)</b>", ncnda_header_style))
-    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=8))
+    elements.append(Paragraph("<b>MASTER NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", ncnda_header_style))
+    elements.append(Paragraph("<b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b>", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, alignment=1)))
+    elements.append(HRFlowable(width="100%", thickness=1, color=MAROON_LINE, spaceBefore=3, spaceAfter=6))
 
-    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=6.5, leading=8.5, textColor=DARK_TEXT)
-    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=NAVY_HEADER)
+    ncnda_legal_body = ParagraphStyle('NCNDABody', parent=styles['Normal'], fontName='Helvetica', fontSize=6.2, leading=8.2, textColor=DARK_TEXT)
+    ncnda_title_style = ParagraphStyle('NCNDATitle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=6.8, leading=8.8, textColor=NAVY_HEADER)
 
     parties_box_data = [
-        [Paragraph("<b>DISCLOSING PARTY (SENDER):</b>", ncnda_title_style), Paragraph("<b>RECEIVING PARTY (PROSPECTIVE INVESTOR):</b>", ncnda_title_style)],
+        [Paragraph("<b>DISCLOSING PARTY (FRANCHISOR):</b>", ncnda_title_style), Paragraph("<b>RECEIVING PARTY (PROSPECTIVE FRANCHISEE):</b>", ncnda_title_style)],
         [
-            Paragraph("<b>Phatbuns South Africa Holding Co. PTY LTD</b><br/>Address: JHB 2092, Republic of South Africa<br/>Represented By: Nisaar Ally (SA Master Rights Holder)<br/>Email: nisaar@fantastic1.com | Tel: +27 68 710 1939", ncnda_legal_body),
+            Paragraph("<b>PHATBUNS SOUTH AFRICA</b><br/>Sector: Fast-Food Franchise / QSR (Republic of South Africa)<br/>Represented By: Nisaar Ally (SA Master Rights Holder)<br/>Email: nisaar@fantastic1.com | Tel: +27 68 710 1939", ncnda_legal_body),
             Paragraph(f"<b>Applicant Name:</b> {applicant_name}<br/><b>Email:</b> {applicant_email}<br/><b>Mobile:</b> {applicant_mobile}<br/><b>Target Location:</b> {loc_name} (Shop {shop})", ncnda_legal_body)
         ]
     ]
@@ -1297,24 +1337,30 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         ('PADDING', (0,0), (-1,-1), 4)
     ]))
     elements.append(t_parties)
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
 
-    elements.append(Paragraph("<b>1. PURPOSE & CONFIDENTIAL INFORMATION:</b> Disclosing Party agrees to share sensitive commercial, operational, financial, and recipe details regarding Phatbuns South Africa for the sole purpose of evaluating a prospective franchise partnership.", ncnda_legal_body))
-    elements.append(Spacer(1, 3))
-    elements.append(Paragraph("<b>2. NON-DISCLOSURE:</b> Receiving Party agrees to maintain strict confidentiality and shall not disclose, reproduce, or distribute any Confidential Information without prior written approval.", ncnda_legal_body))
-    elements.append(Spacer(1, 3))
-    elements.append(Paragraph("<b>3. NON-CIRCUMVENTION:</b> Receiving Party irrevocably agrees not to circumvent, bypass, or avoid Disclosing Party regarding the commercial site lease or brand deployment.", ncnda_legal_body))
-    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("<b>1. PURPOSE & SCOPE OF DISCUSSION:</b> The Parties wish to enter into discussions concerning a potential business relationship relating to a fast-food franchise opportunity under the Phatbuns brand in South Africa (the 'Permitted Purpose'). In connection with this, the Disclosing Party will share proprietary business systems, financial models, recipes, operational manuals, and strategic information.", ncnda_legal_body))
+    elements.append(Spacer(1, 2.5))
+    elements.append(Paragraph("<b>2. FASA COMPLIANCE & ETHICAL STANDARDS:</b> The Parties acknowledge that this Agreement and subsequent franchise disclosures are intended to comply with the ethical frameworks established by the Franchise Association of South Africa (FASA) and the Consumer Protection Act, No. 68 of 2008 (CPA). All negotiations, document exchanges, and disclosures shall be carried out in good faith and transparency.", ncnda_legal_body))
+    elements.append(Spacer(1, 2.5))
+    elements.append(Paragraph("<b>3. PROTECTION OF PERSONAL INFORMATION (POPIA):</b> Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA): (a) Personal information shall be processed strictly for the Permitted Purpose; (b) Technical and organisational security measures shall be maintained to prevent unauthorized access or processing; (c) Personal information shall be securely destroyed or returned once no longer required.", ncnda_legal_body))
+    elements.append(Spacer(1, 2.5))
+    elements.append(Paragraph("<b>4. CONFIDENTIALITY OBLIGATIONS:</b> The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa, including financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies. Information shall not be copied or disclosed without express written consent.", ncnda_legal_body))
+    elements.append(Spacer(1, 2.5))
+    elements.append(Paragraph("<b>5. NON-CIRCUMVENTION & COMPETITION RESTRICTION:</b> The Receiving Party covenants that it will not, directly or indirectly, circumvent or bypass Phatbuns South Africa to enter into any transaction with suppliers, landlords, or partners introduced by the Disclosing Party. The Receiving Party shall not use the concepts or operational models to establish a competing fast-food business for 24 months following termination.", ncnda_legal_body))
+    elements.append(Spacer(1, 2.5))
+    elements.append(Paragraph("<b>6. GOVERNING LAW AND JURISDICTION:</b> This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa. Any disputes arising from this Agreement shall be subject to the exclusive jurisdiction of the High Court of South Africa.", ncnda_legal_body))
+    elements.append(Spacer(1, 5))
 
     sig_p_ncnda = [
-        [Paragraph(f"<b>Signed for Disclosing Party:</b><br/><br/>____________________________________<br/><b>Nisaar Ally</b><br/>Phatbuns South Africa Holding Co. PTY LTD<br/>Date: ____ / ____ / 2026", body_regular),
-         Paragraph(f"<b>Signed for Receiving Party:</b><br/><br/>____________________________________<br/><b>{applicant_name}</b><br/>Prospective Franchisee Investor<br/>Date: ____ / ____ / 2026", body_regular)]
+        [Paragraph(f"<b>For: PHATBUNS SOUTH AFRICA</b><br/><br/>Authorized Signature: _______________________<br/><b>Name:</b> Nisaar Ally<br/><b>Title:</b> SA Master Rights Holder<br/><b>Date:</b> ____ / ____ / 2026<br/><b>Place:</b> Johannesburg", body_regular),
+         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/>Authorized Signature: _______________________<br/><b>Name:</b> {applicant_name}<br/><b>Title:</b> Prospective Franchisee<br/><b>Date:</b> ____ / ____ / 2026<br/><b>ID / Reg No:</b> _______________________", body_regular)]
     ]
     t_sig_ncnda = Table(sig_p_ncnda, colWidths=[279, 279], hAlign='CENTER')
     t_sig_ncnda.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG),
-        ('PADDING', (0,0), (-1,-1), 6)
+        ('PADDING', (0,0), (-1,-1), 5)
     ]))
     elements.append(t_sig_ncnda)
 
@@ -1389,26 +1435,41 @@ tab1, tab2, tab3 = st.tabs([
 
 # TAB 1: FEASIBILITY & BANK MODEL
 with tab1:
-    st.header("Automated Landlord Proposal Extractor")
-    st.markdown("Upload a landlord proposal screenshot/email (JPG, PNG, PDF) or paste offer text below to auto-populate site parameters.")
-
-    col_up1, col_up2 = st.columns(2)
-    with col_up1:
-        uploaded_offer_file = st.file_uploader("Upload Offer File (JPG, PNG, PDF, Screenshot)", type=["jpg", "jpeg", "png", "pdf"])
-    with col_up2:
-        pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
+    st.header("Site Feasibility & Landlord Analysis Engine")
+    
+    analysis_mode = st.radio(
+        "Select Feasibility Analysis Mode:",
+        ["1. I have a Landlord Proposal / Offer Sheet", "2. No Proposal — Check Mall Viability & Recommend Store Model"],
+        index=0,
+        horizontal=True
+    )
 
     extracted_parsed_res = {}
-    if st.button("⚡ Extract & Pre-Fill Lease Terms"):
-        if uploaded_offer_file is not None:
-            pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
-            if pil_img is not None:
-                extracted_parsed_res = extract_lease_from_source(pil_img)
-            elif pdf_text:
-                extracted_parsed_res = extract_lease_from_source(pdf_text)
 
-        if not extracted_parsed_res and pasted_text:
-            extracted_parsed_res = extract_lease_from_source(pasted_text)
+    if "1. I have a Landlord Proposal" in analysis_mode:
+        st.subheader("Automated Landlord Proposal Extractor")
+        st.markdown("Upload a landlord proposal screenshot/email (JPG, PNG, PDF) or paste offer text below to auto-populate site parameters.")
+
+        col_up1, col_up2 = st.columns(2)
+        with col_up1:
+            uploaded_offer_file = st.file_uploader("Upload Offer File (JPG, PNG, PDF, Screenshot)", type=["jpg", "jpeg", "png", "pdf"])
+        with col_up2:
+            pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100, placeholder="Paste landlord offer text here...")
+
+        if st.button("⚡ Extract & Pre-Fill Lease Terms"):
+            if uploaded_offer_file is not None:
+                pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
+                if pil_img is not None:
+                    extracted_parsed_res = extract_lease_from_source(pil_img)
+                elif pdf_text:
+                    extracted_parsed_res = extract_lease_from_source(pdf_text)
+
+            if not extracted_parsed_res and pasted_text:
+                extracted_parsed_res = extract_lease_from_source(pasted_text)
+
+    else:
+        st.subheader("Mall Viability & Store Model Recommender")
+        st.markdown("Evaluates location feasibility using **Monthly Footfall**, **10km ESM/LSM Catchment Profile**, and **In-Mall Competitor Density**.")
 
     st.divider()
 
@@ -1437,8 +1498,43 @@ with tab1:
         "default_rent": 180.0,
         "default_ops": 35.0,
         "default_gla": 120.0,
-        "model": "Full Sit-Down Model"
+        "model": "Full Sit-Down Model",
+        "footfall": "~500,000 visits/month",
+        "households": "100,000 Active Households (10 km Radius)",
+        "competitors": "Nando's, Steers, Debonairs",
+        "lsm_profile": "LSM 7-10+"
     })
+
+    # AUTO-RECOMMENDATION ENGINE FOR OPTION 2
+    footfall_raw = site_default_info.get("footfall", "500000")
+    footfall_num_match = re.search(r'[\d\,]+', footfall_raw.replace('~', ''))
+    parsed_footfall = int(footfall_num_match.group(0).replace(',', '')) if footfall_num_match else 500000
+
+    rec_model = "Express Model"
+    rec_status = "FEASIBLE"
+    rec_color = "#28a745"
+    rec_reason = ""
+
+    if parsed_footfall >= 700000:
+        rec_model = "Multi-Brand Kitchen Model"
+        rec_reason = "High monthly footfall (>700k) and premium ESM/LSM purchasing power support a multi-brand kitchen setup with delivery integration."
+    elif parsed_footfall >= 550000:
+        rec_model = "Full Sit-Down Model"
+        rec_reason = "Solid regional mall footfall (550k–700k) provides strong sit-down customer traffic and sustained basket size."
+    elif parsed_footfall >= 350000:
+        rec_model = "Express Model"
+        rec_reason = "Moderate footfall (350k–550k) suits a lean Express model for fast throughput and lower overheads."
+    else:
+        rec_model = "Kiosk Model"
+        rec_reason = "Lower footfall (<350k) requires a low-overhead Kiosk model to maintain profitability."
+
+    if "2. No Proposal" in analysis_mode:
+        st.markdown(f"""
+        <div style="background-color:#1c2333; padding:15px; border-radius:8px; border-left:5px solid {rec_color}; margin-bottom:15px;">
+            <h4 style="margin:0; color:#FFFFFF;">💡 Automated Site Recommendation: <b>{rec_model}</b></h4>
+            <p style="margin:5px 0 0 0; color:#CCCCCC; font-size:13px;"><b>Status:</b> <span style="color:{rec_color}; font-weight:bold;">{rec_status}</span> | {rec_reason}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     if extracted_parsed_res:
         if 'shop_code' in extracted_parsed_res: set_site_state("shop_code", str(extracted_parsed_res['shop_code']))
@@ -1465,13 +1561,13 @@ with tab1:
     st.subheader("Store Model Type")
 
     def on_model_changed():
-        m_choice = st.session_state.get(f"{site_key}_model_radio", site_default_info.get("model", "Full Sit-Down Model"))
+        m_choice = st.session_state.get(f"{site_key}_model_radio", site_default_info.get("model", rec_model))
         m_info = STORE_MODELS.get(m_choice, STORE_MODELS["Full Sit-Down Model"])
         st.session_state[f"{site_key}_capex_input"] = m_info["turnkey_capital"]
         st.session_state[f"{site_key}_wc_input"] = m_info["working_capital"]
         st.session_state[f"{site_key}_int_gla_input"] = site_default_info.get("default_gla", m_info["default_gla"])
 
-    default_model_name = site_default_info.get("model", "Full Sit-Down Model")
+    default_model_name = rec_model if "2. No Proposal" in analysis_mode else site_default_info.get("model", "Full Sit-Down Model")
     model_keys_list = list(STORE_MODELS.keys())
     default_radio_idx = model_keys_list.index(default_model_name) if default_model_name in model_keys_list else 2
 
@@ -1528,7 +1624,7 @@ with tab1:
 
     st.divider()
 
-    st.subheader("2. Commercial Capital, Lease & Operational Cost Breakdown")
+    st.header("2. Commercial Capital, Lease & Operational Cost Breakdown")
 
     col_cap, col_wc = st.columns(2)
     with col_cap:
