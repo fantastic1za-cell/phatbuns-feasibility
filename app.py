@@ -662,7 +662,6 @@ def process_uploaded_file(uploaded_file):
             return pil_img, file_bytes
         except Exception:
             return None, ""
-
 # ==========================================
 # EMAIL DISPATCH ENGINE WITH 30PX SIDE-BY-SIDE LOGOS
 # ==========================================
@@ -1560,13 +1559,13 @@ with tab1:
             elif pasted_text:
                 extracted_parsed_res = extract_lease_from_source(pasted_text, offline_mode=offline_mode_toggle)
             
-            if extracted_parsed_res:
-                if 'shop_code' in extracted_parsed_res: st.session_state[f"unassigned_site_shop_input"] = str(extracted_parsed_res['shop_code'])
-                if 'internal_gla' in extracted_parsed_res: st.session_state[f"unassigned_site_int_gla_input"] = float(extracted_parsed_res['internal_gla'])
-                if 'external_gla' in extracted_parsed_res: st.session_state[f"unassigned_site_external_gla"] = float(extracted_parsed_res['external_gla'])
-                if 'internal_rent' in extracted_parsed_res: st.session_state[f"unassigned_site_int_rent"] = float(extracted_parsed_res['internal_rent'])
-                if 'external_rent' in extracted_parsed_res: st.session_state[f"unassigned_site_ext_rent"] = float(extracted_parsed_res['external_rent'])
-                if 'ops_cost' in extracted_parsed_res: st.session_state[f"unassigned_site_ops_cost"] = float(extracted_parsed_res['ops_cost'])
+            if extracted_parsed_res and isinstance(extracted_parsed_res, dict):
+                st.session_state['extracted_shop'] = str(extracted_parsed_res.get('shop_code', ''))
+                st.session_state['extracted_int_gla'] = float(extracted_parsed_res.get('internal_gla', 0.0))
+                st.session_state['extracted_ext_gla'] = float(extracted_parsed_res.get('external_gla', 0.0))
+                st.session_state['extracted_int_rent'] = float(extracted_parsed_res.get('internal_rent', 0.0))
+                st.session_state['extracted_ext_rent'] = float(extracted_parsed_res.get('external_rent', 0.0))
+                st.session_state['extracted_ops'] = float(extracted_parsed_res.get('ops_cost', 0.0))
                 st.success("✅ Extracted successfully and pre-filled form fields!")
                 st.rerun()
 
@@ -1587,45 +1586,28 @@ with tab1:
             location_name = selected_location
 
     site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower()) if location_name else "unassigned_site"
-    
-    def get_site_state(key, default_val):
-        full_key = f"{site_key}_{key}"
-        if full_key not in st.session_state:
-            st.session_state[full_key] = default_val
-        return st.session_state[full_key]
-
-    def set_site_state(key, val):
-        st.session_state[f"{site_key}_{key}"] = val
-
-    site_default_info = SITE_PROFILES.get(location_name, {
-        "suburb": "", "shop": "", "default_rent": 0.0, "default_ops": 0.0, "default_gla": 0.0, "model": "Express Model"
-    })
 
     with col2:
-        shop_code = st.text_input("Shop / Unit Code", value=site_default_info.get("shop", ""), key=f"{site_key}_shop_input")
+        shop_code = st.text_input("Shop / Unit Code", value=st.session_state.get('extracted_shop', SITE_PROFILES.get(location_name, {}).get("shop", "")), key=f"{site_key}_shop_input")
 
-    suburb_node = st.text_input("Suburb / Node", value=site_default_info.get("suburb", LOCATION_LOOKUP.get(selected_location, "")), key=f"{site_key}_suburb_input")
+    suburb_node = st.text_input("Suburb / Node", value=SITE_PROFILES.get(location_name, {}).get("suburb", LOCATION_LOOKUP.get(selected_location, "")), key=f"{site_key}_suburb_input")
 
     selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True, key=f"{site_key}_model_radio")
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
-    if f"{site_key}_int_gla_input" not in st.session_state: st.session_state[f"{site_key}_int_gla_input"] = 0.0
-    if f"{site_key}_external_gla" not in st.session_state: st.session_state[f"{site_key}_external_gla"] = 0.0
-    if f"{site_key}_capex_input" not in st.session_state: st.session_state[f"{site_key}_capex_input"] = 0.0
-    if f"{site_key}_wc_input" not in st.session_state: st.session_state[f"{site_key}_wc_input"] = 0.0
-
     col_int_gla, col_ext_gla = st.columns(2)
-    with col_int_gla: internal_gla = st.number_input("Internal Area (sqm)", min_value=0.0, step=1.0, key=f"{site_key}_int_gla_input")
-    with col_ext_gla: external_gla = st.number_input("External / Patio Area (sqm)", min_value=0.0, step=1.0, key=f"{site_key}_external_gla")
+    with col_int_gla:
+        internal_gla = st.number_input("Internal Area (sqm)", min_value=0.0, value=st.session_state.get('extracted_int_gla', 0.0), step=1.0, key=f"{site_key}_int_gla_input")
+    with col_ext_gla:
+        external_gla = st.number_input("External / Patio Area (sqm)", min_value=0.0, value=st.session_state.get('extracted_ext_gla', 0.0), step=1.0, key=f"{site_key}_external_gla")
 
     total_gla = internal_gla + external_gla
 
     blueprint_file = st.file_uploader("Upload Architectural Blueprint", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
+    blueprint_pil_img = None
     if blueprint_file is not None:
-        pil_img, pdf_text = process_uploaded_file(blueprint_file)
-        if pil_img is not None: set_site_state("blueprint_img", pil_img)
-
-    blueprint_pil_img = get_site_state("blueprint_img", None)
+        pil_img, _ = process_uploaded_file(blueprint_file)
+        if pil_img is not None: blueprint_pil_img = pil_img
 
     st.divider()
     st.header("2. Commercial Capital & Lease Modeling")
@@ -1635,11 +1617,11 @@ with tab1:
 
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=get_site_state("int_rent", 0.0), step=10.0, key=f"{site_key}_int_rent_input")
+        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=st.session_state.get('extracted_int_rent', 0.0), step=10.0, key=f"{site_key}_int_rent_input")
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=get_site_state("ext_rent", 0.0), step=5.0, key=f"{site_key}_ext_rent_input")
+        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=st.session_state.get('extracted_ext_rent', 0.0), step=5.0, key=f"{site_key}_ext_rent_input")
 
-    ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=get_site_state("ops_cost", 0.0), step=1.0, key=f"{site_key}_ops_input")
+    ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=st.session_state.get('extracted_ops', 0.0), step=1.0, key=f"{site_key}_ops_input")
     turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0, step=0.5, key=f"{site_key}_turn_pct_input")
 
     total_base_rent_monthly = (internal_rent_sqm * internal_gla) + (external_rent_sqm * external_gla)
