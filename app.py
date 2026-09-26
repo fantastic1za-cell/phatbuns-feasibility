@@ -1497,10 +1497,11 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=480, height=310, preserveAspectRatio=True)
+            # FIX: Wrap stream in BytesIO to avoid TypeError
+            rl_blueprint = RLImage(io.BytesIO(bp_byte_arr.getvalue()), width=480, height=310)
             elements.append(rl_blueprint)
-        except Exception:
-            elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
+        except Exception as e:
+            elements.append(Paragraph(f"<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
     else:
         placeholder_img = Image.new("RGB", (900, 600), color=(245, 247, 250))
         draw = ImageDraw.Draw(placeholder_img)
@@ -1531,7 +1532,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         bp_byte_arr = io.BytesIO()
         placeholder_img.save(bp_byte_arr, format='JPEG', quality=95)
         bp_byte_arr.seek(0)
-        rl_blueprint = RLImage(bp_byte_arr, width=480, height=310, preserveAspectRatio=True)
+        # FIX: Wrap stream in BytesIO to avoid TypeError
+        rl_blueprint = RLImage(io.BytesIO(bp_byte_arr.getvalue()), width=480, height=310)
         elements.append(rl_blueprint)
 
     elements.append(Spacer(1, 8))
