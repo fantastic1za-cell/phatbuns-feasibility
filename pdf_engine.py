@@ -251,8 +251,10 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     menu_table_rows = [[Paragraph("BRAND & CONCEPT", body_white_bold), Paragraph("MENU OVERVIEW & SOCIAL PROFILE", body_white_bold), Paragraph("GOOGLE DRIVE LINK", body_white_bold)]]
     for brand_name, info in BRAND_MENU_CATALOG.items():
         ig_url = info.get("instagram_url", "")
+        drive_id = info.get("drive_file_id", "")
         centre_cell_html = f"{info['description']}<br/><a href='{ig_url}' color='#0066CC'><b>📸 Instagram: Official Profile</b></a>" if ig_url else info['description']
-        menu_table_rows.append([Paragraph(f"<b>{brand_name}</b>", body_bold), Paragraph(centre_cell_html, body_regular), Paragraph(f"<a href='https://drive.google.com/uc?export=download&id={info[\"drive_file_id\"]}'><b>📥 DOWNLOAD MENU</b></a>", body_regular)])
+        dl_link_html = f"<a href='https://drive.google.com/uc?export=download&id={drive_id}'><b>📥 DOWNLOAD MENU</b></a>"
+        menu_table_rows.append([Paragraph(f"<b>{brand_name}</b>", body_bold), Paragraph(centre_cell_html, body_regular), Paragraph(dl_link_html, body_regular)])
 
     t_menus = Table(menu_table_rows, colWidths=[130, 288, 140])
     t_menus.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
