@@ -736,7 +736,26 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
                 img_sa.add_header('Content-Disposition', 'inline', filename='Phatbuns_SA.png')
                 msg.attach(img_sa)
 
-        if sa_flag_path and os
+                if sa_flag_path and os.path.exists(sa_flag_path):
+            with open(sa_flag_path, 'rb') as img_f:
+                img_flag = MIMEImage(img_f.read())
+                img_flag.add_header('Content-ID', '<sa_flag_logo>')
+                img_flag.add_header('Content-Disposition', 'inline', filename='SAFlag.png')
+                msg.attach(img_flag)
+
+        part = MIMEApplication(pdf_bytes, Name=pdf_filename)
+        part['Content-Disposition'] = f'attachment; filename="{pdf_filename}"'
+        msg.attach(part)
+
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, recipient_email, msg.as_string())
+        server.quit()
+        return True, "Email sent successfully with embedded logos and PDF Pack!"
+    except Exception as e:
+        return False, str(e)
+
 # ==========================================
 # STREAMLIT BRAND STYLING & RESPONSIVE UI FIXES
 # ==========================================
