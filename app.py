@@ -1,6 +1,6 @@
 # Complete Python Script to Generate Dynamic Phatbuns Master Investor & Franchisee Document (Bank-Ready)
 # Comprehensive 10-Point Header Expansion, Interactive Google Drive Menu Downloads, Cross-Browser App Icon Injection, HTML Email Signature with 30px Logos, FASA/POPIA/CPA Compliant NCNDA & Live Web Search Intelligence with Offline Safeguards
-# Timestamp: 2026-09-26 17:52 (Updated with Fail-Safe Vision Proposal Extractor Retry Loop)
+# Timestamp: 2026-09-26 18:25 (Updated & Formatted to Full Specification)
 # Author: Nisaar Ally
 
 import math
@@ -16,6 +16,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.image import MIMEImage
+
 import streamlit as st
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
@@ -32,7 +33,16 @@ except ImportError:
 # ReportLab Imports for Executive PDF Generation
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage, PageBreak
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    HRFlowable,
+    Image as RLImage,
+    PageBreak
+)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
@@ -69,6 +79,7 @@ LOCATIONS_DIR = os.path.join(os.getcwd(), "Locations")
 os.makedirs(MENUS_DIR, exist_ok=True)
 os.makedirs(LOCATIONS_DIR, exist_ok=True)
 
+
 def find_file_in_assets(target_names):
     search_dirs = [ASSETS_DIR, os.getcwd()]
     targets_clean = [t.lower() for t in target_names]
@@ -85,6 +96,7 @@ def find_file_in_assets(target_names):
                         return os.path.join(d, file)
     return None
 
+
 def find_site_blueprint(loc_name):
     if not loc_name:
         return None
@@ -95,9 +107,17 @@ def find_site_blueprint(loc_name):
             for root, dirs, files in os.walk(d):
                 for f in files:
                     f_lower = f.lower()
-                    if f_lower.endswith(('.png', '.jpg', '.jpeg', '.pdf')) and ('dev' in f_lower or 'plan' in f_lower or 'layout' in f_lower or 'blueprint' in f_lower or 'leasing' in f_lower or clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)):
+                    if f_lower.endswith(('.png', '.jpg', '.jpeg', '.pdf')) and (
+                        'dev' in f_lower or 
+                        'plan' in f_lower or 
+                        'layout' in f_lower or 
+                        'blueprint' in f_lower or 
+                        'leasing' in f_lower or 
+                        clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)
+                    ):
                         return os.path.join(root, f)
     return None
+
 
 def get_asset_images_map():
     asset_map = {
@@ -108,9 +128,12 @@ def get_asset_images_map():
         "doorstep": find_file_in_assets(["Doorstep Logo.PNG", "doorstep.png"]),
         "adega": find_file_in_assets(["Adega.PNG", "adega.png"]),
         "sa_flag": find_file_in_assets(["SAFlag.PNG", "saflag.png", "sa_flag.png"]),
-        "cover_bg": find_file_in_assets(["coverSA.JPG", "coversa.jpg", "cover.jpg", "Cover.JPG", "IMG_5357.jpeg", "img_5357.jpeg"])
+        "cover_bg": find_file_in_assets([
+            "coverSA.JPG", "coversa.jpg", "cover.jpg", "Cover.JPG", "IMG_5357.jpeg", "img_5357.jpeg"
+        ])
     }
     return asset_map
+
 
 def get_image_base64(file_path):
     if not file_path or not os.path.exists(file_path):
@@ -121,6 +144,7 @@ def get_image_base64(file_path):
         return base64.b64encode(data).decode('utf-8')
     except Exception:
         return ""
+
 
 def format_sa_mobile_number(raw_mobile):
     if not raw_mobile:
@@ -133,6 +157,7 @@ def format_sa_mobile_number(raw_mobile):
     elif len(digits) == 9:
         return "27" + digits
     return digits
+
 
 def get_available_brand_menus():
     menu_files = []
@@ -157,7 +182,12 @@ def get_available_brand_menus():
 
     return sorted(menu_files)
 
+
+# ==========================================
+# STREAMLIT CONFIGURATION
+# ==========================================
 sa_app_logo_path = find_file_in_assets(["Phatbuns_SA.PNG", "phatbuns_sa.png"])
+
 if sa_app_logo_path and os.path.exists(sa_app_logo_path):
     try:
         app_favicon_img = Image.open(sa_app_logo_path)
@@ -206,7 +236,10 @@ def research_location_online(location_name, force_offline=False):
     SA_GEO_DICTIONARY = {
         "rondebuilt": {
             "suburb": "Germiston, Ekurhuleni, Gauteng",
-            "options": ["Germiston, Ekurhuleni, Gauteng", "Rondebuilt Centre, Germiston"],
+            "options": [
+                "Germiston, Ekurhuleni, Gauteng",
+                "Rondebuilt Centre, Germiston"
+            ],
             "footfall": "~380,000 visits/month (~4.5M Annually)",
             "households": "24,061 Active Households / ~76,995 Area Population",
             "competitors": "Shoprite, Boxer, Build-It Flagship, Debonairs, Wimpy, Pedro's, Hungry Lion, Clicks, Pep, Ackermans, Capitec",
@@ -218,7 +251,11 @@ def research_location_online(location_name, force_offline=False):
         },
         "cedar square": {
             "suburb": "Fourways, Johannesburg, Gauteng",
-            "options": ["Fourways, Johannesburg, Gauteng", "Fourways / Craigavon, Sandton", "Cedar Lakes / Fourways, JHB"],
+            "options": [
+                "Fourways, Johannesburg, Gauteng",
+                "Fourways / Craigavon, Sandton",
+                "Cedar Lakes / Fourways, JHB"
+            ],
             "footfall": "~550,000 visits/month",
             "households": "95,000 Active Households (10 km Radius)",
             "competitors": "Tiger's Milk, Panarottis, Mugg & Bean, Nando's, Salsa Mexican Grill",
@@ -230,7 +267,11 @@ def research_location_online(location_name, force_offline=False):
         },
         "scottburgh": {
             "suburb": "Scottburgh, KwaZulu-Natal",
-            "options": ["Scottburgh, KwaZulu-Natal", "Scottburgh South, Ugu District", "Park Rynie / Scottburgh, KZN"],
+            "options": [
+                "Scottburgh, KwaZulu-Natal",
+                "Scottburgh South, Ugu District",
+                "Park Rynie / Scottburgh, KZN"
+            ],
             "footfall": "~350,000 visits/month",
             "households": "45,000 Active Households (10 km Radius)",
             "competitors": "Nando's, Steers, Debonairs, Wimpy, Fishaways",
@@ -242,7 +283,10 @@ def research_location_online(location_name, force_offline=False):
         },
         "campus square": {
             "suburb": "Auckland Park, Johannesburg, Gauteng",
-            "options": ["Auckland Park, Johannesburg, Gauteng", "Melville / Auckland Park, Johannesburg"],
+            "options": [
+                "Auckland Park, Johannesburg, Gauteng",
+                "Melville / Auckland Park, Johannesburg"
+            ],
             "footfall": "~650,000 visits/month",
             "households": "110,000 Active Households (10 km Radius)",
             "competitors": "RocoMamas, Nando's, Chicken Licken, Wimpy, Roman's Pizza, Anat, Bossies Pies",
@@ -254,7 +298,10 @@ def research_location_online(location_name, force_offline=False):
         },
         "clearwater": {
             "suburb": "Strubensvalley, Roodepoort, Gauteng",
-            "options": ["Strubensvalley, Roodepoort, Gauteng", "Little Falls / Roodepoort, Gauteng"],
+            "options": [
+                "Strubensvalley, Roodepoort, Gauteng",
+                "Little Falls / Roodepoort, Gauteng"
+            ],
             "footfall": "~700,000 visits/month",
             "households": "135,000 Active Households (10 km Radius)",
             "competitors": "Burger King, Panarottis, Steers, Debonairs, Mochachos, Ocean Basket",
@@ -318,7 +365,11 @@ def research_location_online(location_name, force_offline=False):
             except Exception:
                 pass
 
-    prov_match = re.search(r'(KwaZulu-Natal|Gauteng|Western Cape|Eastern Cape|Free State|Mpumalanga|Limpopo|North West|Northern Cape)', results_text, re.IGNORECASE)
+    prov_match = re.search(
+        r'(KwaZulu-Natal|Gauteng|Western Cape|Eastern Cape|Free State|Mpumalanga|Limpopo|North West|Northern Cape)',
+        results_text,
+        re.IGNORECASE
+    )
     detected_prov = prov_match.group(1).title() if prov_match else "Gauteng"
     
     sub_m = re.search(r'(?:in|at|near)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', results_text)
@@ -326,9 +377,13 @@ def research_location_online(location_name, force_offline=False):
 
     primary_node = f"{detected_sub}, Johannesburg, {detected_prov}"
     extracted_info["suburb"] = primary_node
-    extracted_info["options"] = [primary_node, f"{location_name.title()} Central, {detected_prov}"]
+    extracted_info["options"] = [
+        primary_node,
+        f"{location_name.title()} Central, {detected_prov}"
+    ]
 
     return extracted_info
+
 
 # ==========================================
 # BRAND MENU DIRECTORY & MEDIA SHOWCASE CATALOG
@@ -385,16 +440,22 @@ STORE_MEDIA_LINKS = {
     "uk_video_2": "https://drive.google.com/file/d/1XYpOF-_aKlzcEgaUouhE8Ewlvdpn7nFI/view?usp=drivesdk"
 }
 
+
 def get_drive_menu_download_url(file_id_or_folder):
     if file_id_or_folder and len(file_id_or_folder) > 25 and file_id_or_folder != "14K_pChaU-dYfNlKi-HvzcEytFY6qOR_m":
         return f"https://drive.google.com/uc?export=download&id={file_id_or_folder}"
     return f"https://drive.google.com/drive/folders/{file_id_or_folder}"
 
+
 # ==========================================
 # ROBUST GOOGLE DRIVE API & SHARED FOLDER ENGINE
 # ==========================================
-GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
+GDRIVE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive'
+]
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
+
 
 def get_drive_service():
     if not HAS_GDRIVE:
@@ -404,14 +465,21 @@ def get_drive_service():
             creds_dict = dict(st.secrets["gcp_service_account"])
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-            creds = service_account.Credentials.from_service_account_info(creds_dict, scopes=GDRIVE_SCOPES)
+            creds = service_account.Credentials.from_service_account_info(
+                creds_dict,
+                scopes=GDRIVE_SCOPES
+            )
             return build('drive', 'v3', credentials=creds)
         elif os.path.exists("service_account.json"):
-            creds = service_account.Credentials.from_service_account_file("service_account.json", scopes=GDRIVE_SCOPES)
+            creds = service_account.Credentials.from_service_account_file(
+                "service_account.json",
+                scopes=GDRIVE_SCOPES
+            )
             return build('drive', 'v3', credentials=creds)
     except Exception as e:
         print(f"Google Drive API Authentication error: {e}")
     return None
+
 
 def get_or_create_drive_folder(service, folder_name, parent_id=None):
     try:
@@ -448,9 +516,14 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
         print(f"Drive Folder Creation Error: {e}")
         return None
 
+
 def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
     try:
-        media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
+        media = MediaIoBaseUpload(
+            io.BytesIO(file_bytes),
+            mimetype='application/pdf',
+            resumable=True
+        )
         query = f"name = '{filename}' and '{parent_folder_id}' in parents and trashed = false"
         results = service.files().list(
             q=query,
@@ -486,6 +559,7 @@ def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
         print(f"Drive Upload Error: {e}")
         return None
 
+
 def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename, offline_mode=False):
     loc_clean = location_name.strip() if location_name else "Unassigned_Location"
     loc_sub_dir = os.path.join(LOCATIONS_DIR, loc_clean)
@@ -503,11 +577,20 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename, offline_
         return local_file_path, "Google Drive API Service Not Initialized (Offline Save Successful)"
 
     try:
-        site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
+        site_folder_id = get_or_create_drive_folder(
+            drive_service,
+            loc_clean,
+            parent_id=LOCATIONS_ROOT_DRIVE_ID
+        )
         if not site_folder_id:
             return local_file_path, f"Failed to create or find Google Drive folder: '{loc_clean}' under root ID"
         
-        file_id = upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
+        file_id = upload_pdf_to_drive(
+            drive_service,
+            pdf_bytes,
+            pdf_filename,
+            site_folder_id
+        )
         if file_id:
             return local_file_path, f"Successfully Synced to Google Drive: '{loc_clean}/{pdf_filename}'"
         else:
@@ -534,6 +617,7 @@ def create_cover_page_image():
     bg_img.save(img_byte_arr, format='JPEG', quality=100, subsampling=0)
     img_byte_arr.seek(0)
     return img_byte_arr
+
 
 def extract_lease_from_source(source_input, file_bytes=None, mime_type="image/jpeg", offline_mode=False):
     if offline_mode or not HAS_GENAI:
@@ -598,6 +682,7 @@ def extract_lease_from_source(source_input, file_bytes=None, mime_type="image/jp
         return parse_landlord_text(source_input)
     return parse_landlord_text("")
 
+
 def parse_landlord_text(text):
     data = {}
     text_clean = text.replace('\r', '\n')
@@ -605,7 +690,8 @@ def parse_landlord_text(text):
     shop_m = re.search(r'(?:Shop|Premises)(?:\s*(?:No|code))?\s*[:\-]?\s*([A-Za-z0-9\s]+)', text_clean, re.IGNORECASE)
     if shop_m:
         val = shop_m.group(1).split('\n')[0].strip()
-        if len(val) < 15: data['shop_code'] = val
+        if len(val) < 15:
+            data['shop_code'] = val
 
     int_area_m = re.search(r'([\d\.]+)\s*(?:m²|sqm|m2)\s*(?:plus|and|\+)?\s*([\d\.]+)\s*(?:m²|sqm|m2)?\s*(?:outside|patio|external)', text_clean, re.IGNORECASE)
     if int_area_m:
@@ -613,34 +699,44 @@ def parse_landlord_text(text):
         data['external_gla'] = float(int_area_m.group(2))
     else:
         int_area_m2 = re.search(r'(?:Shop\s*Size|Internal\s*Area|Area)\s*[:\-]?\s*([\d\.\,]+)\s*(?:sqm|m2|m²)', text_clean, re.IGNORECASE)
-        if int_area_m2: data['internal_gla'] = float(int_area_m2.group(1).replace(',', '.'))
+        if int_area_m2:
+            data['internal_gla'] = float(int_area_m2.group(1).replace(',', '.'))
         ext_area_m2 = re.search(r'(?:outside|external|patio)\s*(?:seating|area)?\s*[:\-]?\s*([\d\.\,]+)\s*(?:sqm|m2|m²)', text_clean, re.IGNORECASE)
-        if ext_area_m2: data['external_gla'] = float(ext_area_m2.group(1).replace(',', '.'))
+        if ext_area_m2:
+            data['external_gla'] = float(ext_area_m2.group(1).replace(',', '.'))
 
     int_rent_m = re.search(r'R?\s*([\d]+(?:\.[\d]+)?)\s*(?:excl|per|\/)?\s*(?:vat)?\s*(?:Shop|Basic)', text_clean, re.IGNORECASE)
     if not int_rent_m:
         int_rent_m = re.search(r'R\s*([\d]+(?:\.[\d]+)?)\s*(?:excl\s*vat\s*Shop|Shop)', text_clean, re.IGNORECASE)
-    if int_rent_m: data['internal_rent'] = float(int_rent_m.group(1))
+    if int_rent_m:
+        data['internal_rent'] = float(int_rent_m.group(1))
 
     ext_rent_m = re.search(r'R?\s*([\d]+(?:\.[\d]+)?)\s*(?:excl|per|\/)?\s*(?:vat)?\s*(?:outside|seating)', text_clean, re.IGNORECASE)
-    if ext_rent_m: data['external_rent'] = float(ext_rent_m.group(1))
+    if ext_rent_m:
+        data['external_rent'] = float(ext_rent_m.group(1))
 
     ops_m = re.search(r'(?:Operating\s*Costs|Ops\s*Cost)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
-    if ops_m: data['ops_cost'] = float(ops_m.group(1))
+    if ops_m:
+        data['ops_cost'] = float(ops_m.group(1))
 
     rates_m = re.search(r'Rates\s*(?:&|and)?\s*taxes\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
-    if rates_m: data['rates_taxes'] = float(rates_m.group(1))
+    if rates_m:
+        data['rates_taxes'] = float(rates_m.group(1))
 
     gen_m = re.search(r'Generator\s*(?:Charge)?\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
-    if gen_m: data['generator'] = float(gen_m.group(1))
+    if gen_m:
+        data['generator'] = float(gen_m.group(1))
 
     mktg_m = re.search(r'Marketing\s*(?:Contribution)?\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
-    if mktg_m: data['mktg'] = float(mktg_m.group(1))
+    if mktg_m:
+        data['mktg'] = float(mktg_m.group(1))
 
     turn_m = re.search(r'(?:Annual\s*Turnover|Turnover\s*Percentage)\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
-    if turn_m: data['turnover_pct'] = float(turn_m.group(1))
+    if turn_m:
+        data['turnover_pct'] = float(turn_m.group(1))
 
     return data
+
 
 def process_uploaded_file(uploaded_file):
     if uploaded_file is None:
@@ -656,7 +752,8 @@ def process_uploaded_file(uploaded_file):
                 reader = PdfReader(io.BytesIO(file_bytes))
                 for page in reader.pages:
                     pdf_text += page.extract_text() or ""
-            except Exception: pass
+            except Exception:
+                pass
         return None, pdf_text
     else:
         try:
@@ -664,6 +761,7 @@ def process_uploaded_file(uploaded_file):
             return pil_img, file_bytes
         except Exception:
             return None, ""
+
 
 # ==========================================
 # EMAIL DISPATCH ENGINE WITH 30PX SIDE-BY-SIDE LOGOS
@@ -736,7 +834,7 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
                 img_sa.add_header('Content-Disposition', 'inline', filename='Phatbuns_SA.png')
                 msg.attach(img_sa)
 
-                if sa_flag_path and os.path.exists(sa_flag_path):
+        if sa_flag_path and os.path.exists(sa_flag_path):
             with open(sa_flag_path, 'rb') as img_f:
                 img_flag = MIMEImage(img_f.read())
                 img_flag.add_header('Content-ID', '<sa_flag_logo>')
@@ -755,7 +853,6 @@ def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_b
         return True, "Email sent successfully with embedded logos and PDF Pack!"
     except Exception as e:
         return False, str(e)
-
 # ==========================================
 # STREAMLIT BRAND STYLING & RESPONSIVE UI FIXES
 # ==========================================
@@ -873,7 +970,11 @@ st.markdown("""
 
 # SIDEBAR CONTROLS FOR OFFLINE / LOW SIGNAL MODE
 st.sidebar.markdown("### 🛜 Connection & Data Settings")
-offline_mode_toggle = st.sidebar.checkbox("🔒 Enable Offline / Low-Signal Mode", value=False, help="Disables external web searches and Cloud uploads so the app runs instantly and reliably on weak mobile data.")
+offline_mode_toggle = st.sidebar.checkbox(
+    "🔒 Enable Offline / Low-Signal Mode",
+    value=False,
+    help="Disables external web searches and Cloud uploads so the app runs instantly and reliably on weak mobile data."
+)
 
 logo_map = get_asset_images_map()
 
@@ -883,6 +984,7 @@ b64_ds = get_image_base64(logo_map.get("doorstep"))
 b64_bb = get_image_base64(logo_map.get("butter_brulee"))
 b64_pv = get_image_base64(logo_map.get("phatville"))
 b64_pb = get_image_base64(logo_map.get("phatbuns"))
+
 
 def render_contact_footer():
     sa_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="contact-mini-img"/>' if b64_sa else '🍔'
@@ -907,6 +1009,7 @@ def render_contact_footer():
         </p>
     </div>
     """, unsafe_allow_html=True)
+
 
 banner_logo_html = f'<img src="data:image/png;base64,{b64_sa}" class="banner-logo-icon"/>' if b64_sa else '🍔'
 
@@ -949,6 +1052,7 @@ st.write("")
 
 DB_FILE = "phatbuns_franchisees.db"
 
+
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -975,7 +1079,9 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 init_db()
+
 
 def save_investor_lead(data):
     conn = sqlite3.connect(DB_FILE)
@@ -1011,11 +1117,16 @@ def save_investor_lead(data):
         conn.commit()
     conn.close()
 
+
 def get_pipeline_dataframe():
     conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql_query("SELECT id, full_name, mobile, email, preferred_site, store_model, capital_available, unencumbered_cash_pct, ceo_approval, created_at FROM franchisee_pipeline ORDER BY id DESC", conn)
+    df = pd.read_sql_query(
+        "SELECT id, full_name, mobile, email, preferred_site, store_model, capital_available, unencumbered_cash_pct, ceo_approval, created_at FROM franchisee_pipeline ORDER BY id DESC",
+        conn
+    )
     conn.close()
     return df
+
 
 SITE_PROFILES = {
     "Rondebuilt Centre": {
@@ -1516,7 +1627,10 @@ with tab1:
     
     analysis_mode = st.radio(
         "Select Feasibility Analysis Mode:",
-        ["1. I have a Landlord Proposal / Offer Sheet", "2. No Proposal — Check Mall Viability & Propose Target Rates"],
+        [
+            "1. I have a Landlord Proposal / Offer Sheet", 
+            "2. No Proposal — Check Mall Viability & Propose Target Rates"
+        ],
         index=0,
         horizontal=True
     )
@@ -1525,18 +1639,32 @@ with tab1:
 
     if "1. I have a Landlord Proposal" in analysis_mode:
         st.subheader("Automated Landlord Proposal Extractor")
-        uploaded_offer_file = st.file_uploader("Upload Offer File (JPG, PNG, PDF, Screenshot)", type=["jpg", "jpeg", "png", "pdf"])
+        uploaded_offer_file = st.file_uploader(
+            "Upload Offer File (JPG, PNG, PDF, Screenshot)", 
+            type=["jpg", "jpeg", "png", "pdf"]
+        )
         pasted_text = st.text_area("Or Paste Email / Whatsapp Offer Text Directly", height=100)
 
         if st.button("⚡ Extract & Pre-Fill Lease Terms"):
             if uploaded_offer_file is not None:
                 pil_img, file_bytes_or_text = process_uploaded_file(uploaded_offer_file)
                 if isinstance(file_bytes_or_text, bytes):
-                    extracted_parsed_res = extract_lease_from_source(pil_img, file_bytes=file_bytes_or_text, mime_type=uploaded_offer_file.type, offline_mode=offline_mode_toggle)
+                    extracted_parsed_res = extract_lease_from_source(
+                        pil_img, 
+                        file_bytes=file_bytes_or_text, 
+                        mime_type=uploaded_offer_file.type, 
+                        offline_mode=offline_mode_toggle
+                    )
                 else:
-                    extracted_parsed_res = extract_lease_from_source(file_bytes_or_text, offline_mode=offline_mode_toggle)
+                    extracted_parsed_res = extract_lease_from_source(
+                        file_bytes_or_text, 
+                        offline_mode=offline_mode_toggle
+                    )
             elif pasted_text:
-                extracted_parsed_res = extract_lease_from_source(pasted_text, offline_mode=offline_mode_toggle)
+                extracted_parsed_res = extract_lease_from_source(
+                    pasted_text, 
+                    offline_mode=offline_mode_toggle
+                )
             
             if extracted_parsed_res and isinstance(extracted_parsed_res, dict):
                 st.session_state['extracted_shop'] = str(extracted_parsed_res.get('shop_code', ''))
@@ -1553,9 +1681,18 @@ with tab1:
 
     col1, col2 = st.columns(2)
     with col1:
-        selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
+        selected_location = st.selectbox(
+            "Select Commercial Location", 
+            options=list(LOCATION_LOOKUP.keys()), 
+            index=0
+        )
         if selected_location == "Custom / Other Site...":
-            location_name = st.text_input("Enter Custom Location Name", value="", placeholder="e.g. Rondebuilt Centre", key="custom_site_name_input")
+            location_name = st.text_input(
+                "Enter Custom Location Name", 
+                value="", 
+                placeholder="e.g. Rondebuilt Centre", 
+                key="custom_site_name_input"
+            )
             if location_name and not offline_mode_toggle and st.button("🔍 Research & Auto-Populate Site Data"):
                 with st.spinner(f"Gathering intelligence for '{location_name}'..."):
                     web_intel = research_location_online(location_name, force_offline=offline_mode_toggle)
@@ -1567,41 +1704,102 @@ with tab1:
     site_key = re.sub(r'[^a-zA-Z0-9]', '_', location_name.lower()) if location_name else "unassigned_site"
 
     with col2:
-        shop_code = st.text_input("Shop / Unit Code", value=st.session_state.get('extracted_shop', SITE_PROFILES.get(location_name, {}).get("shop", "")), key=f"{site_key}_shop_input")
+        shop_code = st.text_input(
+            "Shop / Unit Code", 
+            value=st.session_state.get('extracted_shop', SITE_PROFILES.get(location_name, {}).get("shop", "")), 
+            key=f"{site_key}_shop_input"
+        )
 
-    suburb_node = st.text_input("Suburb / Node", value=SITE_PROFILES.get(location_name, {}).get("suburb", LOCATION_LOOKUP.get(selected_location, "")), key=f"{site_key}_suburb_input")
+    suburb_node = st.text_input(
+        "Suburb / Node", 
+        value=SITE_PROFILES.get(location_name, {}).get("suburb", LOCATION_LOOKUP.get(selected_location, "")), 
+        key=f"{site_key}_suburb_input"
+    )
 
-    selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True, key=f"{site_key}_model_radio")
+    selected_model = st.radio(
+        "Select Model Type", 
+        options=list(STORE_MODELS.keys()), 
+        index=1, 
+        horizontal=True, 
+        key=f"{site_key}_model_radio"
+    )
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
     col_int_gla, col_ext_gla = st.columns(2)
     with col_int_gla:
-        internal_gla = st.number_input("Internal Area (sqm)", min_value=0.0, value=st.session_state.get('extracted_int_gla', 0.0), step=1.0, key=f"{site_key}_int_gla_input")
+        internal_gla = st.number_input(
+            "Internal Area (sqm)", 
+            min_value=0.0, 
+            value=st.session_state.get('extracted_int_gla', 0.0), 
+            step=1.0, 
+            key=f"{site_key}_int_gla_input"
+        )
     with col_ext_gla:
-        external_gla = st.number_input("External / Patio Area (sqm)", min_value=0.0, value=st.session_state.get('extracted_ext_gla', 0.0), step=1.0, key=f"{site_key}_external_gla")
+        external_gla = st.number_input(
+            "External / Patio Area (sqm)", 
+            min_value=0.0, 
+            value=st.session_state.get('extracted_ext_gla', 0.0), 
+            step=1.0, 
+            key=f"{site_key}_external_gla"
+        )
 
     total_gla = internal_gla + external_gla
 
-    blueprint_file = st.file_uploader("Upload Architectural Blueprint", type=["pdf", "png", "jpg", "jpeg"], key=f"{site_key}_blueprint_uploader")
+    blueprint_file = st.file_uploader(
+        "Upload Architectural Blueprint", 
+        type=["pdf", "png", "jpg", "jpeg"], 
+        key=f"{site_key}_blueprint_uploader"
+    )
     blueprint_pil_img = None
     if blueprint_file is not None:
         pil_img, _ = process_uploaded_file(blueprint_file)
-        if pil_img is not None: blueprint_pil_img = pil_img
+        if pil_img is not None:
+            blueprint_pil_img = pil_img
 
     st.divider()
     st.header("2. Commercial Capital & Lease Modeling")
 
-    turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", step=50000.0, format="%.2f", key=f"{site_key}_capex_input")
-    working_capital = st.number_input("Suggested Working Capital Requirement", step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
+    turnkey_capital = st.number_input(
+        "Total Turnkey Capital (Excl. VAT)", 
+        step=50000.0, 
+        format="%.2f", 
+        key=f"{site_key}_capex_input"
+    )
+    working_capital = st.number_input(
+        "Suggested Working Capital Requirement", 
+        step=25000.0, 
+        format="%.2f", 
+        key=f"{site_key}_wc_input"
+    )
 
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=st.session_state.get('extracted_int_rent', 0.0), step=10.0, key=f"{site_key}_int_rent_input")
+        internal_rent_sqm = st.number_input(
+            "Internal Base Rent (R / sqm / month)", 
+            value=st.session_state.get('extracted_int_rent', 0.0), 
+            step=10.0, 
+            key=f"{site_key}_int_rent_input"
+        )
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=st.session_state.get('extracted_ext_rent', 0.0), step=5.0, key=f"{site_key}_ext_rent_input")
+        external_rent_sqm = st.number_input(
+            "External Base Rent (R / sqm / month)", 
+            value=st.session_state.get('extracted_ext_rent', 0.0), 
+            step=5.0, 
+            key=f"{site_key}_ext_rent_input"
+        )
 
-    ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=st.session_state.get('extracted_ops', 0.0), step=1.0, key=f"{site_key}_ops_input")
-    turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0, step=0.5, key=f"{site_key}_turn_pct_input")
+    ops_cost_sqm = st.number_input(
+        "Ops Cost / Municipal (R / sqm)", 
+        value=st.session_state.get('extracted_ops', 0.0), 
+        step=1.0, 
+        key=f"{site_key}_ops_input"
+    )
+    turnover_clause_pct = st.number_input(
+        "Annual Turnover Clause (%)", 
+        value=7.0, 
+        step=0.5, 
+        key=f"{site_key}_turn_pct_input"
+    )
 
     total_base_rent_monthly = (internal_rent_sqm * internal_gla) + (external_rent_sqm * external_gla)
     total_ops_cost = ops_cost_sqm * total_gla
@@ -1622,10 +1820,26 @@ with tab1:
     turnover_req_24 = (outflow_breakeven + (turnkey_capital / 24)) / gp_margin if gp_margin > 0 else 0
 
     payback_matrix_data = {
-        "RECOVERY HORIZON": ["Operational Breakeven", "12 Months Recovery Target", "24 Months Recovery Target"],
-        "REQUIRED TURNOVER/MONTH": [f"R {int(round(turnover_req_be)):,}", f"R {int(round(turnover_req_12)):,}", f"R {int(round(turnover_req_24)):,}"],
-        "REQUIRED UNITS / MONTH": [f"{math.ceil(turnover_req_be/aov_ticket):,} units", f"{math.ceil(turnover_req_12/aov_ticket):,} units", f"{math.ceil(turnover_req_24/aov_ticket):,} units"],
-        "REQUIRED UNITS / DAY": [f"{math.ceil(math.ceil(turnover_req_be/aov_ticket)/30)} units / day", f"{math.ceil(math.ceil(turnover_req_12/aov_ticket)/30)} units / day", f"{math.ceil(math.ceil(turnover_req_24/aov_ticket)/30)} units / day"]
+        "RECOVERY HORIZON": [
+            "Operational Breakeven", 
+            "12 Months Recovery Target", 
+            "24 Months Recovery Target"
+        ],
+        "REQUIRED TURNOVER/MONTH": [
+            f"R {int(round(turnover_req_be)):,}", 
+            f"R {int(round(turnover_req_12)):,}", 
+            f"R {int(round(turnover_req_24)):,}"
+        ],
+        "REQUIRED UNITS / MONTH": [
+            f"{math.ceil(turnover_req_be/aov_ticket):,} units", 
+            f"{math.ceil(turnover_req_12/aov_ticket):,} units", 
+            f"{math.ceil(turnover_req_24/aov_ticket):,} units"
+        ],
+        "REQUIRED UNITS / DAY": [
+            f"{math.ceil(math.ceil(turnover_req_be/aov_ticket)/30)} units / day", 
+            f"{math.ceil(math.ceil(turnover_req_12/aov_ticket)/30)} units / day", 
+            f"{math.ceil(math.ceil(turnover_req_24/aov_ticket)/30)} units / day"
+        ]
     }
     df_payback_matrix = pd.DataFrame(payback_matrix_data)
 
@@ -1646,21 +1860,56 @@ with tab1:
         total_monthly_expenses = monthly_lease + monthly_cogs + monthly_royalties + model_data["labor_monthly"]
         ebitda = monthly_turnover - total_monthly_expenses
         net_profit = ebitda - monthly_loan_payment
-        cash_flow_data.append({"Month": m, "Year": year_idx + 1, "Turnover": monthly_turnover, "Lease Outlay": monthly_lease, "COGS (35%)": monthly_cogs, "Labor": model_data["labor_monthly"], "Royalties (9%)": monthly_royalties, "EBITDA": ebitda, "Bank Repayment": monthly_loan_payment, "Net Operating Profit": net_profit})
+        cash_flow_data.append({
+            "Month": m, 
+            "Year": year_idx + 1, 
+            "Turnover": monthly_turnover, 
+            "Lease Outlay": monthly_lease, 
+            "COGS (35%)": monthly_cogs, 
+            "Labor": model_data["labor_monthly"], 
+            "Royalties (9%)": monthly_royalties, 
+            "EBITDA": ebitda, 
+            "Bank Repayment": monthly_loan_payment, 
+            "Net Operating Profit": net_profit
+        })
 
     df_cashflow = pd.DataFrame(cash_flow_data)
     df_cashflow['Year_Label'] = "Year " + df_cashflow['Year'].astype(str)
-    annual_pnl = df_cashflow.groupby('Year_Label').agg({'Turnover': 'sum', 'Lease Outlay': 'sum', 'COGS (35%)': 'sum', 'Labor': 'sum', 'Royalties (9%)': 'sum', 'EBITDA': 'sum', 'Bank Repayment': 'sum', 'Net Operating Profit': 'sum'}).reset_index()
+    annual_pnl = df_cashflow.groupby('Year_Label').agg({
+        'Turnover': 'sum', 
+        'Lease Outlay': 'sum', 
+        'COGS (35%)': 'sum', 
+        'Labor': 'sum', 
+        'Royalties (9%)': 'sum', 
+        'EBITDA': 'sum', 
+        'Bank Repayment': 'sum', 
+        'Net Operating Profit': 'sum'
+    }).reset_index()
 
     st.divider()
     st.header("6. Dispatch Completed Site Feasibility Pack")
 
     col_inv1, col_inv2 = st.columns(2)
     with col_inv1:
-        target_applicant_name = st.text_input("Prospective Franchisee Full Name", value="", placeholder="e.g. John Doe", key=f"{site_key}_app_name")
-        target_applicant_email = st.text_input("Prospective Franchisee Email Address", value="", placeholder="e.g. applicant@domain.com", key=f"{site_key}_app_email")
+        target_applicant_name = st.text_input(
+            "Prospective Franchisee Full Name", 
+            value="", 
+            placeholder="e.g. John Doe", 
+            key=f"{site_key}_app_name"
+        )
+        target_applicant_email = st.text_input(
+            "Prospective Franchisee Email Address", 
+            value="", 
+            placeholder="e.g. applicant@domain.com", 
+            key=f"{site_key}_app_email"
+        )
     with col_inv2:
-        target_applicant_mobile = st.text_input("Prospective Franchisee Mobile Number", value="", placeholder="e.g. 0827867712", key=f"{site_key}_app_mobile")
+        target_applicant_mobile = st.text_input(
+            "Prospective Franchisee Mobile Number", 
+            value="", 
+            placeholder="e.g. 0827867712", 
+            key=f"{site_key}_app_mobile"
+        )
 
     if not location_name or total_gla <= 0 or turnkey_capital <= 0:
         st.warning("⚠️ **Please complete the Location Name, GLA, and Capital details above before generating the Feasibility PDF or dispatching.**")
@@ -1669,10 +1918,18 @@ with tab1:
 
         if target_applicant_name and target_applicant_email:
             save_investor_lead({
-                "full_name": target_applicant_name, "entity_name": "Prospective Entity", "id_or_passport": "Pending",
-                "email": target_applicant_email, "mobile": target_applicant_mobile if target_applicant_mobile else "N/A",
-                "preferred_site": location_name, "store_model": selected_model, "capital_available": turnkey_capital + working_capital,
-                "unencumbered_cash_pct": 50.0, "admin_fee_paid": 0, "ndnca_signed": 0, "popia_consent": 1
+                "full_name": target_applicant_name, 
+                "entity_name": "Prospective Entity", 
+                "id_or_passport": "Pending",
+                "email": target_applicant_email, 
+                "mobile": target_applicant_mobile if target_applicant_mobile else "N/A",
+                "preferred_site": location_name, 
+                "store_model": selected_model, 
+                "capital_available": turnkey_capital + working_capital,
+                "unencumbered_cash_pct": 50.0, 
+                "admin_fee_paid": 0, 
+                "ndnca_signed": 0, 
+                "popia_consent": 1
             })
 
         clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
@@ -1693,8 +1950,16 @@ with tab1:
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
             b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-            st.markdown(f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>', unsafe_allow_html=True)
-            local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename, offline_mode=offline_mode_toggle)
+            st.markdown(
+                f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>', 
+                unsafe_allow_html=True
+            )
+            local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(
+                location_name, 
+                pdf_bytes, 
+                pdf_filename, 
+                offline_mode=offline_mode_toggle
+            )
             st.caption(f"📂 **Local Directory Saved:** `{local_saved_path}`")
             st.info(f"☁️ **Google Drive Status:** {sync_status_msg}")
 
@@ -1703,9 +1968,17 @@ with tab1:
                 if not target_applicant_email:
                     st.error("Please enter a valid Franchisee Email Address above.")
                 else:
-                    sent_ok, send_msg = send_franchisee_email_pack(target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename)
-                    if sent_ok: st.success(f"✅ {send_msg}")
-                    else: st.error(f"❌ Email Failed: {send_msg}")
+                    sent_ok, send_msg = send_franchisee_email_pack(
+                        target_applicant_email, 
+                        target_applicant_name, 
+                        location_name, 
+                        pdf_bytes, 
+                        pdf_filename
+                    )
+                    if sent_ok:
+                        st.success(f"✅ {send_msg}")
+                    else:
+                        st.error(f"❌ Email Failed: {send_msg}")
 
     render_contact_footer()
 
