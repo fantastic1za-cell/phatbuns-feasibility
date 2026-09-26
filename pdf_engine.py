@@ -1,4 +1,4 @@
-# pdf_engine.py - ReportLab Document & Blueprint Layout Generator
+# pdf_engine.py - Complete ReportLab Document & Layout Generator
 import os
 import io
 import math
@@ -21,8 +21,7 @@ def find_file_in_assets(target_names):
     for d in search_dirs:
         if os.path.exists(d):
             for file in os.listdir(d):
-                file_lower = file.lower()
-                if file_lower in targets_clean:
+                if file.lower() in targets_clean:
                     return os.path.join(d, file)
     return None
 
@@ -40,14 +39,33 @@ def get_asset_images_map():
 def create_cover_page_image():
     asset_map = get_asset_images_map()
     bg_path = asset_map.get("cover_bg")
+    
+    target_w, target_h = 2480, 3508 # A4 @ 300 DPI
+    
     if bg_path and os.path.exists(bg_path):
         try:
-            bg_img = Image.open(bg_path).convert("RGB")
-            bg_img = bg_img.resize((2480, 3508), Image.Resampling.LANCZOS)
+            orig = Image.open(bg_path).convert("RGB")
+            orig_w, orig_h = orig.size
+            
+            # Crop to preserve exact aspect ratio without vertical stretching
+            target_ratio = target_w / float(target_h)
+            orig_ratio = orig_w / float(orig_h)
+            
+            if orig_ratio > target_ratio:
+                new_w = int(orig_h * target_ratio)
+                left = (orig_w - new_w) // 2
+                crop_box = (left, 0, left + new_w, orig_h)
+            else:
+                new_h = int(orig_w / target_ratio)
+                top = (orig_h - new_h) // 2
+                crop_box = (0, top, orig_w, top + new_h)
+                
+            cropped = orig.crop(crop_box)
+            bg_img = cropped.resize((target_w, target_h), Image.Resampling.LANCZOS)
         except Exception:
-            bg_img = Image.new("RGB", (2480, 3508), color=(235, 120, 35))
+            bg_img = Image.new("RGB", (target_w, target_h), color=(235, 120, 35))
     else:
-        bg_img = Image.new("RGB", (2480, 3508), color=(235, 120, 35))
+        bg_img = Image.new("RGB", (target_w, target_h), color=(235, 120, 35))
 
     img_byte_arr = io.BytesIO()
     bg_img.save(img_byte_arr, format='JPEG', quality=95)
@@ -68,8 +86,8 @@ def create_aspect_ratio_rl_image(pil_img, max_width=500, max_height=320):
         new_h = min(orig_h, max_height)
         new_w = new_h * aspect
         if new_w > max_width:
-            new_w = max_width
-            new_h = new_w / aspect
+            new_width = max_width
+            new_h = new_width / aspect
 
     img_byte_arr = io.BytesIO()
     pil_img.save(img_byte_arr, format='JPEG', quality=95)
@@ -132,15 +150,14 @@ class NumberedCanvas(canvas.Canvas):
 # Main PDF Master Report Generator
 def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ext_rent, ops_cost, total_lease_outlay, turnover_clause_pct, recommended_model_name, dscr, payback_df, df_pnl_annual, blueprint_pil_img, applicant_name="Prospective Investor", applicant_email="N/A", applicant_mobile="N/A", **kwargs):
     site_p = SITE_PROFILES.get(loc_name, {
-        "landlord": "Property Developers / Landlord",
-        "mall_size": "Regional Flagship Retail Node",
-        "footfall": "~550,000 visits/month (~6.6M Annually)",
-        "households": "24,061 Active Households / ~76,995 Area Population",
-        "competitors": "Shoprite, Boxer, Build-It Flagship, Debonairs, Wimpy, Pedro's, Hungry Lion",
-        "lsm_profile": "LSM 7–10 / High Purchasing Power Corridor"
+        "landlord": "Redefine Properties / Abcon",
+        "mall_size": "10,008 m² Convenience Center",
+        "footfall": "160,000 – 210,000 visits / month (~2.1M - 2.5M Annually)",
+        "households": "110,000 – 135,000 Active Households (10 km Catchment)",
+        "competitors": "RocoMamas, McDonald's Drive-Thru, Ocean Basket, Adega Café",
+        "lsm_profile": "LSM 8–10+ / High Disposable Income Segment"
     })
 
-    asset_map = get_asset_images_map()
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=18, leftMargin=18, topMargin=18, bottomMargin=28)
     styles = getSampleStyleSheet()
@@ -185,37 +202,74 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     t_sec1 = Table(sec1_data, colWidths=[110, 160, 198, 90])
     t_sec1.setStyle(TableStyle([('BACKGROUND', (0,0), (1,0), NAVY_HEADER), ('BACKGROUND', (2,0), (3,0), ORANGE_BRAND), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_sec1)
+    elements.append(Spacer(1, 6))
+
+    # SECTION 02: LEASE STRUCTURE & PROVISIONS
+    sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[558])
+    sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
+    elements.append(sec2_banner)
+
+    sec2_data = [
+        [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
+        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int(round(int_rent))}/m²/month (Excl. VAT)", body_regular), Paragraph(f"R {int(round(int_rent * internal_gla)):,} / month", body_regular)],
+        [Paragraph("Annual Rental Escalation", body_bold), Paragraph("7.5% per annum effective anniversary", body_regular), Paragraph("Predictable cost curve", body_regular)],
+        [Paragraph("Turnover Rental Clause", body_bold), Paragraph(f"{turnover_clause_pct}% of Net Monthly Turnover", body_regular), Paragraph("Triggered on high volume", body_regular)]
+    ]
+    t_sec2 = Table(sec2_data, colWidths=[160, 218, 180])
+    t_sec2.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    elements.append(t_sec2)
+    elements.append(Spacer(1, 6))
+
+    # SECTION 03: CATCHMENT & LOCATION INTELLIGENCE
+    sec3_banner = Table([[Paragraph("03. CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[558])
+    sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
+    elements.append(sec3_banner)
+
+    sec3_data = [
+        [Paragraph("CATCHMENT METRIC", body_white_bold), Paragraph("DATA POINT / LOCATION ANALYSIS", body_white_bold)],
+        [Paragraph("LSM / ESM Profile", body_bold), Paragraph(site_p["lsm_profile"], body_regular)],
+        [Paragraph("Monthly / Annual Footfall", body_bold), Paragraph(site_p["footfall"], body_regular)],
+        [Paragraph("Catchment Household Count", body_bold), Paragraph(site_p["households"], body_regular)],
+        [Paragraph("QSR Competitor Profile", body_bold), Paragraph(site_p["competitors"], body_regular)]
+    ]
+    t_sec3 = Table(sec3_data, colWidths=[160, 398])
+    t_sec3.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    elements.append(t_sec3)
     elements.append(PageBreak())
 
-    # PAGE 3: HEADINGS 04 - 06
+    # PAGE 3: HEADINGS 04 - FINANCIAL RECOVERY MATRIX
     elements.append(Paragraph(f"<b>04. FINANCIAL RECOVERY MATRIX — {loc_name.upper()}</b>", sec_banner_style))
+    elements.append(Spacer(1, 4))
+    
     matrix_table_data = [[Paragraph(f"<b>{col}</b>", body_white_bold) for col in payback_df.columns]]
     for idx, row in payback_df.iterrows():
         matrix_table_data.append([Paragraph(str(row[col]), body_regular) for col in payback_df.columns])
-    t_matrix = Table(matrix_table_data, colWidths=[148, 82, 82, 82, 82, 82])
-    t_matrix.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    t_matrix = Table(matrix_table_data, colWidths=[180, 189, 189])
+    t_matrix.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_matrix)
     elements.append(PageBreak())
 
     # PAGE 4: 5-YEAR PRO FORMA & 11A/11B FINANCIAL COMPARISON
     elements.append(Paragraph("<b>11. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST</b>", sec_banner_style))
+    elements.append(Spacer(1, 4))
+    
     pnl_table_data = [[Paragraph(f"<b>{col}</b>", body_white_bold) for col in df_pnl_annual.columns]]
     for idx, row in df_pnl_annual.iterrows():
         pnl_table_data.append([Paragraph(f"R {int(round(row[col])):,}" if isinstance(row[col], (int, float)) else str(row[col]), body_regular) for col in df_pnl_annual.columns])
-    t_pnl = Table(pnl_table_data, colWidths=[51, 69, 64, 62, 59, 62, 64, 60, 67])
-    t_pnl.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    t_pnl = Table(pnl_table_data, colWidths=[62, 124, 124, 124, 124][:len(df_pnl_annual.columns)])
+    t_pnl.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_pnl)
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 6))
 
     # 11B Bank Investment Comparison
     sec11b_banner = Table([[Paragraph("11B. 5-YEAR CASH INVESTMENT COMPARISON: BANK FIXED DEPOSIT VS. PHATBUNS FRANCHISE", sec_banner_style)]], colWidths=[558])
     sec11b_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec11b_banner)
 
-    bank_principal = 2500000.00
+    bank_principal = float(capital)
     bank_total_5yr = bank_principal * ((1 + 0.085) ** 5)
     bank_total_return = bank_total_5yr - bank_principal
-    phatbuns_profit_5yr = sum([row['Net Operating Profit'] for idx, row in df_pnl_annual.iterrows()])
+    phatbuns_profit_5yr = sum([float(row['Net Operating Profit']) for idx, row in df_pnl_annual.iterrows() if 'Net Operating Profit' in row])
 
     sec11b_data = [
         [Paragraph("INVESTMENT METRIC", body_white_bold), Paragraph("BANK FIXED DEPOSIT (8.5% P.A. PRE-TAX)", body_white_bold), Paragraph("PHATBUNS STORE INVESTMENT", body_white_bold)],
@@ -236,9 +290,11 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         rl_blueprint = create_aspect_ratio_rl_image(blueprint_pil_img, max_width=500, max_height=320)
         elements.append(rl_blueprint)
     else:
+        # High quality fallback blueprint canvas render
         placeholder_img = Image.new("RGB", (900, 600), color=(245, 247, 250))
         draw = ImageDraw.Draw(placeholder_img)
         draw.rectangle([15, 15, 885, 585], outline=(26, 54, 93), width=4)
+        draw.text((320, 280), f"PROPOSED LAYOUT PLAN ({total_gla:.0f} sqm)", fill=(26, 54, 93))
         rl_blueprint = create_aspect_ratio_rl_image(placeholder_img, max_width=500, max_height=320)
         elements.append(rl_blueprint)
 
@@ -253,7 +309,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         ig_url = info.get("instagram_url", "")
         drive_id = info.get("drive_file_id", "")
         centre_cell_html = f"{info['description']}<br/><a href='{ig_url}' color='#0066CC'><b>📸 Instagram: Official Profile</b></a>" if ig_url else info['description']
-        dl_link_html = f"<a href='https://drive.google.com/uc?export=download&id={drive_id}'><b>📥 DOWNLOAD MENU</b></a>"
+        dl_link_html = f"<a href='https://drive.google.com/uc?export=download&id={drive_id}'><b>DOWNLOAD MENU</b></a>"
         menu_table_rows.append([Paragraph(f"<b>{brand_name}</b>", body_bold), Paragraph(centre_cell_html, body_regular), Paragraph(dl_link_html, body_regular)])
 
     t_menus = Table(menu_table_rows, colWidths=[130, 288, 140])
@@ -267,8 +323,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     
     media_table_rows = [
         [Paragraph("STORE / MEDIA TYPE", body_white_bold), Paragraph("DESCRIPTION", body_white_bold), Paragraph("DIRECT WATCH LINK", body_white_bold)],
-        [Paragraph("<b>Phatbuns Master Drive Folder</b>", body_bold), Paragraph("Complete directory of store photos, video tours & marketing reels.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["master_folder"]}"><b>📂 OPEN DRIVE FOLDER</b></a>', body_regular)],
-        [Paragraph("<b>Phatbuns UK Store Video 1</b>", body_bold), Paragraph("HD walk-through of active UK franchise store operations.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["uk_video_1"]}"><b>🎬 WATCH UK VIDEO 1</b></a>', body_regular)]
+        [Paragraph("<b>Phatbuns Master Drive Folder</b>", body_bold), Paragraph("Complete directory of store photos, video tours & marketing reels.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["master_folder"]}"><b>OPEN DRIVE FOLDER</b></a>', body_regular)],
+        [Paragraph("<b>Phatbuns UK Store Video 1</b>", body_bold), Paragraph("HD walkthrough of active UK franchise store operations.", body_regular), Paragraph(f'<a href="{STORE_MEDIA_LINKS["uk_video_1"]}"><b>WATCH UK VIDEO 1</b></a>', body_regular)]
     ]
     t_media = Table(media_table_rows, colWidths=[140, 278, 140])
     t_media.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 3.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
@@ -279,9 +335,9 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", sec_banner_style))
     elements.append(Spacer(1, 4))
 
-    app_name_str = f"<b>{applicant_name}</b>" if (applicant_name and applicant_name != "Prospective Investor") else "________________________________________________"
-    app_email_str = f"<b>{applicant_email}</b>" if (applicant_email and applicant_email != "N/A") else "________________________________________________"
-    app_mobile_str = f"<b>{applicant_mobile}</b>" if (applicant_mobile and applicant_mobile != "N/A") else "________________________________________________"
+    app_name_str = f"<b>{applicant_name}</b>" if (applicant_name and applicant_name.strip() != "Prospective Investor") else "________________________________________________"
+    app_email_str = f"<b>{applicant_email}</b>" if (applicant_email and applicant_email.strip() != "N/A") else "________________________________________________"
+    app_mobile_str = f"<b>{applicant_mobile}</b>" if (applicant_mobile and applicant_mobile.strip() != "N/A") else "________________________________________________"
     app_address_str = kwargs.get("applicant_address", "________________________________________________________________________________________")
 
     ncnda_parties_html = (
@@ -298,7 +354,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     sig_p_ncnda = [
         [Paragraph("<b>For: PHATBUNS SOUTH AFRICA</b><br/><br/>____________________________________<br/><b>Name:</b> Nisaar Ally<br/><b>Title:</b> SA Master Rights Holder", body_regular),
-         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/>____________________________________<br/><b>Name:</b> {applicant_name}<br/><b>Title:</b> Prospective Franchisee", body_regular)]
+         Paragraph(f"<b>For: THE RECEIVING PARTY</b><br/><br/>____________________________________<br/><b>Name:</b> {applicant_name if applicant_name else ''}<br/><b>Title:</b> Prospective Franchisee", body_regular)]
     ]
     t_sig_ncnda = Table(sig_p_ncnda, colWidths=[270, 270])
     t_sig_ncnda.setStyle(TableStyle([('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('BACKGROUND', (0,0), (-1,-1), LIGHT_BG), ('PADDING', (0,0), (-1,-1), 6)]))
