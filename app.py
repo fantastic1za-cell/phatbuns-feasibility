@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Interface (Full Feasibility Layout + Legacy PDF Ingestion)
+# app.py - Dynamic Feasibility Engine & Legacy Pack Extractor
 import os
 import io
 import re
@@ -199,13 +199,14 @@ with tab1:
         if legacy_file:
             parsed_params = extract_legacy_pdf_parameters(legacy_file.read())
             if parsed_params:
-                st.session_state["override_location"] = parsed_params.get("location_name", "Kwena Square")
-                st.session_state["override_shop"] = parsed_params.get("shop_code", "22")
-                st.session_state["override_gla"] = parsed_params.get("internal_gla", 50.0)
-                st.session_state["override_rent"] = parsed_params.get("int_rent", 496.0)
-                st.session_state["override_capital"] = parsed_params.get("turnkey_capital", 2500000.0)
-                st.session_state["override_wc"] = parsed_params.get("working_capital", 500000.0)
-                st.success(f"✅ Extracted Parameters: {st.session_state['override_location']} (Shop {st.session_state['override_shop']}) | Footprint: {st.session_state['override_gla']} m² | Base Rent: R {st.session_state['override_rent']}/m²")
+                if "location_name" in parsed_params: st.session_state["override_location"] = parsed_params["location_name"]
+                if "shop_code" in parsed_params: st.session_state["override_shop"] = parsed_params["shop_code"]
+                if "internal_gla" in parsed_params: st.session_state["override_gla"] = parsed_params["internal_gla"]
+                if "int_rent" in parsed_params: st.session_state["override_rent"] = parsed_params["int_rent"]
+                if "turnkey_capital" in parsed_params: st.session_state["override_capital"] = parsed_params["turnkey_capital"]
+                if "working_capital" in parsed_params: st.session_state["override_wc"] = parsed_params["working_capital"]
+                
+                st.success(f"✅ Dynamic PDF Ingestion Successful: Extracted {parsed_params.get('location_name', 'Site')} (Shop {parsed_params.get('shop_code', 'N/A')}) | Footprint: {parsed_params.get('internal_gla', 50)} m² | Base Rent: R {parsed_params.get('int_rent', 0)}/m² | Capital: R {parsed_params.get('turnkey_capital', 0):,}")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -276,7 +277,8 @@ with tab1:
     with t_col1:
         turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0)
     with t_col2:
-        turnover_threshold = st.number_input("Monthly Turnover Threshold (R / month)", value=354286.0)
+        dyn_turnover_threshold = float(round((internal_gla * int_rent) / 0.07))
+        turnover_threshold = st.number_input("Monthly Turnover Threshold (R / month)", value=dyn_turnover_threshold)
 
     # Monthly Lease Outlay Calculation
     base_rent_total = (internal_gla * int_rent) + (external_gla * ext_rent)
@@ -295,12 +297,32 @@ with tab1:
     app_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp")
     app_address = st.text_input("Physical / Domicilium Address")
 
-    payback_data = pd.DataFrame({"RECOVERY HORIZON": ["12 Months", "24 Months"], "REQUIRED TURNOVER/MONTH": ["R 402,815", "R 298,648"]})
-    pnl_data = pd.DataFrame({"Year_Label": ["Year 1", "Year 2"], "Turnover": [4833780, 5220482], "Net Operating Profit": [1215400, 1380500]})
+    # Dynamically Extrapolated 5-Year Financial Model & Payback Data
+    base_monthly_rev = total_gla * 8000.0 if total_gla > 0 else 400000.0
+    y1_rev = int(base_monthly_rev * 12)
+    y1_cogs = int(y1_rev * 0.35)
+    y1_gp = y1_rev - y1_cogs
+    y1_lease = int(total_lease_monthly * 12)
+    y1_nop = int(y1_gp - y1_lease - (y1_rev * 0.15))
+
+    payback_data = pd.DataFrame({
+        "RECOVERY HORIZON": ["Operational Breakeven", "12 Months Target", "24 Months Target", "36 Months Target"],
+        "REQUIRED TURNOVER/MONTH": [f"R {int(round(total_lease_monthly / 0.30)):,}", f"R {int(round((y1_rev / 12) * 1.0)):,}", f"R {int(round((y1_rev / 12) * 0.85)):,}", f"R {int(round((y1_rev / 12) * 0.75)):,}"],
+        "REQUIRED UNITS/DAY": [f"{int(round((total_lease_monthly / 0.30) / 175 / 30))} units / day", f"{int(round(((y1_rev / 12) * 1.0) / 175 / 30))} units / day", f"{int(round(((y1_rev / 12) * 0.85) / 175 / 30))} units / day", f"{int(round(((y1_rev / 12) * 0.75) / 175 / 30))} units / day"]
+    })
+
+    pnl_data = pd.DataFrame({
+        "METRIC": ["Turnover", "Cost of Goods Sold (35%)", "Gross Profit (65%)", "Net Lease Outlay", "Net Operating Profit"],
+        "YEAR 1": [y1_rev, y1_cogs, y1_gp, y1_lease, y1_nop],
+        "YEAR 2": [int(y1_rev*1.08), int(y1_cogs*1.08), int(y1_gp*1.08), int(y1_lease*1.075), int(y1_nop*1.12)],
+        "YEAR 3": [int(y1_rev*1.16), int(y1_cogs*1.16), int(y1_gp*1.16), int(y1_lease*1.155), int(y1_nop*1.25)],
+        "YEAR 4": [int(y1_rev*1.25), int(y1_cogs*1.25), int(y1_gp*1.25), int(y1_lease*1.242), int(y1_nop*1.39)],
+        "YEAR 5": [int(y1_rev*1.35), int(y1_cogs*1.35), int(y1_gp*1.35), int(y1_lease*1.335), int(y1_nop*1.55)]
+    })
 
     if st.button("⚡ Generate & Sync Feasibility Pack"):
         pdf_buf = generate_pdf_report(
-            location_name, shop_code, "Little Falls, Roodepoort", internal_gla, external_gla, total_gla,
+            location_name, shop_code, "Commercial District", internal_gla, external_gla, total_gla,
             selected_model, est_standard_seats, est_hightop_seats, turnkey_capital, working_capital, int_rent, ext_rent, ops_cost,
             total_lease_monthly, turnover_clause_pct, selected_model, 7.42, payback_data, pnl_data, blueprint_pil,
             applicant_name=app_name, applicant_email=app_email, applicant_mobile=app_mobile,
