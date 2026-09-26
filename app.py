@@ -540,7 +540,7 @@ def create_cover_page_image():
     img_byte_arr.seek(0)
     return img_byte_arr
 
-def extract_lease_from_source(source_input, offline_mode=False):
+def extract_lease_from_source(source_input, file_bytes=None, mime_type="image/jpeg", offline_mode=False):
     if offline_mode or not HAS_GENAI:
         if isinstance(source_input, str):
             return parse_landlord_text(source_input)
@@ -569,19 +569,18 @@ def extract_lease_from_source(source_input, offline_mode=False):
           "mktg": float,
           "turnover_pct": float
         }
-        Extract exact numbers from the proposal sheet:
-        - shop_code: e.g. "79"
-        - internal_gla: e.g. 70.0 (from shop size e.g. 70m²)
-        - external_gla: e.g. 28.0 (from outside seating e.g. 28m²)
-        - internal_rent: e.g. 220.0 (Basic Monthly Rental shop R220)
-        - external_rent: e.g. 110.0 (Basic Monthly Rental outside seating R110)
-        - ops_cost: e.g. 32.50 (Operating costs R32.50)
-        - rates_taxes: e.g. 15.00 (Rates estimated at R15.00)
-        - generator: e.g. 8.00 (Generator charge R8.00)
-        - mktg: e.g. 3.0 (Marketing contribution 3%)
-        - turnover_pct: e.g. 7.0 (Annual turnover percentage 7%)
         """
-        contents_payload = [source_input, prompt] if not isinstance(source_input, str) else [source_input + "\n\n" + prompt]
+        if file_bytes:
+            image_part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+            contents_payload = [image_part, prompt]
+        elif isinstance(source_input, Image.Image):
+            img_byte_arr = io.BytesIO()
+            source_input.save(img_byte_arr, format='JPEG')
+            image_part = types.Part.from_bytes(data=img_byte_arr.getvalue(), mime_type="image/jpeg")
+            contents_payload = [image_part, prompt]
+        else:
+            contents_payload = [str(source_input) + "\n\n" + prompt]
+
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=contents_payload,
@@ -660,7 +659,7 @@ def process_uploaded_file(uploaded_file):
     else:
         try:
             pil_img = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-            return pil_img, ""
+            return pil_img, file_bytes
         except Exception:
             return None, ""
 
@@ -847,20 +846,6 @@ st.markdown("""
     object-fit: contain !important;
     display: block !important;
     margin: 0 auto !important;
-}
-.brand-card-block {
-    background-color: #1A1A1A;
-    padding: 15px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    margin-bottom: 20px;
-}
-.brand-logo-above {
-    height: 48px;
-    width: auto;
-    object-fit: contain;
-    display: block;
-    margin-bottom: 10px;
 }
 .contact-footer-box {
     background-color: #181818;
@@ -1567,13 +1552,23 @@ with tab1:
 
         if st.button("⚡ Extract & Pre-Fill Lease Terms"):
             if uploaded_offer_file is not None:
-                pil_img, pdf_text = process_uploaded_file(uploaded_offer_file)
-                if pil_img is not None:
-                    extracted_parsed_res = extract_lease_from_source(pil_img, offline_mode=offline_mode_toggle)
-                elif pdf_text:
-                    extracted_parsed_res = extract_lease_from_source(pdf_text, offline_mode=offline_mode_toggle)
-            if not extracted_parsed_res and pasted_text:
+                pil_img, file_bytes_or_text = process_uploaded_file(uploaded_offer_file)
+                if isinstance(file_bytes_or_text, bytes):
+                    extracted_parsed_res = extract_lease_from_source(pil_img, file_bytes=file_bytes_or_text, mime_type=uploaded_offer_file.type, offline_mode=offline_mode_toggle)
+                else:
+                    extracted_parsed_res = extract_lease_from_source(file_bytes_or_text, offline_mode=offline_mode_toggle)
+            elif pasted_text:
                 extracted_parsed_res = extract_lease_from_source(pasted_text, offline_mode=offline_mode_toggle)
+            
+            if extracted_parsed_res:
+                if 'shop_code' in extracted_parsed_res: st.session_state[f"unassigned_site_shop_input"] = str(extracted_parsed_res['shop_code'])
+                if 'internal_gla' in extracted_parsed_res: st.session_state[f"unassigned_site_int_gla_input"] = float(extracted_parsed_res['internal_gla'])
+                if 'external_gla' in extracted_parsed_res: st.session_state[f"unassigned_site_external_gla"] = float(extracted_parsed_res['external_gla'])
+                if 'internal_rent' in extracted_parsed_res: st.session_state[f"unassigned_site_int_rent"] = float(extracted_parsed_res['internal_rent'])
+                if 'external_rent' in extracted_parsed_res: st.session_state[f"unassigned_site_ext_rent"] = float(extracted_parsed_res['external_rent'])
+                if 'ops_cost' in extracted_parsed_res: st.session_state[f"unassigned_site_ops_cost"] = float(extracted_parsed_res['ops_cost'])
+                st.success("✅ Extracted successfully and pre-filled form fields!")
+                st.rerun()
 
     st.divider()
     st.header("1. Site & Lease Specification")
@@ -1638,16 +1633,11 @@ with tab1:
     turnkey_capital = st.number_input("Total Turnkey Capital (Excl. VAT)", step=50000.0, format="%.2f", key=f"{site_key}_capex_input")
     working_capital = st.number_input("Suggested Working Capital Requirement", step=25000.0, format="%.2f", key=f"{site_key}_wc_input")
 
-    if extracted_parsed_res:
-        if 'internal_rent' in extracted_parsed_res: set_site_state("internal_rent", float(extracted_parsed_res['internal_rent']))
-        if 'external_rent' in extracted_parsed_res: set_site_state("external_rent", float(extracted_parsed_res['external_rent']))
-        if 'ops_cost' in extracted_parsed_res: set_site_state("ops_cost", float(extracted_parsed_res['ops_cost']))
-
     col_int_rent, col_ext_rent = st.columns(2)
     with col_int_rent:
-        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=get_site_state("internal_rent", 0.0), step=10.0, key=f"{site_key}_int_rent_input")
+        internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=get_site_state("int_rent", 0.0), step=10.0, key=f"{site_key}_int_rent_input")
     with col_ext_rent:
-        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=get_site_state("external_rent", 0.0), step=5.0, key=f"{site_key}_ext_rent_input")
+        external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=get_site_state("ext_rent", 0.0), step=5.0, key=f"{site_key}_ext_rent_input")
 
     ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=get_site_state("ops_cost", 0.0), step=1.0, key=f"{site_key}_ops_input")
     turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0, step=0.5, key=f"{site_key}_turn_pct_input")
