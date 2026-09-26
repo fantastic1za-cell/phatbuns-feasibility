@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Interface (Full Feasibility Layout + Custom Header Branding)
+# app.py - Main Streamlit Interface (Full Feasibility Layout + Legacy PDF Ingestion)
 import os
 import io
 import re
@@ -17,7 +17,7 @@ from config import (
 from services import (
     init_db, save_investor_lead, get_pipeline_dataframe,
     sync_pdf_to_local_and_cloud, send_franchisee_email_pack,
-    send_investor_lead_notification,
+    send_investor_lead_notification, extract_legacy_pdf_parameters,
     get_drive_service, get_or_create_drive_folder, upload_pdf_to_drive
 )
 from pdf_engine import generate_pdf_report, get_asset_images_map
@@ -58,7 +58,6 @@ st.markdown("""
 <style>
 .stApp { background-color: #111111; color: #FFFFFF; }
 
-/* Dynamic Dual Logo Banner */
 .brand-banner { 
     background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%); 
     padding: 22px; 
@@ -151,7 +150,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Generate HTML string for Header Icons
+# Header Icons
 phatbuns_img_html = f'<img src="data:image/png;base64,{b64_phatbuns_sa}" class="header-logo-phatbuns" alt="Phatbuns SA"/>' if b64_phatbuns_sa else ''
 flag_img_html = f'<img src="data:image/png;base64,{b64_sa_flag}" class="header-logo-flag" alt="SA Flag"/>' if b64_sa_flag else ''
 
@@ -198,22 +197,36 @@ with tab1:
         st.subheader("♻️ Legacy Franchisee Pack Converter")
         legacy_file = st.file_uploader("Upload Legacy PDF Pack (.pdf)", type=["pdf"])
         if legacy_file:
-            st.success("Legacy Pack ingested. Review extracted parameters below.")
+            parsed_params = extract_legacy_pdf_parameters(legacy_file.read())
+            if parsed_params:
+                st.session_state["override_location"] = parsed_params.get("location_name", "Kwena Square")
+                st.session_state["override_shop"] = parsed_params.get("shop_code", "22")
+                st.session_state["override_gla"] = parsed_params.get("internal_gla", 50.0)
+                st.session_state["override_rent"] = parsed_params.get("int_rent", 496.0)
+                st.session_state["override_capital"] = parsed_params.get("turnkey_capital", 2500000.0)
+                st.session_state["override_wc"] = parsed_params.get("working_capital", 500000.0)
+                st.success(f"✅ Extracted Parameters: {st.session_state['override_location']} (Shop {st.session_state['override_shop']}) | Footprint: {st.session_state['override_gla']} m² | Base Rent: R {st.session_state['override_rent']}/m²")
 
     col1, col2 = st.columns(2)
     with col1:
+        default_loc = st.session_state.get("override_location", "")
         selected_location = st.selectbox("Select Commercial Location", options=list(LOCATION_LOOKUP.keys()), index=0)
-        location_name = selected_location if selected_location != "Custom / Other Site..." else st.text_input("Custom Location Name")
+        location_name = default_loc if default_loc else (selected_location if selected_location != "Custom / Other Site..." else st.text_input("Custom Location Name"))
+        if default_loc:
+            st.info(f"Target Site Active: **{default_loc}**")
     with col2:
-        shop_code = st.text_input("Shop / Unit Code", value="79")
+        shop_code = st.text_input("Shop / Unit Code", value=str(st.session_state.get("override_shop", "79")))
 
     selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True)
     model_data = STORE_MODELS[selected_model]
 
     st.subheader("📐 Store Footprint & Seating Capacity Calculator")
     col_int, col_ext = st.columns(2)
-    with col_int: internal_gla = st.number_input("Internal Area (sqm)", value=float(model_data["default_gla"]))
-    with col_ext: external_gla = st.number_input("External / Patio Area (sqm)", value=0.0)
+    with col_int: 
+        default_gla_val = float(st.session_state.get("override_gla", model_data["default_gla"]))
+        internal_gla = st.number_input("Internal Area (sqm)", value=default_gla_val)
+    with col_ext: 
+        external_gla = st.number_input("External / Patio Area (sqm)", value=0.0)
     total_gla = internal_gla + external_gla
 
     # Dynamic Seating Calculation
@@ -238,13 +251,18 @@ with tab1:
     st.header("Commercial Capital & Detailed Lease Modeling")
     
     col_c1, col_c2 = st.columns(2)
-    with col_c1: turnkey_capital = st.number_input("Turnkey Capital (Excl. VAT)", value=float(model_data["turnkey_capital"]))
-    with col_c2: working_capital = st.number_input("Working Capital", value=float(model_data["working_capital"]))
+    with col_c1: 
+        default_cap_val = float(st.session_state.get("override_capital", model_data["turnkey_capital"]))
+        turnkey_capital = st.number_input("Turnkey Capital (Excl. VAT)", value=default_cap_val)
+    with col_c2: 
+        default_wc_val = float(st.session_state.get("override_wc", model_data["working_capital"]))
+        working_capital = st.number_input("Working Capital", value=default_wc_val)
 
     st.subheader("🏢 Landlord Rental & Operational Cost Schedule")
     l_col1, l_col2, l_col3 = st.columns(3)
     with l_col1:
-        int_rent = st.number_input("Internal Base Rent (R / sqm)", value=220.0)
+        default_rent_val = float(st.session_state.get("override_rent", 220.0))
+        int_rent = st.number_input("Internal Base Rent (R / sqm)", value=default_rent_val)
         ext_rent = st.number_input("External Base Rent (R / sqm)", value=0.0)
     with l_col2:
         rates_cost = st.number_input("Rates & Taxes (R / sqm)", value=18.50)
@@ -258,7 +276,7 @@ with tab1:
     with t_col1:
         turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0)
     with t_col2:
-        turnover_threshold = st.number_input("Monthly Turnover Threshold (R / month)", value=650000.0)
+        turnover_threshold = st.number_input("Monthly Turnover Threshold (R / month)", value=354286.0)
 
     # Monthly Lease Outlay Calculation
     base_rent_total = (internal_gla * int_rent) + (external_gla * ext_rent)
@@ -277,12 +295,12 @@ with tab1:
     app_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp")
     app_address = st.text_input("Physical / Domicilium Address")
 
-    payback_data = pd.DataFrame({"RECOVERY HORIZON": ["12 Months", "24 Months"], "REQUIRED TURNOVER/MONTH": ["R 579,193", "R 389,799"]})
-    pnl_data = pd.DataFrame({"Year_Label": ["Year 1", "Year 2"], "Turnover": [7136206, 7707102], "Net Operating Profit": [2291100, 2590244]})
+    payback_data = pd.DataFrame({"RECOVERY HORIZON": ["12 Months", "24 Months"], "REQUIRED TURNOVER/MONTH": ["R 402,815", "R 298,648"]})
+    pnl_data = pd.DataFrame({"Year_Label": ["Year 1", "Year 2"], "Turnover": [4833780, 5220482], "Net Operating Profit": [1215400, 1380500]})
 
     if st.button("⚡ Generate & Sync Feasibility Pack"):
         pdf_buf = generate_pdf_report(
-            location_name, shop_code, "Germiston, GP", internal_gla, external_gla, total_gla,
+            location_name, shop_code, "Little Falls, Roodepoort", internal_gla, external_gla, total_gla,
             selected_model, est_standard_seats, est_hightop_seats, turnkey_capital, working_capital, int_rent, ext_rent, ops_cost,
             total_lease_monthly, turnover_clause_pct, selected_model, 7.42, payback_data, pnl_data, blueprint_pil,
             applicant_name=app_name, applicant_email=app_email, applicant_mobile=app_mobile,
