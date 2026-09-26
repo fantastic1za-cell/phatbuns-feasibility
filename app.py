@@ -16,6 +16,7 @@ from config import (
 from services import (
     init_db, save_investor_lead, get_pipeline_dataframe,
     sync_pdf_to_local_and_cloud, send_franchisee_email_pack,
+    send_investor_lead_notification,
     get_drive_service, get_or_create_drive_folder, upload_pdf_to_drive
 )
 from pdf_engine import generate_pdf_report, get_asset_images_map
@@ -266,14 +267,30 @@ with tab3:
 
         if st.form_submit_button("Submit Lead to Database"):
             if fn and em and mb and ps:
-                save_investor_lead({
-                    "full_name": fn, "id_or_passport": "Provided", "email": em, "mobile": mb,
-                    "preferred_site": ps, "store_model": "Express Model", "capital_available": 2500000.0,
-                    "unencumbered_cash_pct": 50.0, "company_docs_status": "Uploaded" if upl_comp else "Not Provided",
+                lead_payload = {
+                    "full_name": fn, 
+                    "id_or_passport": "Provided" if upl_id else "Pending", 
+                    "email": em, 
+                    "mobile": mb,
+                    "preferred_site": ps, 
+                    "store_model": "Express Model", 
+                    "capital_available": 2500000.0,
+                    "unencumbered_cash_pct": 50.0, 
+                    "company_docs_status": "Uploaded" if upl_comp else "Not Provided",
                     "franchisee_id_status": "Uploaded" if upl_id else "Not Provided",
                     "proof_of_funds_status": "Uploaded" if upl_pof else "Not Provided"
-                })
-                st.success(f"Lead record for {fn} saved!")
+                }
+                
+                # 1. Save Lead to SQLite Database
+                save_investor_lead(lead_payload)
+                
+                # 2. Dispatch Executive Email Notification to Both Recipients
+                email_sent, email_msg = send_investor_lead_notification(lead_payload)
+                
+                if email_sent:
+                    st.success(f"✅ Lead for {fn} saved to database & dispatched to fantastic1za@gmail.com and nisaar@fantastic1.com!")
+                else:
+                    st.warning(f"✅ Lead saved to database, but email dispatch notification failed: {email_msg}")
             else:
                 st.error("Please complete all mandatory fields (*).")
 
@@ -285,4 +302,4 @@ with tab3:
         else:
             st.info("No franchisee applications logged in database yet.")
     except Exception:
-        st.warning("Database re-initializing...")
+        st.warning("Database initializing...")
