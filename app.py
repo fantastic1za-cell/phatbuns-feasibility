@@ -43,6 +43,13 @@ try:
 except ImportError:
     HAS_PYPDF = False
 
+# PyMuPDF Import
+try:
+    import fitz
+    HAS_FITZ = True
+except ImportError:
+    HAS_FITZ = False
+
 # Google GenAI Import for Vision Extraction & Search
 try:
     from google import genai
@@ -291,7 +298,7 @@ def research_location_online(location_name):
                   "households": "Estimated catchment e.g. 24,061 Households / ~76,995 Population",
                   "competitors": "Key actual food tenants present in the mall (AUDITED & ACCURATE)",
                   "lsm_profile": "Accurate LSM profile e.g. LSM 6-9 / Commercial Node",
-                  "default_rent": float (Realistic market rent target per sqm e.g. 220.0),
+                  "default_rent": float,
                   "turnover_clause_pct": 7.0
                 }}
                 """
@@ -499,6 +506,7 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
             return local_file_path, f"Failed to upload file '{pdf_filename}' to Drive folder '{loc_clean}'"
     except Exception as e:
         return local_file_path, f"Google Drive Sync Exception: {str(e)}"
+
 # ==========================================
 # COVER PAGE COMPOSITOR (8K CRISP FULL-BLEED)
 # ==========================================
@@ -549,17 +557,6 @@ def extract_lease_from_source(source_input):
           "mktg": float,
           "turnover_pct": float
         }
-        Extract exact numbers from the proposal sheet:
-        - shop_code: e.g. "79"
-        - internal_gla: e.g. 70.0 (from shop size e.g. 70m²)
-        - external_gla: e.g. 28.0 (from outside seating e.g. 28m²)
-        - internal_rent: e.g. 220.0 (Basic Monthly Rental shop R220)
-        - external_rent: e.g. 110.0 (Basic Monthly Rental outside seating R110)
-        - ops_cost: e.g. 32.50 (Operating costs R32.50)
-        - rates_taxes: e.g. 15.00 (Rates estimated at R15.00)
-        - generator: e.g. 8.00 (Generator charge R8.00)
-        - mktg: e.g. 3.0 (Marketing contribution 3%)
-        - turnover_pct: e.g. 7.0 (Annual turnover percentage 7%)
         """
         contents_payload = [source_input, prompt] if not isinstance(source_input, str) else [source_input + "\n\n" + prompt]
         response = client.models.generate_content(
@@ -1175,6 +1172,7 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
         self.restoreState()
+
 # ==========================================
 # MASTER 10-HEADING PDF GENERATION ENGINE
 # ==========================================
@@ -1259,13 +1257,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec1)
     elements.append(Spacer(1, 4))
 
-    # 02. LEASE STRUCTURE & FINANCIAL PROVISIONS (RECOMMENDED OFFER TARGET)
+    # 02. LEASE STRUCTURE & FINANCIAL PROVISIONS
     sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & PROPOSED LANDLORD OFFER TARGETS", sec_banner_style)]], colWidths=[558])
     sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec2_banner)
 
     monthly_base_rent_total = (int_rent * int_gla) + (ext_rent * ext_gla)
-    monthly_threshold_zar = monthly_base_rent_total / (turnover_clause_pct / 100.0)
+    monthly_threshold_zar = monthly_base_rent_total / (turnover_clause_pct / 100.0) if turnover_clause_pct > 0 else 0
 
     sec2_table_data = [
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
@@ -1280,7 +1278,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec2)
     elements.append(Spacer(1, 4))
 
-    # 03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE (AUDITED LIVE TENANTS & DEMOGRAPHICS)
+    # 03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE
     sec3_banner = Table([[Paragraph("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[558])
     sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec3_banner)
@@ -1297,6 +1295,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec3_grid)
 
     elements.append(PageBreak())
+    
     # PAGE 2: HEADINGS 04, 04A, 05, 06
     p2_title = ParagraphStyle('P2Title', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, textColor=DARK_TEXT, alignment=1)
     elements.append(Paragraph(f"PHATBUNS SOUTH AFRICA — {loc_name.upper() if loc_name else 'TARGET SITE'} PROSPECTUS", p2_title))
@@ -1324,7 +1323,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_matrix)
     elements.append(Spacer(1, 3))
 
-    # 04A. RECOVERY PERIOD & TURNOVER TARGET WITH AVERAGE DAILY UNIT SALES
+    # 04A. RECOVERY PERIOD & TURNOVER TARGET
     sec4a_banner = Table([[Paragraph("04A. RECOVERY PERIOD & TURNOVER TARGET WITH AVERAGE DAILY UNIT SALES", sec_banner_style)]], colWidths=[558])
     sec4a_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec4a_banner)
@@ -1424,7 +1423,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_pnl)
     elements.append(Spacer(1, 6))
 
-    # 11A: TOTAL ROI, TOTAL LANDLORD RENTALS, TOTAL ROYALTIES & MASTER RECOMMENDATION
+    # 11A: TOTAL ROI & RECOMMENDATION
     sec11a_banner = Table([[Paragraph("11A. AGGREGATE 5-YEAR FINANCIAL RETURN (ROI), LANDLORD RENTALS & MASTER RECOMMENDATION", sec_banner_style)]], colWidths=[558])
     sec11a_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec11a_banner)
@@ -1446,7 +1445,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     is_site_feasible = total_5yr_net_profit > 0
     feasibility_status_text = "Phatbuns South Africa, advise the site as Feasible." if is_site_feasible else "Phatbuns South Africa, Does not advise this Site."
     feasibility_bg_color = colors.HexColor('#28a745') if is_site_feasible else colors.HexColor('#C53030')
-    feasibility_text_color = colors.HexColor('#000000') if is_site_feasible else colors.HexColor('#FFFFFF')
+    feasibility_text_color = colors.HexColor('#FFFFFF')
 
     sec11a_data = [
         [Paragraph("FINANCIAL METRIC / AGGREGATE CATEGORY", body_white_bold), Paragraph("5-YEAR PROJECTED CUMULATIVE VALUE (ZAR)", body_white_bold)],
@@ -1468,7 +1467,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 5: DEDICATED STORE DEVELOPMENT LEASING LAYOUT PLAN (PROPORTIONAL VECTOR SCALING)
+    # PAGE 5: DEDICATED STORE DEVELOPMENT LEASING LAYOUT PLAN
     blueprint_header_style = ParagraphStyle('BPHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=12, textColor=NAVY_HEADER, alignment=1)
     blueprint_subheader_style = ParagraphStyle('BPSubHeader', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, textColor=ORANGE_BRAND, alignment=1)
 
@@ -1482,20 +1481,13 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         auto_bp_path = find_site_blueprint(loc_name)
         if auto_bp_path and os.path.exists(auto_bp_path):
             try:
-                if auto_bp_path.lower().endswith('.pdf') and HAS_PYPDF:
-                    from pypdf import PdfReader
-                    import pfitzer if 'fitz' in globals() else None
-                    # Convert PDF page 1 to PIL image if possible, or use fitz/pdf2image
-                    try:
-                        import fitz # PyMuPDF
-                        doc_pdf = fitz.open(auto_bp_path)
-                        page = doc_pdf[0]
-                        pix = page.get_pixmap(dpi=150)
-                        img_bytes = pix.tobytes("jpeg")
-                        effective_blueprint_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-                    except Exception:
-                        effective_blueprint_img = Image.open(auto_bp_path).convert("RGB") if not auto_bp_path.lower().endswith('.pdf') else None
-                else:
+                if auto_bp_path.lower().endswith('.pdf') and HAS_FITZ:
+                    doc_pdf = fitz.open(auto_bp_path)
+                    page = doc_pdf[0]
+                    pix = page.get_pixmap(dpi=150)
+                    img_bytes = pix.tobytes("jpeg")
+                    effective_blueprint_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                elif not auto_bp_path.lower().endswith('.pdf'):
                     effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
             except Exception:
                 pass
@@ -1547,7 +1539,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 6: DEDICATED BRAND MENUS & MEDIA SHOWCASE
+    # PAGE 6: BRAND MENUS & MEDIA SHOWCASE
     elements.append(Paragraph("<b>PHATBUNS BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE</b>", blueprint_header_style))
     elements.append(Paragraph("<b>CLICKABLE DOWNLOAD LINKS FOR BRAND MENUS, STORE VISUALS & VIDEO WALK-THROUGHS</b>", blueprint_subheader_style))
     elements.append(Spacer(1, 4))
@@ -1619,7 +1611,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 7: FULL 1-PAGE CONSOLIDATED MASTER NCNDA LEGAL TEMPLATE (CLAUSES 1 - 6 & SIGNATURES)
+    # PAGE 7: FULL CONSOLIDATED NCNDA
     ncnda_header_style = ParagraphStyle('NCNDAHeader', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=11, textColor=NAVY_HEADER, alignment=1)
     elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", ncnda_header_style))
     elements.append(Paragraph("<b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b>", ParagraphStyle('NCNDASub', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, alignment=1)))
@@ -2042,7 +2034,7 @@ with tab1:
             def_turn = get_site_state("turnover_pct", site_default_info.get("turnover_clause_pct", 7.0))
             turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=def_turn, step=0.5, format="%.2f", key=f"{site_key}_turn_pct_input")
             set_site_state("turnover_pct", turnover_clause_pct)
-            monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0)
+            monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0) if turnover_clause_pct > 0 else 0
         with col_labor:
             monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
 
@@ -2070,7 +2062,7 @@ with tab1:
         total_ops_cost = ops_cost_sqm * total_gla
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
         total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_landlord_marketing
-        monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0)
+        monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0) if turnover_clause_pct > 0 else 0
 
         st.success(f"🎯 **Mode 2 Active:** Localized market intelligence lease target set to **R {int(round(internal_rent_sqm))}/m²** for **{location_name if location_name else 'Selected Area'}** P&L calculations and landlord offer sheet.")
 
@@ -2129,7 +2121,7 @@ with tab1:
     total_initial_investment = turnkey_capital + working_capital
     debt_portion = total_initial_investment * 0.50
     monthly_interest_rate = (0.1175) / 12
-    monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1)
+    monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1) if ((1 + monthly_interest_rate)**60 - 1) > 0 else 0
 
     cash_flow_data = []
     cumulative_cash_flow = -total_initial_investment
