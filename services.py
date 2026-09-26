@@ -35,7 +35,7 @@ GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.goog
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
 DB_FILE = "phatbuns_franchisees.db"
 
-# Database Operations & Fail-Safe Migration
+# Database Operations & Fail-Safe Auto-Migration
 def init_db(force_recreate=False):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -48,13 +48,13 @@ def init_db(force_recreate=False):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             full_name TEXT NOT NULL,
             entity_name TEXT,
-            id_or_passport TEXT NOT NULL,
-            email TEXT NOT NULL,
-            mobile TEXT NOT NULL,
-            preferred_site TEXT NOT NULL,
-            store_model TEXT NOT NULL,
-            capital_available REAL NOT NULL,
-            unencumbered_cash_pct REAL NOT NULL,
+            id_or_passport TEXT,
+            email TEXT,
+            mobile TEXT,
+            preferred_site TEXT,
+            store_model TEXT,
+            capital_available REAL,
+            unencumbered_cash_pct REAL,
             company_docs_status TEXT DEFAULT 'Not Provided',
             franchisee_id_status TEXT DEFAULT 'Not Provided',
             proof_of_funds_status TEXT DEFAULT 'Not Provided',
@@ -66,25 +66,6 @@ def init_db(force_recreate=False):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # Auto-add missing columns to existing database
-    cursor.execute("PRAGMA table_info(franchisee_pipeline)")
-    existing_cols = [col[1] for col in cursor.fetchall()]
-    
-    missing_cols = {
-        "company_docs_status": "TEXT DEFAULT 'Not Provided'",
-        "franchisee_id_status": "TEXT DEFAULT 'Not Provided'",
-        "proof_of_funds_status": "TEXT DEFAULT 'Not Provided'",
-        "ceo_approval": "TEXT DEFAULT 'Pending'"
-    }
-    
-    for col_name, col_type in missing_cols.items():
-        if col_name not in existing_cols:
-            try:
-                cursor.execute(f"ALTER TABLE franchisee_pipeline ADD COLUMN {col_name} {col_type}")
-            except Exception:
-                pass
-            
     conn.commit()
     conn.close()
 
@@ -130,13 +111,12 @@ def get_pipeline_dataframe():
     init_db()
     conn = sqlite3.connect(DB_FILE)
     try:
-        df = pd.read_sql_query("SELECT id, full_name, mobile, email, preferred_site, store_model, capital_available, unencumbered_cash_pct, company_docs_status, franchisee_id_status, proof_of_funds_status, ceo_approval, created_at FROM franchisee_pipeline ORDER BY id DESC", conn)
+        df = pd.read_sql_query("SELECT * FROM franchisee_pipeline ORDER BY id DESC", conn)
     except Exception:
-        # Fallback if SQLite file schema is corrupt or locked: Force table rebuild
         conn.close()
         init_db(force_recreate=True)
         conn = sqlite3.connect(DB_FILE)
-        df = pd.read_sql_query("SELECT id, full_name, mobile, email, preferred_site, store_model, capital_available, unencumbered_cash_pct, company_docs_status, franchisee_id_status, proof_of_funds_status, ceo_approval, created_at FROM franchisee_pipeline ORDER BY id DESC", conn)
+        df = pd.read_sql_query("SELECT * FROM franchisee_pipeline ORDER BY id DESC", conn)
     
     conn.close()
     return df
