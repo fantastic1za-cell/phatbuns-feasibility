@@ -35,7 +35,7 @@ GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.goog
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
 DB_FILE = "phatbuns_franchisees.db"
 
-# Database Operations & Fail-Safe Auto-Migration
+# Fail-Safe Database Operations & Schema Management
 def init_db(force_recreate=False):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -66,6 +66,25 @@ def init_db(force_recreate=False):
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Auto-migrate missing columns if table exists from an older build
+    cursor.execute("PRAGMA table_info(franchisee_pipeline)")
+    existing_cols = [col[1] for col in cursor.fetchall()]
+    
+    missing_cols = {
+        "company_docs_status": "TEXT DEFAULT 'Not Provided'",
+        "franchisee_id_status": "TEXT DEFAULT 'Not Provided'",
+        "proof_of_funds_status": "TEXT DEFAULT 'Not Provided'",
+        "ceo_approval": "TEXT DEFAULT 'Pending'"
+    }
+    
+    for col_name, col_type in missing_cols.items():
+        if col_name not in existing_cols:
+            try:
+                cursor.execute(f"ALTER TABLE franchisee_pipeline ADD COLUMN {col_name} {col_type}")
+            except Exception:
+                pass
+                
     conn.commit()
     conn.close()
 
@@ -73,8 +92,15 @@ def save_investor_lead(data):
     init_db()
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM franchisee_pipeline WHERE email = ?", (data['email'],))
+    
+    email_val = data.get('email', '')
+    if not email_val:
+        conn.close()
+        return
+
+    cursor.execute("SELECT id FROM franchisee_pipeline WHERE email = ?", (email_val,))
     existing = cursor.fetchone()
+    
     if existing:
         cursor.execute("""
             UPDATE franchisee_pipeline SET
@@ -84,10 +110,10 @@ def save_investor_lead(data):
                 admin_fee_paid = ?, ndnca_signed = ?, popia_consent = ?
             WHERE email = ?
         """, (
-            data['full_name'], data.get('entity_name', ''), data['id_or_passport'], data['mobile'],
-            data['preferred_site'], data['store_model'], data['capital_available'], data['unencumbered_cash_pct'],
+            data.get('full_name', ''), data.get('entity_name', ''), data.get('id_or_passport', 'Provided'), data.get('mobile', ''),
+            data.get('preferred_site', ''), data.get('store_model', 'Express Model'), float(data.get('capital_available', 2500000.0)), float(data.get('unencumbered_cash_pct', 50.0)),
             data.get('company_docs_status', 'Not Provided'), data.get('franchisee_id_status', 'Not Provided'), data.get('proof_of_funds_status', 'Not Provided'),
-            data.get('admin_fee_paid', 0), data.get('ndnca_signed', 0), data.get('popia_consent', 1), data['email']
+            int(data.get('admin_fee_paid', 0)), int(data.get('ndnca_signed', 0)), int(data.get('popia_consent', 1)), email_val
         ))
     else:
         cursor.execute("""
@@ -98,11 +124,11 @@ def save_investor_lead(data):
                 admin_fee_paid, ndnca_signed, popia_consent
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            data['full_name'], data.get('entity_name', ''), data['id_or_passport'],
-            data['email'], data['mobile'], data['preferred_site'],
-            data['store_model'], data['capital_available'], data['unencumbered_cash_pct'],
+            data.get('full_name', ''), data.get('entity_name', ''), data.get('id_or_passport', 'Provided'),
+            email_val, data.get('mobile', ''), data.get('preferred_site', ''),
+            data.get('store_model', 'Express Model'), float(data.get('capital_available', 2500000.0)), float(data.get('unencumbered_cash_pct', 50.0)),
             data.get('company_docs_status', 'Not Provided'), data.get('franchisee_id_status', 'Not Provided'), data.get('proof_of_funds_status', 'Not Provided'),
-            data.get('admin_fee_paid', 0), data.get('ndnca_signed', 0), data.get('popia_consent', 1)
+            int(data.get('admin_fee_paid', 0)), int(data.get('ndnca_signed', 0)), int(data.get('popia_consent', 1))
         ))
     conn.commit()
     conn.close()
@@ -114,6 +140,7 @@ def get_pipeline_dataframe():
         df = pd.read_sql_query("SELECT * FROM franchisee_pipeline ORDER BY id DESC", conn)
     except Exception:
         conn.close()
+        # Force table rebuild if the cached database file schema is corrupt
         init_db(force_recreate=True)
         conn = sqlite3.connect(DB_FILE)
         df = pd.read_sql_query("SELECT * FROM franchisee_pipeline ORDER BY id DESC", conn)
