@@ -330,3 +330,50 @@ def send_investor_lead_notification(data):
         return True, "Notification email sent to both addresses!"
     except Exception as e:
         return False, str(e)
+
+# Legacy PDF Parameter Extraction Engine
+def extract_legacy_pdf_parameters(pdf_file_bytes):
+    extracted_data = {}
+    if not HAS_PYPDF:
+        return extracted_data
+    
+    try:
+        reader = PdfReader(io.BytesIO(pdf_file_bytes))
+        full_text = ""
+        for page in reader.pages:
+            full_text += page.extract_text() + "\n"
+            
+        # Parse Location
+        loc_match = re.search(r"Location Name\s*\|\s*([^\n\(]+)", full_text)
+        if loc_match:
+            extracted_data["location_name"] = loc_match.group(1).strip()
+            
+        # Parse Shop Code
+        shop_match = re.search(r"Shop\s*([0-9A-Za-z]+)", full_text)
+        if shop_match:
+            extracted_data["shop_code"] = shop_match.group(1).strip()
+
+        # Parse GLA / Footprint
+        gla_match = re.search(r"(\d+)\s*m²", full_text)
+        if gla_match:
+            extracted_data["internal_gla"] = float(gla_match.group(1))
+
+        # Parse Rent Rate
+        rent_match = re.search(r"R\s*([\d,]+)\s*/\s*m²", full_text)
+        if rent_match:
+            extracted_data["int_rent"] = float(rent_match.group(1).replace(",", ""))
+
+        # Parse Turnkey Capital
+        cap_match = re.search(r"R\s*([\d,]+)\s*Excl\.\s*VAT", full_text)
+        if cap_match:
+            extracted_data["turnkey_capital"] = float(cap_match.group(1).replace(",", ""))
+
+        # Parse Working Capital
+        wc_match = re.search(r"WORKING CAPITAL\s*R\s*([\d,]+)", full_text)
+        if wc_match:
+            extracted_data["working_capital"] = float(wc_match.group(1).replace(",", ""))
+
+    except Exception as e:
+        print(f"PDF Parsing Exception: {e}")
+        
+    return extracted_data
