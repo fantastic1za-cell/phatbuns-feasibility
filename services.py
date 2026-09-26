@@ -35,10 +35,12 @@ GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.goog
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
 DB_FILE = "phatbuns_franchisees.db"
 
-# Database Operations
+# Database Operations & Auto-Migration
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    
+    # 1. Base table creation
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS franchisee_pipeline (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,10 +64,27 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # 2. Schema Migration Check: Add missing columns if database existed prior to update
+    cursor.execute("PRAGMA table_info(franchisee_pipeline)")
+    existing_cols = [col[1] for col in cursor.fetchall()]
+    
+    missing_cols = {
+        "company_docs_status": "TEXT DEFAULT 'Not Provided'",
+        "franchisee_id_status": "TEXT DEFAULT 'Not Provided'",
+        "proof_of_funds_status": "TEXT DEFAULT 'Not Provided'",
+        "ceo_approval": "TEXT DEFAULT 'Pending'"
+    }
+    
+    for col_name, col_type in missing_cols.items():
+        if col_name not in existing_cols:
+            cursor.execute(f"ALTER TABLE franchisee_pipeline ADD COLUMN {col_name} {col_type}")
+            
     conn.commit()
     conn.close()
 
 def save_investor_lead(data):
+    init_db()
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM franchisee_pipeline WHERE email = ?", (data['email'],))
@@ -103,6 +122,7 @@ def save_investor_lead(data):
     conn.close()
 
 def get_pipeline_dataframe():
+    init_db()
     conn = sqlite3.connect(DB_FILE)
     df = pd.read_sql_query("SELECT id, full_name, mobile, email, preferred_site, store_model, capital_available, unencumbered_cash_pct, company_docs_status, franchisee_id_status, proof_of_funds_status, ceo_approval, created_at FROM franchisee_pipeline ORDER BY id DESC", conn)
     conn.close()
