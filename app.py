@@ -23,26 +23,91 @@ from pdf_engine import generate_pdf_report, get_asset_images_map
 # Initialize SQLite Database
 init_db()
 
+# Helper function to convert logo images to Base64 HTML strings
+def get_base64_image(image_path):
+    if image_path and os.path.exists(image_path):
+        try:
+            with open(image_path, "rb") as img_file:
+                return base64.b64encode(img_file.read()).decode('utf-8')
+        except Exception:
+            return None
+    return None
+
 # Streamlit Page Configuration
-sa_app_logo_path = os.path.join(ASSETS_DIR, "Phatbuns_SA.PNG")
-app_favicon = Image.open(sa_app_logo_path) if os.path.exists(sa_app_logo_path) else "🍔"
+asset_images = get_asset_images_map()
+sa_app_logo_path = asset_images.get("phatbuns_sa")
+app_favicon = Image.open(sa_app_logo_path) if sa_app_logo_path and os.path.exists(sa_app_logo_path) else "🍔"
 
 st.set_page_config(
-    page_title="Phatbuns Engine",
+    page_title="Phatbuns SA Feasibility Engine",
     page_icon=app_favicon,
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Custom Styling
+# Custom Styling for Neat Spacing & Dark Theme
 st.markdown("""
 <style>
 .stApp { background-color: #111111; color: #FFFFFF; }
-.brand-banner { background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333; }
+.brand-banner { background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333; margin-bottom: 10px; }
 .brand-title { color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; }
 .green-divider { border: none; height: 3px; background-color: #72BF44; border-radius: 2px; margin: 15px 0; }
-.brand-card-block { background-color: #1A1A1A; padding: 15px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
-.direct-dl-btn { display: block; width: 100%; background-color: #0066CC; color: white !important; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; text-decoration: none; }
+
+/* Brand Card Block Styling */
+.brand-card-block {
+    background-color: #1A1A1A;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #333333;
+    margin-bottom: 25px;
+}
+.brand-logo-img {
+    max-height: 55px;
+    width: auto;
+    margin-bottom: 12px;
+    display: block;
+}
+.brand-card-header {
+    font-size: 20px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+}
+.brand-tagline {
+    font-size: 13px;
+    font-weight: 700;
+    color: #C53030;
+    margin-bottom: 12px;
+}
+.brand-overview {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #E2E8F0;
+    margin-bottom: 16px;
+}
+.brand-link-row {
+    margin-top: 10px;
+    font-size: 14px;
+}
+.brand-link-row a {
+    color: #63B3ED !important;
+    text-decoration: none;
+    font-weight: 600;
+}
+.brand-link-row a:hover {
+    text-decoration: underline;
+}
+.direct-dl-btn {
+    display: block;
+    width: 100%;
+    background-color: #0066CC;
+    color: white !important;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -132,16 +197,56 @@ with tab1:
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         st.markdown(f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_fn}" class="direct-dl-btn">📥 Download PDF Direct</a>', unsafe_allow_html=True)
 
-# TAB 2: BRAND SHOWCASE
+
+# TAB 2: BRAND MENUS & GLOBAL MEDIA SHOWCASE
 with tab2:
     st.header("📖 Brand Menus & Global Media Showcase")
+    st.markdown("Individual brand catalogs and global store walk-throughs below are configured with dedicated Google Drive Download & Streaming Links.")
+    st.write("")
+
     for b_key, b_info in BRAND_MENU_CATALOG.items():
-        st.markdown(f'<div class="brand-card-block">### {b_key}\n**Tagline:** {b_info["tagline"]}\n\n**Overview:** {b_info["description"]}\n\n🔗 [Download Menu PDF](https://drive.google.com/uc?export=download&id={b_info["drive_file_id"]})\n\n📸 [Instagram Profile]({b_info["instagram_url"]})</div>', unsafe_allow_html=True)
+        logo_file_path = asset_images.get(b_info.get("logo_key", "phatbuns_sa"))
+        b64_logo_str = get_base64_image(logo_file_path)
+        
+        logo_html = f'<img src="data:image/png;base64,{b64_logo_str}" class="brand-logo-img"/>' if b64_logo_str else ''
+        drive_dl_url = f"https://drive.google.com/uc?export=download&id={b_info['drive_file_id']}"
+        ig_url = b_info.get("instagram_url", "")
 
-    st.subheader("🎬 Global Store Video Walk-Throughs & Gallery")
-    st.markdown(f"📂 **Master Media Directory:** [Open Google Drive Media Folder]({STORE_MEDIA_LINKS['master_folder']})")
+        card_html = f"""
+        <div class="brand-card-block">
+            {logo_html}
+            <div class="brand-card-header">{b_key}</div>
+            <div class="brand-tagline">Tagline: {b_info['tagline']}</div>
+            <div class="brand-overview"><b>Overview:</b> {b_info['description']}</div>
+            <div class="brand-link-row">🔗 <b>Google Drive Direct Download Link:</b> <a href="{drive_dl_url}" target="_blank">{b_info['filename']}</a></div>
+            <div class="brand-link-row" style="margin-top:6px;">📸 <b>Official Instagram Profile:</b> <a href="{ig_url}" target="_blank">{ig_url}</a></div>
+        </div>
+        """
+        st.markdown(card_html, unsafe_allow_html=True)
 
-# TAB 3: REGISTRY
+    st.subheader("🎬 Global Store Video Walk-Throughs & Visual Gallery")
+    
+    st.markdown(f"""
+    <a href="{STORE_MEDIA_LINKS['master_folder']}" target="_blank" style="text-decoration:none;">
+        <div style="background-color:#1A365D; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; margin-bottom:15px; border:1px solid #3182CE;">
+            📂 Open Phatbuns Master Google Drive Media Repository (All Videos & Photos)
+        </div>
+    </a>
+    """, unsafe_allow_html=True)
+
+    m_col1, m_col2 = st.columns(2)
+    with m_col1:
+        st.markdown(f"🖼️ **Sample Store Photos Gallery:** [View Google Drive Gallery]({STORE_MEDIA_LINKS['store_photos']})")
+        st.markdown(f"🎬 **Phatbuns UK Walk-Through 1:** [Watch Video]({STORE_MEDIA_LINKS['uk_video_1']})")
+        st.markdown(f"🎬 **Phatbuns UK Walk-Through 2:** [Watch Video]({STORE_MEDIA_LINKS['uk_video_2']})")
+
+    with m_col2:
+        st.markdown(f"🎬 **Phatbuns Dubai Flagship Video:** [Watch Video]({STORE_MEDIA_LINKS['dubai_video']})")
+        st.markdown(f"🎬 **Store Opening Event & Reels:** [Watch Collection]({STORE_MEDIA_LINKS['master_folder']})")
+        st.markdown(f"🎬 **Kitchen & Pass Operations Line:** [Watch Video Clip]({STORE_MEDIA_LINKS['master_folder']})")
+
+
+# TAB 3: INVESTOR & FRANCHISEE REGISTRY
 with tab3:
     st.header("Franchisee & Investor Lead Intake & Database")
     with st.form("reg_form"):
@@ -173,6 +278,11 @@ with tab3:
                 st.error("Please complete all mandatory fields (*).")
 
     st.subheader("CEO Pipeline Registry")
-    df_pipe = get_pipeline_dataframe()
-    if not df_pipe.empty:
-        st.dataframe(df_pipe, use_container_width=True)
+    try:
+        df_pipe = get_pipeline_dataframe()
+        if not df_pipe.empty:
+            st.dataframe(df_pipe, use_container_width=True)
+        else:
+            st.info("No franchisee applications logged in database yet.")
+    except Exception:
+        st.warning("Database re-initializing...")
