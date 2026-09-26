@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Interface (Full Feasibility Layout)
+# app.py - Main Streamlit Interface (Full Feasibility Layout + Dual Header Logos)
 import os
 import io
 import re
@@ -25,7 +25,7 @@ from pdf_engine import generate_pdf_report, get_asset_images_map
 # Initialize SQLite Database
 init_db()
 
-# Helper function to convert logo images to Base64 HTML strings
+# Helper function to convert logo images to Base64 HTML strings safely
 def get_base64_image(image_path):
     if image_path and os.path.exists(image_path):
         try:
@@ -35,9 +35,15 @@ def get_base64_image(image_path):
             return None
     return None
 
-# Streamlit Page Configuration
+# Load Header Assets
 asset_images = get_asset_images_map()
 sa_app_logo_path = asset_images.get("phatbuns_sa")
+sa_flag_path = asset_images.get("sa_flag")
+
+b64_phatbuns_sa = get_base64_image(sa_app_logo_path)
+b64_sa_flag = get_base64_image(sa_flag_path)
+
+# Streamlit Page Configuration
 app_favicon = Image.open(sa_app_logo_path) if sa_app_logo_path and os.path.exists(sa_app_logo_path) else "🍔"
 
 st.set_page_config(
@@ -47,12 +53,43 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom Styling for Dark Theme & Financial Cards
+# Custom Styling for Dark Theme, Header Banner & Cards
 st.markdown("""
 <style>
 .stApp { background-color: #111111; color: #FFFFFF; }
-.brand-banner { background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333; margin-bottom: 10px; }
-.brand-title { color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; }
+
+/* Dynamic Dual Logo Banner */
+.brand-banner { 
+    background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%); 
+    padding: 20px; 
+    border-radius: 12px; 
+    text-align: center; 
+    border: 1px solid #333; 
+    margin-bottom: 10px; 
+}
+.banner-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+.header-logo-30 {
+    height: 30px;
+    width: auto;
+    object-fit: contain;
+}
+.brand-title { 
+    color: #FFFFFF; 
+    font-size: 24px; 
+    font-weight: 800; 
+    margin: 0; 
+    letter-spacing: 0.5px;
+}
+.banner-subtitle {
+    font-size: 13px;
+    color: #CBD5E0;
+}
 .green-divider { border: none; height: 3px; background-color: #72BF44; border-radius: 2px; margin: 15px 0; }
 
 .calc-box {
@@ -107,7 +144,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="brand-banner"><div class="brand-title">PHATBUNS SOUTH AFRICA</div><div>Bankable Commercial Feasibility, Financial Modeling & Automated Lease Extraction</div></div>', unsafe_allow_html=True)
+# Generate HTML string for Header Icons
+phatbuns_img_html = f'<img src="data:image/png;base64,{b64_phatbuns_sa}" class="header-logo-30" alt="Phatbuns SA"/>' if b64_phatbuns_sa else ''
+flag_img_html = f'<img src="data:image/png;base64,{b64_sa_flag}" class="header-logo-30" alt="SA Flag"/>' if b64_sa_flag else ''
+
+st.markdown(f'''
+<div class="brand-banner">
+    <div class="banner-header-row">
+        {phatbuns_img_html}
+        <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
+        {flag_img_html}
+    </div>
+    <div class="banner-subtitle">Bankable Commercial Feasibility, Financial Modeling & Automated Lease Extraction</div>
+</div>
+''', unsafe_allow_html=True)
 st.markdown('<hr class="green-divider">', unsafe_allow_html=True)
 
 # Application Tabs
