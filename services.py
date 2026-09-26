@@ -1,4 +1,4 @@
-# services.py - External Services, Database & Email Dispatch
+# services.py - External Services, Database, Email & Google Drive Sync Engine
 import os
 import io
 import re
@@ -31,7 +31,11 @@ except ImportError:
 
 from config import ASSETS_DIR, MENUS_DIR, LOCATIONS_DIR, BRAND_MENU_CATALOG
 
-GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
+GDRIVE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/drive.appdata'
+]
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
 DB_FILE = "phatbuns_franchisees.db"
 
@@ -166,21 +170,35 @@ def get_drive_service():
 
 def get_or_create_drive_folder(service, folder_name, parent_id=None):
     try:
-        clean_name = re.sub(r'[^a-zA-Z0-9_\- ]', '_', folder_name)
+        clean_name = folder_name.strip()
         query = f"name = '{clean_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         if parent_id:
             query += f" and '{parent_id}' in parents"
         
-        results = service.files().list(q=query, spaces='drive', fields="files(id, name)", supportsAllDrives=True, includeItemsFromAllDrives=True, corpora='allDrives').execute()
+        results = service.files().list(
+            q=query, 
+            spaces='drive', 
+            fields="files(id, name)", 
+            supportsAllDrives=True, 
+            includeItemsFromAllDrives=True
+        ).execute()
+        
         files = results.get('files', [])
         
         if files:
             return files[0]['id']
         else:
-            file_metadata = {'name': clean_name, 'mimeType': 'application/vnd.google-apps.folder'}
+            file_metadata = {
+                'name': clean_name, 
+                'mimeType': 'application/vnd.google-apps.folder'
+            }
             if parent_id:
                 file_metadata['parents'] = [parent_id]
-            folder = service.files().create(body=file_metadata, fields='id', supportsAllDrives=True).execute()
+            folder = service.files().create(
+                body=file_metadata, 
+                fields='id', 
+                supportsAllDrives=True
+            ).execute()
             return folder.get('id')
     except Exception as e:
         print(f"Drive Folder Error: {e}")
@@ -189,15 +207,23 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
 def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
     try:
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
-        file_metadata = {'name': filename, 'parents': [parent_folder_id]}
-        file = service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
+        file_metadata = {
+            'name': filename, 
+            'parents': [parent_folder_id]
+        }
+        file = service.files().create(
+            body=file_metadata, 
+            media_body=media, 
+            fields='id', 
+            supportsAllDrives=True
+        ).execute()
         return file.get('id')
     except Exception as e:
         print(f"Drive Upload Error: {e}")
         return None
 
 def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
-    loc_clean = re.sub(r'[^a-zA-Z0-9_\- ]', '_', location_name.strip()) if location_name else "Unassigned_Location"
+    loc_clean = location_name.strip() if location_name else "Kwena_Square"
     loc_sub_dir = os.path.join(LOCATIONS_DIR, loc_clean)
     os.makedirs(loc_sub_dir, exist_ok=True)
     local_file_path = os.path.join(loc_sub_dir, pdf_filename)
@@ -207,15 +233,15 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
 
     drive_service = get_drive_service()
     if not drive_service:
-        return local_file_path, "Drive API Inactive (Check Secrets/Service Account)"
+        return local_file_path, "Local saved, but Drive API credentials active check failed"
 
     try:
         site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
         if site_folder_id:
             file_id = upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
             if file_id:
-                return local_file_path, f"Successfully Synced to Google Drive: '{loc_clean}/{pdf_filename}'"
-        return local_file_path, "Google Drive Sync Failed"
+                return local_file_path, f"✅ Created folder & synced output to Google Drive: 'Locations/{loc_clean}/{pdf_filename}'"
+        return local_file_path, "Local saved, Google Drive folder creation skipped"
     except Exception as e:
         return local_file_path, f"Drive Exception: {str(e)}"
 
@@ -293,28 +319,7 @@ def send_investor_lead_notification(data):
                             <td style="padding: 10px; font-weight: bold; border: 1px solid #E2E8F0;">Preferred Target Site</td>
                             <td style="padding: 10px; font-weight: bold; color: #C53030; border: 1px solid #E2E8F0;">{data.get('preferred_site', 'N/A')}</td>
                         </tr>
-                        <tr style="background-color: #EDF2F7;">
-                            <td style="padding: 10px; font-weight: bold; border: 1px solid #E2E8F0;">Company Documentation</td>
-                            <td style="padding: 10px; border: 1px solid #E2E8F0;">{data.get('company_docs_status', 'Not Provided')}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px; font-weight: bold; border: 1px solid #E2E8F0;">Franchisee ID / Passport</td>
-                            <td style="padding: 10px; border: 1px solid #E2E8F0;">{data.get('franchisee_id_status', 'Not Provided')}</td>
-                        </tr>
-                        <tr style="background-color: #EDF2F7;">
-                            <td style="padding: 10px; font-weight: bold; border: 1px solid #E2E8F0;">Proof of Funds Status</td>
-                            <td style="padding: 10px; border: 1px solid #E2E8F0;">{data.get('proof_of_funds_status', 'Not Provided')}</td>
-                        </tr>
                     </table>
-
-                    <div style="margin-top: 20px; padding: 12px; background-color: #EBF8FF; border-left: 4px solid #3182CE; border-radius: 4px;">
-                        <p style="margin: 0; font-size: 12px; color: #2B6CB0;">
-                            <b>System Status:</b> Lead successfully recorded in SQLite database (<code>phatbuns_franchisees.db</code>) and visible in the CEO Pipeline Registry.
-                        </p>
-                    </div>
-                </div>
-                <div style="background-color: #EDF2F7; padding: 12px; text-align: center; font-size: 11px; color: #718096;">
-                    Phatbuns SA Master Operations | Confidential Executive Notification
                 </div>
             </div>
         </body>
