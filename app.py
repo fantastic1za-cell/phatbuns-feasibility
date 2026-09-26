@@ -1477,24 +1477,21 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Spacer(1, 4))
     elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
 
-    effective_blueprint_img = blueprint_pil_img
+        effective_blueprint_img = blueprint_pil_img
     if effective_blueprint_img is None and loc_name:
         auto_bp_path = find_site_blueprint(loc_name)
         if auto_bp_path and os.path.exists(auto_bp_path):
             try:
                 if auto_bp_path.lower().endswith('.pdf') and HAS_PYPDF:
-                    from pypdf import PdfReader
-                    import pfitzer if 'fitz' in globals() else None
-                    # Convert PDF page 1 to PIL image if possible, or use fitz/pdf2image
                     try:
-                        import fitz # PyMuPDF
+                        import fitz  # PyMuPDF
                         doc_pdf = fitz.open(auto_bp_path)
                         page = doc_pdf[0]
                         pix = page.get_pixmap(dpi=150)
                         img_bytes = pix.tobytes("jpeg")
                         effective_blueprint_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
                     except Exception:
-                        effective_blueprint_img = Image.open(auto_bp_path).convert("RGB") if not auto_bp_path.lower().endswith('.pdf') else None
+                        effective_blueprint_img = None
                 else:
                     effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
             except Exception:
