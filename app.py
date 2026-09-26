@@ -94,7 +94,7 @@ def find_site_blueprint(loc_name):
             for root, dirs, files in os.walk(d):
                 for f in files:
                     f_lower = f.lower()
-                    if f_lower.endswith(('.png', '.jpg', '.jpeg')) and ('dev' in f_lower or 'plan' in f_lower or 'layout' in f_lower or 'blueprint' in f_lower or clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)):
+                    if f_lower.endswith(('.png', '.jpg', '.jpeg', '.pdf')) and ('dev' in f_lower or 'plan' in f_lower or 'layout' in f_lower or 'blueprint' in f_lower or 'leasing' in f_lower or clean_target in re.sub(r'[^a-zA-Z0-9]', '', f_lower)):
                         return os.path.join(root, f)
     return None
 
@@ -379,7 +379,7 @@ def get_drive_menu_download_url(file_id_or_folder):
     return f"https://drive.google.com/drive/folders/{file_id_or_folder}"
 
 # ==========================================
-# STRICT GOOGLE DRIVE API & SHARED FOLDER ENGINE (supportsAllDrives=True)
+# ROBUST GOOGLE DRIVE API & SHARED FOLDER ENGINE
 # ==========================================
 GDRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
@@ -484,17 +484,21 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
         f.write(pdf_bytes)
 
     drive_service = get_drive_service()
-    if drive_service:
-        try:
-            site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
-            if site_folder_id:
-                file_id = upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
-                if file_id:
-                    return local_file_path, f"Successfully Synced Site Pack to Google Drive: Locations/{loc_clean}/{pdf_filename}"
-        except Exception as e:
-            return local_file_path, f"Saved Locally | Drive Sync Warning: {e}"
+    if not drive_service:
+        return local_file_path, "Google Drive API Service Not Initialized (Check service_account.json or Streamlit Secrets)"
 
-    return local_file_path, "PDF Generated & Saved to Local Directory | Google Drive Menu Links Active"
+    try:
+        site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
+        if not site_folder_id:
+            return local_file_path, f"Failed to create or find Google Drive folder: '{loc_clean}' under root ID"
+        
+        file_id = upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
+        if file_id:
+            return local_file_path, f"Successfully Synced to Google Drive: '{loc_clean}/{pdf_filename}'"
+        else:
+            return local_file_path, f"Failed to upload file '{pdf_filename}' to Drive folder '{loc_clean}'"
+    except Exception as e:
+        return local_file_path, f"Google Drive Sync Exception: {str(e)}"
 # ==========================================
 # COVER PAGE COMPOSITOR (8K CRISP FULL-BLEED)
 # ==========================================
@@ -540,12 +544,22 @@ def extract_lease_from_source(source_input):
           "external_rent": float,
           "ops_cost": float,
           "rates_taxes": float,
+          "generator": float,
           "escalation": float,
           "mktg": float,
-          "generator": float,
           "turnover_pct": float
         }
-        Extract exact numbers, strictly separating internal area from external/patio seating GLA (e.g., if shop size is 70m² plus 28m² outside, internal_gla=70.0, external_gla=28.0; if rent is R220 shop and R110 outside, internal_rent=220.0, external_rent=110.0; if turnover clause is 7%, turnover_pct=7.0).
+        Extract exact numbers from the proposal sheet:
+        - shop_code: e.g. "79"
+        - internal_gla: e.g. 70.0 (from shop size e.g. 70m²)
+        - external_gla: e.g. 28.0 (from outside seating e.g. 28m²)
+        - internal_rent: e.g. 220.0 (Basic Monthly Rental shop R220)
+        - external_rent: e.g. 110.0 (Basic Monthly Rental outside seating R110)
+        - ops_cost: e.g. 32.50 (Operating costs R32.50)
+        - rates_taxes: e.g. 15.00 (Rates estimated at R15.00)
+        - generator: e.g. 8.00 (Generator charge R8.00)
+        - mktg: e.g. 3.0 (Marketing contribution 3%)
+        - turnover_pct: e.g. 7.0 (Annual turnover percentage 7%)
         """
         contents_payload = [source_input, prompt] if not isinstance(source_input, str) else [source_input + "\n\n" + prompt]
         response = client.models.generate_content(
@@ -572,33 +586,37 @@ def parse_landlord_text(text):
         val = shop_m.group(1).split('\n')[0].strip()
         if len(val) < 15: data['shop_code'] = val
 
-    int_area_m = re.search(r'(?:Shop\s*Size|Internal\s*Area|Area)\s*[:\-]?\s*([\d\.\,]+)\s*(?:sqm|m2|m²)', text_clean, re.IGNORECASE)
-    if int_area_m: data['internal_gla'] = float(int_area_m.group(1).replace(',', '.'))
-
-    ext_area_m = re.search(r'(?:outside|external|patio)\s*(?:seating|area)?\s*[:\-]?\s*([\d\.\,]+)\s*(?:sqm|m2|m²)', text_clean, re.IGNORECASE)
-    if ext_area_m: data['external_gla'] = float(ext_area_m.group(1).replace(',', '.'))
+    int_area_m = re.search(r'([\d\.]+)\s*(?:m²|sqm|m2)\s*(?:plus|and|\+)?\s*([\d\.]+)\s*(?:m²|sqm|m2)?\s*(?:outside|patio|external)', text_clean, re.IGNORECASE)
+    if int_area_m:
+        data['internal_gla'] = float(int_area_m.group(1))
+        data['external_gla'] = float(int_area_m.group(2))
+    else:
+        int_area_m2 = re.search(r'(?:Shop\s*Size|Internal\s*Area|Area)\s*[:\-]?\s*([\d\.\,]+)\s*(?:sqm|m2|m²)', text_clean, re.IGNORECASE)
+        if int_area_m2: data['internal_gla'] = float(int_area_m2.group(1).replace(',', '.'))
+        ext_area_m2 = re.search(r'(?:outside|external|patio)\s*(?:seating|area)?\s*[:\-]?\s*([\d\.\,]+)\s*(?:sqm|m2|m²)', text_clean, re.IGNORECASE)
+        if ext_area_m2: data['external_gla'] = float(ext_area_m2.group(1).replace(',', '.'))
 
     int_rent_m = re.search(r'R?\s*([\d]+(?:\.[\d]+)?)\s*(?:excl|per|\/)?\s*(?:vat)?\s*(?:Shop|Basic)', text_clean, re.IGNORECASE)
     if not int_rent_m:
-        int_rent_m = re.search(r'(?:Basic\s*Monthly\s*Rental|Rental\s*internal|Gross\s*Rental)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
+        int_rent_m = re.search(r'R\s*([\d]+(?:\.[\d]+)?)\s*(?:excl\s*vat\s*Shop|Shop)', text_clean, re.IGNORECASE)
     if int_rent_m: data['internal_rent'] = float(int_rent_m.group(1))
 
     ext_rent_m = re.search(r'R?\s*([\d]+(?:\.[\d]+)?)\s*(?:excl|per|\/)?\s*(?:vat)?\s*(?:outside|seating)', text_clean, re.IGNORECASE)
     if ext_rent_m: data['external_rent'] = float(ext_rent_m.group(1))
 
-    ops_m = re.search(r'(?:Operating\s*Costs|Ops\s*Cost|Municipal\s*Charges)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
+    ops_m = re.search(r'(?:Operating\s*Costs|Ops\s*Cost)\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
     if ops_m: data['ops_cost'] = float(ops_m.group(1))
-
-    esc_m = re.search(r'Escalation\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
-    if esc_m: data['escalation'] = float(esc_m.group(1))
 
     rates_m = re.search(r'Rates\s*(?:&|and)?\s*taxes\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
     if rates_m: data['rates_taxes'] = float(rates_m.group(1))
 
+    gen_m = re.search(r'Generator\s*(?:Charge)?\s*[:\-]?\s*R?\s*([\d]+(?:\.[\d]+)?)', text_clean, re.IGNORECASE)
+    if gen_m: data['generator'] = float(gen_m.group(1))
+
     mktg_m = re.search(r'Marketing\s*(?:Contribution)?\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
     if mktg_m: data['mktg'] = float(mktg_m.group(1))
 
-    turn_m = re.search(r'(?:Annual\s*Turnover|Turnover\s*Rental)\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
+    turn_m = re.search(r'(?:Annual\s*Turnover|Turnover\s*Percentage)\s*[:\-]?\s*([\d]+(?:\.[\d]+)?)\s*%', text_clean, re.IGNORECASE)
     if turn_m: data['turnover_pct'] = float(turn_m.group(1))
 
     return data
@@ -1254,7 +1272,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("Lease Period & Renewal", body_bold), Paragraph("5 Years Initial Period + 5-Year Renewal Option", body_regular), Paragraph("60 Months Base Amortization", body_regular)],
         [Paragraph("Base Net Rental Rate Target", body_bold), Paragraph(f"Shop: R {int(round(int_rent))} /m² | Patio: R {int(round(ext_rent))} /m²", body_regular), Paragraph(f"R {int(round(monthly_base_rent_total)):,} / month", body_regular)],
         [Paragraph("Annual Rental Escalation", body_bold), Paragraph("7.0% per annum effective anniversary", body_regular), Paragraph(f"Year 2 Base: R {int(round(monthly_base_rent_total * 1.07)):,} / month", body_regular)],
-        [Paragraph("Annual Turnover Rental Clause", body_bold), Paragraph(f"{turnover_clause_pct}% of net turnover vs Base Net Rental (whichever greater)", body_regular), Paragraph(f"Effective Threshold: > R {int(round(monthly_threshold_zar)):,} p.m.", body_regular)],
+        [Paragraph("Monthly Turnover Rental Clause", body_bold), Paragraph(f"{turnover_clause_pct}% of net turnover vs Base Net Rental (whichever greater)", body_regular), Paragraph(f"Effective Threshold: > R {int(round(monthly_threshold_zar)):,} p.m.", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
     ]
     t_sec2 = Table(sec2_table_data, colWidths=[150, 248, 160])
@@ -1464,7 +1482,21 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         auto_bp_path = find_site_blueprint(loc_name)
         if auto_bp_path and os.path.exists(auto_bp_path):
             try:
-                effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
+                if auto_bp_path.lower().endswith('.pdf') and HAS_PYPDF:
+                    from pypdf import PdfReader
+                    import pfitzer if 'fitz' in globals() else None
+                    # Convert PDF page 1 to PIL image if possible, or use fitz/pdf2image
+                    try:
+                        import fitz # PyMuPDF
+                        doc_pdf = fitz.open(auto_bp_path)
+                        page = doc_pdf[0]
+                        pix = page.get_pixmap(dpi=150)
+                        img_bytes = pix.tobytes("jpeg")
+                        effective_blueprint_img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+                    except Exception:
+                        effective_blueprint_img = Image.open(auto_bp_path).convert("RGB") if not auto_bp_path.lower().endswith('.pdf') else None
+                else:
+                    effective_blueprint_img = Image.open(auto_bp_path).convert("RGB")
             except Exception:
                 pass
 
@@ -1990,7 +2022,7 @@ with tab1:
             set_site_state("ops_cost", ops_cost_sqm)
             total_ops_cost = ops_cost_sqm * total_gla
         with col_rates:
-            def_rates = get_site_state("rates_taxes", 0.00)
+            def_rates = get_site_state("rates_taxes", 15.00 if location_name == "Rondebuilt Centre" else 0.00)
             rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=def_rates, step=0.5, format="%.2f", key=f"{site_key}_rates_input")
             set_site_state("rates_taxes", rates_taxes_sqm)
             total_rates_taxes = rates_taxes_sqm * total_gla
