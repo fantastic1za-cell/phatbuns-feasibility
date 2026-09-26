@@ -210,8 +210,8 @@ def research_location_online(location_name):
             "suburb": "Germiston, Ekurhuleni, Gauteng",
             "options": ["Germiston, Ekurhuleni, Gauteng", "Rondebuilt Centre, Germiston"],
             "footfall": "~380,000 visits/month (~4.5M Annually)",
-            "households": "55,000 Active Households (10 km Radius)",
-            "competitors": "Adega, Nando's, Steers, Debonairs, Wimpy",
+            "households": "24,061 Active Households / ~76,995 Area Population",
+            "competitors": "Shoprite, Boxer, Build-It Flagship, Debonairs, Wimpy, Pedro's, Hungry Lion, Clicks, Pep, Ackermans, Capitec",
             "lsm_profile": "LSM 6–9 / Established Commercial & Industrial Corridor",
             "default_rent": 220.0,
             "turnover_clause_pct": 7.0
@@ -283,12 +283,12 @@ def research_location_online(location_name):
 
                 Return ONLY a valid JSON object:
                 {{
-                  "suburb": "Precise Suburb, City, Province (e.g. Germiston, Ekurhuleni, Gauteng)",
+                  "suburb": "Precise Suburb, City, Province",
                   "options": ["Option 1", "Option 2"],
                   "landlord": "Managing agent or landlord if known",
-                  "mall_size": "Estimated GLA e.g. 23,257 m² Regional Centre",
+                  "mall_size": "Estimated GLA e.g. 23,275 m² Community Centre",
                   "footfall": "Estimated monthly visits e.g. ~380,000 visits/month",
-                  "households": "Estimated catchment e.g. 55,000 Active Households (10 km Radius)",
+                  "households": "Estimated catchment e.g. 24,061 Households / ~76,995 Population",
                   "competitors": "Key actual food tenants present in the mall (AUDITED & ACCURATE)",
                   "lsm_profile": "Accurate LSM profile e.g. LSM 6-9 / Commercial Node",
                   "default_rent": float (Realistic market rent target per sqm e.g. 220.0),
@@ -545,7 +545,7 @@ def extract_lease_from_source(source_input):
           "generator": float,
           "turnover_pct": float
         }
-        Extract exact numbers (e.g., if shop size is 70m² plus 28m² outside, internal_gla=70.0, external_gla=28.0; if rent is R220 shop and R110 outside, internal_rent=220.0, external_rent=110.0; if turnover clause is 7%, turnover_pct=7.0).
+        Extract exact numbers, strictly separating internal area from external/patio seating GLA (e.g., if shop size is 70m² plus 28m² outside, internal_gla=70.0, external_gla=28.0; if rent is R220 shop and R110 outside, internal_rent=220.0, external_rent=110.0; if turnover clause is 7%, turnover_pct=7.0).
         """
         contents_payload = [source_input, prompt] if not isinstance(source_input, str) else [source_input + "\n\n" + prompt]
         response = client.models.generate_content(
@@ -993,10 +993,10 @@ SITE_PROFILES = {
         "suburb": "Germiston, Ekurhuleni, Gauteng",
         "shop": "79",
         "landlord": "Vegieland Properties (Pty) Ltd",
-        "mall_size": "23,257 m² Commercial Centre",
+        "mall_size": "23,275 m² Community Centre",
         "footfall": "~380,000 visits/month (~4.5M Annually)",
-        "households": "55,000 Active Households (10 km Radius)",
-        "competitors": "Adega, Nando's, Steers, Debonairs, Wimpy",
+        "households": "24,061 Active Households / ~76,995 Area Population",
+        "competitors": "Shoprite, Boxer, Build-It Flagship, Debonairs, Wimpy, Pedro's, Hungry Lion, Clicks, Pep, Ackermans, Capitec",
         "lsm_profile": "LSM 6–9 / Established Commercial & Industrial Corridor",
         "default_rent": 220.0,
         "default_ops": 32.50,
@@ -1165,8 +1165,8 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         "landlord": "Property Developers / Landlord",
         "mall_size": "Regional Flagship Retail Node",
         "footfall": "~550,000 visits/month (~6.6M Annually)",
-        "households": "95,000–115,000 Active Households (10 km Radius)",
-        "competitors": "Nando's, Steers, Debonairs, Wimpy, RocoMamas",
+        "households": "24,061 Active Households / ~76,995 Area Population",
+        "competitors": "Shoprite, Boxer, Build-It Flagship, Debonairs, Wimpy, Pedro's, Hungry Lion",
         "lsm_profile": "LSM 7–10 / High Purchasing Power Corridor",
         "default_rent": 280.0,
         "default_ops": 35.0,
@@ -1231,7 +1231,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         [Paragraph("SITE PARAMETER", body_white_bold), Paragraph("SPECIFICATION", body_white_bold), Paragraph("TURNKEY CAPITAL SCHEDULE (EXCL. VAT)", body_white_bold), Paragraph("AMOUNT", body_white_bold)],
         [Paragraph("Location Name", body_bold), Paragraph(f"{loc_name if loc_name else 'Unassigned'} (Shop {shop})", body_regular), Paragraph("50% Deposit on Signing Agreement", body_regular), Paragraph(f"R {int(round(capital*0.50)):,}", body_regular)],
         [Paragraph("Address / Node", body_bold), Paragraph(str(suburb), body_regular), Paragraph("40% Beneficial Occupation (BO)", body_regular), Paragraph(f"R {int(round(capital*0.40)):,}", body_regular)],
-        [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model}", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {int(round(capital*0.10)):,}", body_regular)],
+        [Paragraph("Store Footprint", body_bold), Paragraph(f"{total_gla:.2f} m² {model} ({int_gla:.0f}m² Int + {ext_gla:.0f}m² Ext)", body_regular), Paragraph("10% Prior to Store Opening", body_regular), Paragraph(f"R {int(round(capital*0.10)):,}", body_regular)],
         [Paragraph("Managing Agent", body_bold), Paragraph(site_p["landlord"], body_regular), Paragraph("Total Turnkey Capital Outlay", body_bold), Paragraph(f"R {int(round(capital)):,}", body_regular)],
         [Paragraph("Mall GLA Size", body_bold), Paragraph(site_p["mall_size"], body_regular), Paragraph("Working Capital Reserve", body_regular), Paragraph(f"R {int(round(wc)):,}", body_regular)],
         [Paragraph("Site Plan Attached", body_bold), Paragraph("Yes (Rendered on Page 5)", body_regular), Paragraph("Landlord Rental Deposit", body_regular), Paragraph(f"R {int(round(total_lease_outlay*3)):,}", body_regular)],
@@ -1247,14 +1247,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(sec2_banner)
 
     monthly_base_rent_total = (int_rent * int_gla) + (ext_rent * ext_gla)
-    annual_threshold_zar = monthly_base_rent_total * 12 / (turnover_clause_pct / 100.0)
+    monthly_threshold_zar = monthly_base_rent_total / (turnover_clause_pct / 100.0)
 
     sec2_table_data = [
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
         [Paragraph("Lease Period & Renewal", body_bold), Paragraph("5 Years Initial Period + 5-Year Renewal Option", body_regular), Paragraph("60 Months Base Amortization", body_regular)],
         [Paragraph("Base Net Rental Rate Target", body_bold), Paragraph(f"Shop: R {int(round(int_rent))} /m² | Patio: R {int(round(ext_rent))} /m²", body_regular), Paragraph(f"R {int(round(monthly_base_rent_total)):,} / month", body_regular)],
         [Paragraph("Annual Rental Escalation", body_bold), Paragraph("7.0% per annum effective anniversary", body_regular), Paragraph(f"Year 2 Base: R {int(round(monthly_base_rent_total * 1.07)):,} / month", body_regular)],
-        [Paragraph("Annual Turnover Rental Clause", body_bold), Paragraph(f"{turnover_clause_pct}% of net turnover vs Base Net Rental (whichever greater)", body_regular), Paragraph(f"Effective Threshold: > R {int(round(annual_threshold_zar)):,} p.a.", body_regular)],
+        [Paragraph("Annual Turnover Rental Clause", body_bold), Paragraph(f"{turnover_clause_pct}% of net turnover vs Base Net Rental (whichever greater)", body_regular), Paragraph(f"Effective Threshold: > R {int(round(monthly_threshold_zar)):,} p.m.", body_regular)],
         [Paragraph("Beneficial Occupation (BO)", body_bold), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", body_regular), Paragraph("Fitout Schedule: 60 Days", body_regular)]
     ]
     t_sec2 = Table(sec2_table_data, colWidths=[150, 248, 160])
@@ -1415,18 +1415,37 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     total_5yr_royalties = sum([row['Royalties (9%)'] for idx, row in df_pnl_annual.iterrows()])
     total_5yr_net_profit = sum([row['Net Operating Profit'] for idx, row in df_pnl_annual.iterrows()])
     initial_total_investment = capital + wc
+
+    roi_yr_list = []
+    for idx, row in df_pnl_annual.iterrows():
+        net_prof_yr = row['Net Operating Profit']
+        yr_roi = (net_prof_yr / initial_total_investment) * 100.0 if initial_total_investment > 0 else 0.0
+        roi_yr_list.append(f"{row['Year_Label']}: {yr_roi:.1f}%")
+    
     five_yr_roi_pct = (total_5yr_net_profit / initial_total_investment) * 100.0 if initial_total_investment > 0 else 0.0
+    roi_breakdown_str = ", ".join(roi_yr_list) + f" | <b>5-Year Cumulative ROI: {five_yr_roi_pct:.1f}%</b>"
+
+    is_site_feasible = total_5yr_net_profit > 0
+    feasibility_status_text = "Phatbuns South Africa, advise the site as Feasible." if is_site_feasible else "Phatbuns South Africa, Does not advise this Site."
+    feasibility_bg_color = colors.HexColor('#28a745') if is_site_feasible else colors.HexColor('#C53030')
+    feasibility_text_color = colors.HexColor('#000000') if is_site_feasible else colors.HexColor('#FFFFFF')
 
     sec11a_data = [
         [Paragraph("FINANCIAL METRIC / AGGREGATE CATEGORY", body_white_bold), Paragraph("5-YEAR PROJECTED CUMULATIVE VALUE (ZAR)", body_white_bold)],
         [Paragraph("Total Landlord Rentals Paid (5 Years)", body_bold), Paragraph(f"R {int(round(total_5yr_rentals)):,}", body_regular)],
         [Paragraph("Total Central Royalties Paid (9% over 5 Years)", body_bold), Paragraph(f"R {int(round(total_5yr_royalties)):,}", body_regular)],
         [Paragraph("Cumulative Net Operating Profit (After Debt Service)", body_bold), Paragraph(f"R {int(round(total_5yr_net_profit)):,}", body_regular)],
-        [Paragraph("5-Year Aggregate Return on Investment (ROI %)", body_bold), Paragraph(f"<b>{five_yr_roi_pct:.1f}% ROI</b> on Initial Capital Outlay (R {int(round(initial_total_investment)):,})", body_regular)],
-        [Paragraph("Phatbuns SA Master Recommendation & Disclaimer", body_bold), Paragraph(f"<b>Recommended Model:</b> {recommended_model_name}. The system explicitly confirms this model is best suited for the site based on feasibility. Any store footprint or model larger than the recommended size will require a formal re-evaluation and feasibility study, as this will increase the recovery of investment term and impact ROI values. All figures are projections (E&OE).", body_regular)]
+        [Paragraph("Year-by-Year & Cumulative ROI (%)", body_bold), Paragraph(roi_breakdown_str, body_regular)],
+        [Paragraph("Site Feasibility & Master Recommendation", body_bold), Paragraph(f"<b>{feasibility_status_text}</b><br/>Recommended Model: {recommended_model_name}. Any store footprint larger than recommended requires formal re-evaluation (E&OE).", ParagraphStyle('FeasStyle', parent=body_regular, textColor=feasibility_text_color, fontName='Helvetica-Bold'))]
     ]
     t_sec11a = Table(sec11a_data, colWidths=[200, 358])
-    t_sec11a.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
+    t_sec11a.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), NAVY_HEADER),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
+        ('PADDING', (0,0), (-1,-1), 2.5),
+        ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG),
+        ('BACKGROUND', (1, 5), (1, 5), feasibility_bg_color)
+    ]))
     elements.append(t_sec11a)
 
     elements.append(PageBreak())
@@ -1454,7 +1473,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
             bp_byte_arr = io.BytesIO()
             effective_blueprint_img.save(bp_byte_arr, format='JPEG', quality=95)
             bp_byte_arr.seek(0)
-            rl_blueprint = RLImage(bp_byte_arr, width=480, height=310)
+            rl_blueprint = RLImage(bp_byte_arr, width=480, height=310, preserveAspectRatio=True)
             elements.append(rl_blueprint)
         except Exception:
             elements.append(Paragraph("<b>Blueprint Render Initialized</b>", ParagraphStyle('NAStyle', parent=body_regular, textColor=colors.HexColor('#8B0000'), fontSize=10)))
@@ -1488,7 +1507,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         bp_byte_arr = io.BytesIO()
         placeholder_img.save(bp_byte_arr, format='JPEG', quality=95)
         bp_byte_arr.seek(0)
-        rl_blueprint = RLImage(bp_byte_arr, width=480, height=310)
+        rl_blueprint = RLImage(bp_byte_arr, width=480, height=310, preserveAspectRatio=True)
         elements.append(rl_blueprint)
 
     elements.append(Spacer(1, 8))
@@ -1496,7 +1515,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 6: DEDICATED BRAND MENUS & MEDIA SHOWCASE LINKS
+    # PAGE 6: DEDICATED BRAND MENUS & MEDIA SHOWCASE
     elements.append(Paragraph("<b>PHATBUNS BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE</b>", blueprint_header_style))
     elements.append(Paragraph("<b>CLICKABLE DOWNLOAD LINKS FOR BRAND MENUS, STORE VISUALS & VIDEO WALK-THROUGHS</b>", blueprint_subheader_style))
     elements.append(Spacer(1, 4))
@@ -1772,8 +1791,8 @@ with tab1:
         "default_gla": 98.0,
         "model": "Express Model",
         "footfall": "~380,000 visits/month",
-        "households": "55,000 Active Households (10 km Radius)",
-        "competitors": "Adega, Nando's, Steers, Debonairs, Wimpy",
+        "households": "24,061 Active Households / ~76,995 Area Population",
+        "competitors": "Shoprite, Boxer, Build-It Flagship, Debonairs, Wimpy, Pedro's, Hungry Lion",
         "lsm_profile": "LSM 6-9",
         "turnover_clause_pct": 7.0
     })
@@ -1881,7 +1900,7 @@ with tab1:
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
     if f"{site_key}_int_gla_input" not in st.session_state:
-        st.session_state[f"{site_key}_int_gla_input"] = site_default_info.get("default_gla", model_data["default_gla"])
+        st.session_state[f"{site_key}_int_gla_input"] = 70.0 if location_name == "Rondebuilt Centre" else site_default_info.get("default_gla", model_data["default_gla"])
     if f"{site_key}_external_gla" not in st.session_state:
         st.session_state[f"{site_key}_external_gla"] = 28.0 if location_name == "Rondebuilt Centre" else 0.0
     if f"{site_key}_capex_input" not in st.session_state:
@@ -1991,7 +2010,7 @@ with tab1:
             def_turn = get_site_state("turnover_pct", site_default_info.get("turnover_clause_pct", 7.0))
             turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=def_turn, step=0.5, format="%.2f", key=f"{site_key}_turn_pct_input")
             set_site_state("turnover_pct", turnover_clause_pct)
-            annual_threshold_zar = (total_base_rent_monthly * 12) / (turnover_clause_pct / 100.0)
+            monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0)
         with col_labor:
             monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
 
@@ -2001,7 +2020,7 @@ with tab1:
         <div class="lease-outlay-card">
             <b style="color:#FFFFFF; font-size:15px;">🏬 Total Monthly Landlord Lease Outlay ({location_name if location_name else 'Target Site'}):</b><br/>
             <span style="color:#ECC94B; font-size:18px; font-weight:800;">R {int(round(total_lease_outlay_monthly)):,} (Excl. VAT)</span><br/>
-            <span style="color:#CCCCCC; font-size:12px;">Turnover Clause: <b>{turnover_clause_pct}%</b> of net turnover effective when annual turnover exceeds <b>R {int(round(annual_threshold_zar)):,} p.a.</b></span>
+            <span style="color:#CCCCCC; font-size:12px;">Turnover Clause: <b>{turnover_clause_pct}%</b> of net turnover effective when monthly turnover exceeds <b>R {int(round(monthly_threshold_zar)):,} p.m.</b></span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2019,7 +2038,7 @@ with tab1:
         total_ops_cost = ops_cost_sqm * total_gla
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
         total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_landlord_marketing
-        annual_threshold_zar = (total_base_rent_monthly * 12) / (turnover_clause_pct / 100.0)
+        monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0)
 
         st.success(f"🎯 **Mode 2 Active:** Localized market intelligence lease target set to **R {int(round(internal_rent_sqm))}/m²** for **{location_name if location_name else 'Selected Area'}** P&L calculations and landlord offer sheet.")
 
@@ -2138,7 +2157,7 @@ with tab1:
         })
 
     clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip()) if location_name else "Unassigned_Site"
-    pdf_filename = f"{clean_site_slug}_{shop_code if shop_code else 'Unit'}_Phatbuns_Master_Investor_Pack.pdf"
+    pdf_filename = f"{clean_site_slug}_{selected_model.replace(' ', '_')}_{int(total_gla)}m2_.pdf"
 
     pdf_buffer = generate_pdf_report(
         location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
