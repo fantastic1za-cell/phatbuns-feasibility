@@ -1267,7 +1267,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(sec2_banner)
 
     monthly_base_rent_total = (int_rent * int_gla) + (ext_rent * ext_gla)
-    monthly_threshold_zar = monthly_base_rent_total / (turnover_clause_pct / 100.0)
+    monthly_threshold_zar = monthly_base_rent_total / (turnover_clause_pct / 100.0) if turnover_clause_pct > 0 else 0.0
 
     sec2_table_data = [
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
@@ -1798,7 +1798,7 @@ with tab1:
                         st.session_state["suburb_node_input_key"] = suburb_val
                         st.session_state[f"{re.sub(r'[^a-zA-Z0-9]', '_', custom_input.lower())}_suburb_val"] = suburb_val
                         
-                        st.success(f"Location intelligence retrieved for **{custom_input}**! Suburb Node: **{suburb_val}** | Market Rent Target: **R {web_intel.get('default_rent', 220.0)}/m²**")
+                        st.success(f"Location intelligence retrieved for **{custom_input}**! Suburb Node: **{suburb_val}** | Market Rent Target: **R {web_intel.get('default_rent', 280.0)}/m²**")
         else:
             location_name = selected_location
 
@@ -1817,9 +1817,9 @@ with tab1:
     site_default_info = SITE_PROFILES.get(location_name, {
         "suburb": LOCATION_LOOKUP.get(selected_location, ""),
         "shop": "",
-        "default_rent": 220.0,
-        "default_ops": 32.50,
-        "default_gla": 98.0,
+        "default_rent": 0.0,
+        "default_ops": 0.0,
+        "default_gla": 0.0,
         "model": "Express Model",
         "footfall": "~380,000 visits/month",
         "households": "24,061 Active Households / ~76,995 Area Population",
@@ -1828,7 +1828,7 @@ with tab1:
         "turnover_clause_pct": 7.0
     })
 
-    area_market_rent = site_default_info.get("default_rent", 220.0)
+    area_market_rent = site_default_info.get("default_rent", 0.0)
 
     footfall_raw = site_default_info.get("footfall", "380000")
     footfall_num_match = re.search(r'[\d\,]+', footfall_raw.replace('~', ''))
@@ -1931,13 +1931,13 @@ with tab1:
     model_data = STORE_MODELS.get(selected_model, STORE_MODELS["Express Model"])
 
     if f"{site_key}_int_gla_input" not in st.session_state:
-        st.session_state[f"{site_key}_int_gla_input"] = 70.0 if location_name == "Rondebuilt Centre" else site_default_info.get("default_gla", model_data["default_gla"])
+        st.session_state[f"{site_key}_int_gla_input"] = 0.0
     if f"{site_key}_external_gla" not in st.session_state:
-        st.session_state[f"{site_key}_external_gla"] = 28.0 if location_name == "Rondebuilt Centre" else 0.0
+        st.session_state[f"{site_key}_external_gla"] = 0.0
     if f"{site_key}_capex_input" not in st.session_state:
-        st.session_state[f"{site_key}_capex_input"] = model_data["turnkey_capital"]
+        st.session_state[f"{site_key}_capex_input"] = 0.0
     if f"{site_key}_wc_input" not in st.session_state:
-        st.session_state[f"{site_key}_wc_input"] = model_data["working_capital"]
+        st.session_state[f"{site_key}_wc_input"] = 0.0
 
     st.subheader("Space Allocation (GLA Breakdown)")
     col_int_gla, col_ext_gla = st.columns(2)
@@ -1999,14 +1999,14 @@ with tab1:
         st.subheader("Landlord Lease Breakdown (Per SQM)")
         col_int_rent, col_ext_rent = st.columns(2)
         with col_int_rent:
-            def_int_rent = get_site_state("internal_rent", area_market_rent)
+            def_int_rent = get_site_state("internal_rent", 0.0)
             internal_rent_sqm = st.number_input("Internal Base Rent (R / sqm / month)", value=def_int_rent, step=10.0, format="%.2f", key=f"{site_key}_int_rent_input")
             set_site_state("internal_rent", internal_rent_sqm)
             total_internal_rent = internal_gla * internal_rent_sqm
             st.caption(f"💵 **Total Monthly Internal Rent:** R {int(round(total_internal_rent)):,} (Excl. VAT)")
 
         with col_ext_rent:
-            def_ext_rent = get_site_state("external_rent", 110.0 if location_name == "Rondebuilt Centre" else 0.00)
+            def_ext_rent = get_site_state("external_rent", 0.0)
             external_rent_sqm = st.number_input("External Base Rent (R / sqm / month)", value=def_ext_rent, step=5.0, format="%.2f", key=f"{site_key}_ext_rent_input")
             set_site_state("external_rent", external_rent_sqm)
             total_external_rent = external_gla * external_rent_sqm
@@ -2016,32 +2016,32 @@ with tab1:
 
         col_ops, col_rates, col_gen = st.columns(3)
         with col_ops:
-            def_ops = get_site_state("ops_cost", site_default_info.get("default_ops", 32.50))
+            def_ops = get_site_state("ops_cost", 0.0)
             ops_cost_sqm = st.number_input("Ops Cost / Municipal (R / sqm)", value=def_ops, step=1.0, format="%.2f", key=f"{site_key}_ops_input")
             set_site_state("ops_cost", ops_cost_sqm)
             total_ops_cost = ops_cost_sqm * total_gla
         with col_rates:
-            def_rates = get_site_state("rates_taxes", 15.00 if location_name == "Rondebuilt Centre" else 0.00)
+            def_rates = get_site_state("rates_taxes", 0.0)
             rates_taxes_sqm = st.number_input("Rates & Taxes (R / sqm)", value=def_rates, step=0.5, format="%.2f", key=f"{site_key}_rates_input")
             set_site_state("rates_taxes", rates_taxes_sqm)
             total_rates_taxes = rates_taxes_sqm * total_gla
         with col_gen:
-            def_gen = get_site_state("generator", 8.00 if location_name == "Rondebuilt Centre" else 0.00)
+            def_gen = get_site_state("generator", 0.0)
             generator_cost_sqm = st.number_input("Generator Cost (R / sqm)", value=def_gen, step=0.5, format="%.2f", key=f"{site_key}_gen_input")
             set_site_state("generator", generator_cost_sqm)
             total_generator_cost = generator_cost_sqm * total_gla
 
         col_mktg_pct, col_labor, col_turn_pct = st.columns(3)
         with col_mktg_pct:
-            def_mktg = get_site_state("mktg", 3.00 if location_name == "Rondebuilt Centre" else 5.00)
+            def_mktg = get_site_state("mktg", 0.0)
             landlord_marketing_pct = st.number_input("Landlord Marketing (% of Basic Rent)", value=def_mktg, step=0.5, format="%.2f", key=f"{site_key}_mktg_input")
             set_site_state("mktg", landlord_marketing_pct)
             total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
         with col_turn_pct:
-            def_turn = get_site_state("turnover_pct", site_default_info.get("turnover_clause_pct", 7.0))
+            def_turn = get_site_state("turnover_pct", 7.0)
             turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=def_turn, step=0.5, format="%.2f", key=f"{site_key}_turn_pct_input")
             set_site_state("turnover_pct", turnover_clause_pct)
-            monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0)
+            monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0) if turnover_clause_pct > 0 else 0.0
         with col_labor:
             monthly_labor_cost = st.number_input("Monthly Store Staffing / Payroll (ZAR)", value=model_data["labor_monthly"], step=5000.0, format="%.2f", key=f"{site_key}_labor_input")
 
@@ -2056,20 +2056,20 @@ with tab1:
         """, unsafe_allow_html=True)
 
     else:
-        internal_rent_sqm = area_market_rent
+        internal_rent_sqm = 0.0
         external_rent_sqm = 0.00
-        ops_cost_sqm = site_default_info.get("default_ops", 35.0)
+        ops_cost_sqm = 0.0
         rates_taxes_sqm = 0.00
         generator_cost_sqm = 0.00
-        landlord_marketing_pct = 5.00
-        turnover_clause_pct = site_default_info.get("turnover_clause_pct", 7.0)
+        landlord_marketing_pct = 0.00
+        turnover_clause_pct = 7.0
         monthly_labor_cost = model_data["labor_monthly"]
 
         total_base_rent_monthly = (internal_gla * internal_rent_sqm) + (external_gla * external_rent_sqm)
         total_ops_cost = ops_cost_sqm * total_gla
         total_landlord_marketing = total_base_rent_monthly * (landlord_marketing_pct / 100.0)
         total_lease_outlay_monthly = total_base_rent_monthly + total_ops_cost + total_landlord_marketing
-        monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0)
+        monthly_threshold_zar = total_base_rent_monthly / (turnover_clause_pct / 100.0) if turnover_clause_pct > 0 else 0.0
 
         st.success(f"🎯 **Mode 2 Active:** Localized market intelligence lease target set to **R {int(round(internal_rent_sqm))}/m²** for **{location_name if location_name else 'Selected Area'}** P&L calculations and landlord offer sheet.")
 
@@ -2079,11 +2079,11 @@ with tab1:
     gp_margin = 0.55
     aov_ticket = 190.0
 
-    capex_12 = turnkey_capital / 12
-    capex_24 = turnkey_capital / 24
-    capex_36 = turnkey_capital / 36
-    capex_48 = turnkey_capital / 48
-    capex_60 = turnkey_capital / 60
+    capex_12 = turnkey_capital / 12 if 12 > 0 else 0
+    capex_24 = turnkey_capital / 24 if 24 > 0 else 0
+    capex_36 = turnkey_capital / 36 if 36 > 0 else 0
+    capex_48 = turnkey_capital / 48 if 48 > 0 else 0
+    capex_60 = turnkey_capital / 60 if 60 > 0 else 0
 
     outflow_breakeven = total_lease_outlay_monthly + monthly_labor_cost
     outflow_12 = outflow_breakeven + capex_12
@@ -2092,15 +2092,15 @@ with tab1:
     outflow_48 = outflow_breakeven + capex_48
     outflow_60 = outflow_breakeven + capex_60
 
-    turnover_req_be = outflow_breakeven / gp_margin
-    turnover_req_12 = outflow_12 / gp_margin
-    turnover_req_24 = outflow_24 / gp_margin
-    turnover_req_36 = outflow_36 / gp_margin
-    turnover_req_48 = outflow_48 / gp_margin
-    turnover_req_60 = outflow_60 / gp_margin
+    turnover_req_be = outflow_breakeven / gp_margin if gp_margin > 0 else 0
+    turnover_req_12 = outflow_12 / gp_margin if gp_margin > 0 else 0
+    turnover_req_24 = outflow_24 / gp_margin if gp_margin > 0 else 0
+    turnover_req_36 = outflow_36 / gp_margin if gp_margin > 0 else 0
+    turnover_req_48 = outflow_48 / gp_margin if gp_margin > 0 else 0
+    turnover_req_60 = outflow_60 / gp_margin if gp_margin > 0 else 0
 
     def make_target_row(turnover_val):
-        units_m = math.ceil(turnover_val / aov_ticket)
+        units_m = math.ceil(turnover_val / aov_ticket) if aov_ticket > 0 else 0
         units_d = math.ceil(units_m / 30)
         return f"R {int(round(turnover_val)):,}", f"{units_m:,} units", f"{units_d} units / day"
 
@@ -2128,7 +2128,7 @@ with tab1:
     total_initial_investment = turnkey_capital + working_capital
     debt_portion = total_initial_investment * 0.50
     monthly_interest_rate = (0.1175) / 12
-    monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1)
+    monthly_loan_payment = debt_portion * (monthly_interest_rate * (1 + monthly_interest_rate)**60) / ((1 + monthly_interest_rate)**60 - 1) if ((1 + monthly_interest_rate)**60 - 1) > 0 else 0
 
     cash_flow_data = []
     cumulative_cash_flow = -total_initial_investment
@@ -2169,76 +2169,80 @@ with tab1:
     with col_inv2:
         target_applicant_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp Number", value="", placeholder="e.g. 0827867712 or +27827867712", key=f"{site_key}_app_mobile")
 
-    selected_menus = st.session_state.get("selected_brand_menus", get_available_brand_menus())
+    # VALIDATION GUARD: Block generation and dispatch if mandatory details are blank or zero
+    if not location_name or total_gla <= 0 or turnkey_capital <= 0:
+        st.warning("⚠️ **Please complete the Location Name, GLA, and Capital details above before generating the Feasibility PDF or dispatching.**")
+    else:
+        selected_menus = st.session_state.get("selected_brand_menus", get_available_brand_menus())
 
-    if target_applicant_name and target_applicant_email:
-        save_investor_lead({
-            "full_name": target_applicant_name,
-            "entity_name": "Prospective Entity",
-            "id_or_passport": "Pending / Unassigned",
-            "email": target_applicant_email,
-            "mobile": target_applicant_mobile if target_applicant_mobile else "N/A",
-            "preferred_site": location_name if location_name else "Unassigned Site",
-            "store_model": selected_model,
-            "capital_available": turnkey_capital + working_capital,
-            "unencumbered_cash_pct": 50.0,
-            "admin_fee_paid": 0,
-            "ndnca_signed": 0,
-            "popia_consent": 1
-        })
+        if target_applicant_name and target_applicant_email:
+            save_investor_lead({
+                "full_name": target_applicant_name,
+                "entity_name": "Prospective Entity",
+                "id_or_passport": "Pending / Unassigned",
+                "email": target_applicant_email,
+                "mobile": target_applicant_mobile if target_applicant_mobile else "N/A",
+                "preferred_site": location_name,
+                "store_model": selected_model,
+                "capital_available": turnkey_capital + working_capital,
+                "unencumbered_cash_pct": 50.0,
+                "admin_fee_paid": 0,
+                "ndnca_signed": 0,
+                "popia_consent": 1
+            })
 
-    clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip()) if location_name else "Unassigned_Site"
-    pdf_filename = f"{clean_site_slug}_{selected_model.replace(' ', '_')}_{int(total_gla)}m2_.pdf"
+        clean_site_slug = re.sub(r'[^a-zA-Z0-9_]', '_', location_name.strip())
+        pdf_filename = f"{clean_site_slug}_{selected_model.replace(' ', '_')}_{int(total_gla)}m2_.pdf"
 
-    pdf_buffer = generate_pdf_report(
-        location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
-        max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
-        external_rent_sqm, ops_cost_sqm, total_lease_outlay_monthly, turnover_clause_pct, rec_model, 7.42,
-        df_payback_matrix, annual_pnl, blueprint_pil_img,
-        applicant_name=target_applicant_name if target_applicant_name else "Prospective Investor",
-        applicant_email=target_applicant_email if target_applicant_email else "N/A",
-        applicant_mobile=target_applicant_mobile if target_applicant_mobile else "N/A",
-        selected_menus=selected_menus
-    )
-    pdf_bytes = pdf_buffer.getvalue()
+        pdf_buffer = generate_pdf_report(
+            location_name, shop_code, suburb_node, internal_gla, external_gla, total_gla, selected_model,
+            max_comfortable_seats, high_density_seats, turnkey_capital, working_capital, internal_rent_sqm,
+            external_rent_sqm, ops_cost_sqm, total_lease_outlay_monthly, turnover_clause_pct, rec_model, 7.42,
+            df_payback_matrix, annual_pnl, blueprint_pil_img,
+            applicant_name=target_applicant_name if target_applicant_name else "Prospective Investor",
+            applicant_email=target_applicant_email if target_applicant_email else "N/A",
+            applicant_mobile=target_applicant_mobile if target_applicant_mobile else "N/A",
+            selected_menus=selected_menus
+        )
+        pdf_bytes = pdf_buffer.getvalue()
 
-    btn_col1, btn_col2 = st.columns(2)
-    
-    with btn_col1:
-        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-        dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>'
-        st.markdown(dl_link_html, unsafe_allow_html=True)
+        btn_col1, btn_col2 = st.columns(2)
         
-        local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename)
-        st.caption(f"📂 **Local Directory Saved:** `{local_saved_path}`")
-        st.info(f"☁️ **Google Drive Status:** {sync_status_msg}")
+        with btn_col1:
+            b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+            dl_link_html = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{pdf_filename}" class="direct-dl-btn">📥 Download PDF Direct</a>'
+            st.markdown(dl_link_html, unsafe_allow_html=True)
+            
+            local_saved_path, sync_status_msg = sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename)
+            st.caption(f"📂 **Local Directory Saved:** `{local_saved_path}`")
+            st.info(f"☁️ **Google Drive Status:** {sync_status_msg}")
 
-    with btn_col2:
-        if st.button("📧 Dispatch via Email (with Read Receipt)", key=f"{site_key}_email_btn"):
-            if not target_applicant_email:
-                st.error("Please enter a valid Franchisee Email Address above.")
-            else:
-                sent_ok, send_msg = send_franchisee_email_pack(
-                    target_applicant_email, target_applicant_name, location_name if location_name else "Target Site", pdf_bytes, pdf_filename
-                )
-                if sent_ok:
-                    st.success(f"✅ {send_msg}")
+        with btn_col2:
+            if st.button("📧 Dispatch via Email (with Read Receipt)", key=f"{site_key}_email_btn"):
+                if not target_applicant_email:
+                    st.error("Please enter a valid Franchisee Email Address above.")
                 else:
-                    st.error(f"❌ Email Failed: {send_msg}")
+                    sent_ok, send_msg = send_franchisee_email_pack(
+                        target_applicant_email, target_applicant_name, location_name, pdf_bytes, pdf_filename
+                    )
+                    if sent_ok:
+                        st.success(f"✅ {send_msg}")
+                    else:
+                        st.error(f"❌ Email Failed: {send_msg}")
 
-    if target_applicant_mobile:
-        formatted_wa_mobile = format_sa_mobile_number(target_applicant_mobile)
-        wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, thank you for showing interest in Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name if location_name else 'your target site'} to your email ({target_applicant_email}). Please review the attached pack, brand menus, and NCNDA."
-        encoded_wa_text = urllib.parse.quote(wa_text)
-        wa_url = f"https://api.whatsapp.com/send?phone={formatted_wa_mobile}&text={encoded_wa_text}"
+        if target_applicant_mobile:
+            formatted_wa_mobile = format_sa_mobile_number(target_applicant_mobile)
+            wa_text = f"Hi {target_applicant_name if target_applicant_name else 'there'}, thank you for showing interest in Phatbuns South Africa. I have dispatched the Executive Feasibility & Investor Pack for {location_name} to your email ({target_applicant_email})."
+            encoded_wa_text = urllib.parse.quote(wa_text)
+            wa_url = f"https://api.whatsapp.com/send?phone={formatted_wa_mobile}&text={encoded_wa_text}"
 
-        st.markdown(f"""
-        <a href="{wa_url}" target="_blank" style="text-decoration:none;">
-            <div style="background-color:#25D366; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; font-size:15px; margin-top:10px;">
-                💬 Launch WhatsApp Direct Chat with {target_applicant_name} (+{formatted_wa_mobile})
-            </div>
-        </a>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <a href="{wa_url}" target="_blank" style="text-decoration:none;">
+                <div style="background-color:#25D366; color:white; padding:12px; border-radius:8px; text-align:center; font-weight:bold; font-size:15px; margin-top:10px;">
+                    💬 Launch WhatsApp Direct Chat with {target_applicant_name} (+{formatted_wa_mobile})
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
 
     render_contact_footer()
 
@@ -2290,7 +2294,7 @@ with tab3:
             mobile = st.text_input("Mobile / WhatsApp Number *")
             preferred_site = st.text_input("Preferred Target Site / Node *", value="")
             store_model_choice = st.selectbox("Preferred Store Model", options=list(STORE_MODELS.keys()), index=1)
-            capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=2500000.0, step=100000.0)
+            capital_available = st.number_input("Proposed Total Capital Available (ZAR)", value=0.0, step=100000.0)
 
         unencumbered_cash_pct = st.slider("Verified Unencumbered Cash (%)", min_value=0.0, max_value=100.0, value=50.0)
         c_col1, c_col2, c_col3 = st.columns(3)
