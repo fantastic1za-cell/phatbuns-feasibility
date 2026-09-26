@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Interface (Full Feasibility Layout + Dual Header Logos)
+# app.py - Main Streamlit Interface (Full Feasibility Layout + Custom Header Branding)
 import os
 import io
 import re
@@ -61,7 +61,7 @@ st.markdown("""
 /* Dynamic Dual Logo Banner */
 .brand-banner { 
     background: linear-gradient(135deg, #1f1f1f 0%, #0a0a0a 100%); 
-    padding: 20px; 
+    padding: 22px; 
     border-radius: 12px; 
     text-align: center; 
     border: 1px solid #333; 
@@ -71,11 +71,16 @@ st.markdown("""
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 6px;
+    gap: 16px;
+    margin-bottom: 8px;
 }
-.header-logo-30 {
-    height: 30px;
+.header-logo-phatbuns {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+.header-logo-flag {
+    height: 32px;
     width: auto;
     object-fit: contain;
 }
@@ -84,11 +89,13 @@ st.markdown("""
     font-size: 24px; 
     font-weight: 800; 
     margin: 0; 
-    letter-spacing: 0.5px;
+    line-height: 1.25;
+    letter-spacing: 0.8px;
 }
 .banner-subtitle {
     font-size: 13px;
     color: #CBD5E0;
+    margin-top: 6px;
 }
 .green-divider { border: none; height: 3px; background-color: #72BF44; border-radius: 2px; margin: 15px 0; }
 
@@ -145,14 +152,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Generate HTML string for Header Icons
-phatbuns_img_html = f'<img src="data:image/png;base64,{b64_phatbuns_sa}" class="header-logo-30" alt="Phatbuns SA"/>' if b64_phatbuns_sa else ''
-flag_img_html = f'<img src="data:image/png;base64,{b64_sa_flag}" class="header-logo-30" alt="SA Flag"/>' if b64_sa_flag else ''
+phatbuns_img_html = f'<img src="data:image/png;base64,{b64_phatbuns_sa}" class="header-logo-phatbuns" alt="Phatbuns SA"/>' if b64_phatbuns_sa else ''
+flag_img_html = f'<img src="data:image/png;base64,{b64_sa_flag}" class="header-logo-flag" alt="SA Flag"/>' if b64_sa_flag else ''
 
 st.markdown(f'''
 <div class="brand-banner">
     <div class="banner-header-row">
         {phatbuns_img_html}
-        <div class="brand-title">PHATBUNS SOUTH AFRICA</div>
+        <div class="brand-title">PHATBUNS<br/>SOUTH AFRICA</div>
         {flag_img_html}
     </div>
     <div class="banner-subtitle">Bankable Commercial Feasibility, Financial Modeling & Automated Lease Extraction</div>
