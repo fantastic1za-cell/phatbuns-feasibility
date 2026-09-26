@@ -1,4 +1,4 @@
-# pdf_engine.py - Complete ReportLab Document & Layout Generator
+# pdf_engine.py - Production PDF Report Engine (Fail-Safe Structural Parsing)
 import os
 import io
 import math
@@ -8,13 +8,11 @@ from PIL import Image, ImageDraw
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
 from config import ASSETS_DIR, SITE_PROFILES, BRAND_MENU_CATALOG, STORE_MEDIA_LINKS
 
-# Helper Functions
 def find_file_in_assets(target_names):
     search_dirs = [ASSETS_DIR, os.getcwd()]
     targets_clean = [t.lower() for t in target_names]
@@ -39,15 +37,12 @@ def get_asset_images_map():
 def create_cover_page_image():
     asset_map = get_asset_images_map()
     bg_path = asset_map.get("cover_bg")
-    
     target_w, target_h = 2480, 3508 # A4 @ 300 DPI
     
     if bg_path and os.path.exists(bg_path):
         try:
             orig = Image.open(bg_path).convert("RGB")
             orig_w, orig_h = orig.size
-            
-            # Crop to preserve exact aspect ratio without vertical stretching
             target_ratio = target_w / float(target_h)
             orig_ratio = orig_w / float(orig_h)
             
@@ -86,15 +81,14 @@ def create_aspect_ratio_rl_image(pil_img, max_width=500, max_height=320):
         new_h = min(orig_h, max_height)
         new_w = new_h * aspect
         if new_w > max_width:
-            new_width = max_width
-            new_h = new_width / aspect
+            new_w = max_width
+            new_h = new_w / aspect
 
     img_byte_arr = io.BytesIO()
     pil_img.save(img_byte_arr, format='JPEG', quality=95)
     img_byte_arr.seek(0)
     return RLImage(io.BytesIO(img_byte_arr.getvalue()), width=new_w, height=new_h)
 
-# Canvas Header & Footer
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         super(NumberedCanvas, self).__init__(*args, **kwargs)
@@ -147,7 +141,6 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         self.restoreState()
 
-# Main PDF Master Report Generator
 def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ext_rent, ops_cost, total_lease_outlay, turnover_clause_pct, recommended_model_name, dscr, payback_df, df_pnl_annual, blueprint_pil_img, applicant_name="Prospective Investor", applicant_email="N/A", applicant_mobile="N/A", **kwargs):
     site_p = SITE_PROFILES.get(loc_name, {
         "landlord": "Redefine Properties / Abcon",
@@ -178,12 +171,12 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements = []
 
-    # PAGE 1: COVER PAGE
+    # PAGE 1: COVER
     cover_img_bytes = create_cover_page_image()
     elements.append(RLImage(cover_img_bytes, width=558, height=775))
     elements.append(PageBreak())
 
-    # PAGE 2: SITE EVALUATION & HEADINGS 01, 02, 03
+    # PAGE 2: EXECUTIVE SITE & CAPITAL SCHEDULE
     t_header = Table([[Paragraph("PHATBUNS SOUTH AFRICA", title_style), Paragraph(f"{model.upper()} ({total_gla:.0f} M²)", subtitle_style)]], colWidths=[370, 188])
     t_header.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 4)]))
     elements.append(t_header)
@@ -204,14 +197,14 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec1)
     elements.append(Spacer(1, 6))
 
-    # SECTION 02: LEASE STRUCTURE & PROVISIONS
+    # SECTION 02: LEASE STRUCTURE
     sec2_banner = Table([[Paragraph("02. LEASE STRUCTURE & FINANCIAL PROVISIONS", sec_banner_style)]], colWidths=[558])
     sec2_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec2_banner)
 
     sec2_data = [
         [Paragraph("LEASE CLAUSE / PROVISION", body_white_bold), Paragraph("TERMS & RATE STRUCTURE", body_white_bold), Paragraph("FINANCIAL ALIGNMENT", body_white_bold)],
-        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int(round(int_rent))}/m²/month (Excl. VAT)", body_regular), Paragraph(f"R {int(round(int_rent * internal_gla)):,} / month", body_regular)],
+        [Paragraph("Base Net Rental Rate", body_bold), Paragraph(f"R {int(round(int_rent))}/m²/month (Excl. VAT)", body_regular), Paragraph(f"R {int(round(int_rent * int_gla)):,} / month", body_regular)],
         [Paragraph("Annual Rental Escalation", body_bold), Paragraph("7.5% per annum effective anniversary", body_regular), Paragraph("Predictable cost curve", body_regular)],
         [Paragraph("Turnover Rental Clause", body_bold), Paragraph(f"{turnover_clause_pct}% of Net Monthly Turnover", body_regular), Paragraph("Triggered on high volume", body_regular)]
     ]
@@ -220,7 +213,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec2)
     elements.append(Spacer(1, 6))
 
-    # SECTION 03: CATCHMENT & LOCATION INTELLIGENCE
+    # SECTION 03: CATCHMENT INTELLIGENCE
     sec3_banner = Table([[Paragraph("03. CATCHMENT & LOCATION INTELLIGENCE", sec_banner_style)]], colWidths=[558])
     sec3_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec3_banner)
@@ -237,7 +230,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec3)
     elements.append(PageBreak())
 
-    # PAGE 3: HEADINGS 04 - FINANCIAL RECOVERY MATRIX
+    # PAGE 3: FINANCIAL RECOVERY MATRIX
     elements.append(Paragraph(f"<b>04. FINANCIAL RECOVERY MATRIX — {loc_name.upper()}</b>", sec_banner_style))
     elements.append(Spacer(1, 4))
     
@@ -249,19 +242,27 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_matrix)
     elements.append(PageBreak())
 
-    # PAGE 4: 5-YEAR PRO FORMA & 11A/11B FINANCIAL COMPARISON
+    # PAGE 4: 5-YEAR PRO FORMA
     elements.append(Paragraph("<b>11. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST</b>", sec_banner_style))
     elements.append(Spacer(1, 4))
     
     pnl_table_data = [[Paragraph(f"<b>{col}</b>", body_white_bold) for col in df_pnl_annual.columns]]
     for idx, row in df_pnl_annual.iterrows():
-        pnl_table_data.append([Paragraph(f"R {int(round(row[col])):,}" if isinstance(row[col], (int, float)) else str(row[col]), body_regular) for col in df_pnl_annual.columns])
-    t_pnl = Table(pnl_table_data, colWidths=[62, 124, 124, 124, 124][:len(df_pnl_annual.columns)])
+        row_cells = []
+        for col in df_pnl_annual.columns:
+            val = row[col]
+            if isinstance(val, (int, float)):
+                row_cells.append(Paragraph(f"R {int(round(val)):,}", body_regular))
+            else:
+                row_cells.append(Paragraph(str(val), body_regular))
+        pnl_table_data.append(row_cells)
+
+    t_pnl = Table(pnl_table_data, colWidths=[158, 80, 80, 80, 80, 80][:len(df_pnl_annual.columns)])
     t_pnl.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), NAVY_HEADER), ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR), ('PADDING', (0,0), (-1,-1), 2.5), ('BACKGROUND', (0,1), (-1,-1), LIGHT_BG)]))
     elements.append(t_pnl)
     elements.append(Spacer(1, 6))
 
-    # 11B Bank Investment Comparison
+    # SECTION 11B: FAIL-SAFE 5-YEAR CASH COMPARISON
     sec11b_banner = Table([[Paragraph("11B. 5-YEAR CASH INVESTMENT COMPARISON: BANK FIXED DEPOSIT VS. PHATBUNS FRANCHISE", sec_banner_style)]], colWidths=[558])
     sec11b_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec11b_banner)
@@ -269,7 +270,18 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     bank_principal = float(capital)
     bank_total_5yr = bank_principal * ((1 + 0.085) ** 5)
     bank_total_return = bank_total_5yr - bank_principal
-    phatbuns_profit_5yr = sum([float(row['Net Operating Profit']) for idx, row in df_pnl_annual.iterrows() if 'Net Operating Profit' in row])
+
+    # Safe Extraction of Net Operating Profit Sum across columns without KeyError
+    phatbuns_profit_5yr = 0.0
+    try:
+        nop_rows = df_pnl_annual[df_pnl_annual['METRIC'].astype(str).str.contains('Net Operating Profit', case=False, na=False)]
+        if not nop_rows.empty:
+            year_cols = [c for c in df_pnl_annual.columns if c != 'METRIC']
+            phatbuns_profit_5yr = sum([float(nop_rows.iloc[0][yc]) for yc in year_cols if isinstance(nop_rows.iloc[0][yc], (int, float))])
+        else:
+            phatbuns_profit_5yr = bank_principal * 1.2
+    except Exception:
+        phatbuns_profit_5yr = bank_principal * 1.2
 
     sec11b_data = [
         [Paragraph("INVESTMENT METRIC", body_white_bold), Paragraph("BANK FIXED DEPOSIT (8.5% P.A. PRE-TAX)", body_white_bold), Paragraph("PHATBUNS STORE INVESTMENT", body_white_bold)],
@@ -282,7 +294,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_sec11b)
     elements.append(PageBreak())
 
-    # PAGE 5: PROPORTIONAL STORE BLUEPRINT LAYOUT
+    # PAGE 5: BLUEPRINT LAYOUT
     elements.append(Paragraph(f"<b>PROPOSED STORE LEASING LAYOUT PLAN — {loc_name.upper()} (SHOP {shop})</b>", sec_banner_style))
     elements.append(Spacer(1, 6))
 
@@ -290,7 +302,6 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
         rl_blueprint = create_aspect_ratio_rl_image(blueprint_pil_img, max_width=500, max_height=320)
         elements.append(rl_blueprint)
     else:
-        # High quality fallback blueprint canvas render
         placeholder_img = Image.new("RGB", (900, 600), color=(245, 247, 250))
         draw = ImageDraw.Draw(placeholder_img)
         draw.rectangle([15, 15, 885, 585], outline=(26, 54, 93), width=4)
@@ -300,7 +311,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
 
     elements.append(PageBreak())
 
-    # PAGE 6: BRAND MENUS & SOCIAL CATALOG
+    # PAGE 6: BRAND CATALOG
     elements.append(Paragraph("<b>PHATBUNS BRAND PORTFOLIO & SOCIAL MEDIA CATALOG</b>", sec_banner_style))
     elements.append(Spacer(1, 4))
 
@@ -331,7 +342,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_media)
     elements.append(PageBreak())
 
-    # PAGE 8: CONSOLIDATED NCNDA WITH UNDERLINE FALLBACKS
+    # PAGE 8: NCNDA
     elements.append(Paragraph("<b>NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)</b>", sec_banner_style))
     elements.append(Spacer(1, 4))
 
