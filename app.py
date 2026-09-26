@@ -499,6 +499,7 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
             return local_file_path, f"Failed to upload file '{pdf_filename}' to Drive folder '{loc_clean}'"
     except Exception as e:
         return local_file_path, f"Google Drive Sync Exception: {str(e)}"
+
 # ==========================================
 # COVER PAGE COMPOSITOR (8K CRISP FULL-BLEED)
 # ==========================================
@@ -1175,6 +1176,7 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(A4[0] - 10 * mm, 8 * mm, page_str)
         
         self.restoreState()
+
 # ==========================================
 # MASTER 10-HEADING PDF GENERATION ENGINE
 # ==========================================
@@ -1477,7 +1479,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(Spacer(1, 4))
     elements.append(HRFlowable(width="100%", thickness=1, color=NAVY_HEADER, spaceBefore=2, spaceAfter=8))
 
-        effective_blueprint_img = blueprint_pil_img
+    effective_blueprint_img = blueprint_pil_img
     if effective_blueprint_img is None and loc_name:
         auto_bp_path = find_site_blueprint(loc_name)
         if auto_bp_path and os.path.exists(auto_bp_path):
@@ -2314,7 +2316,7 @@ with tab3:
 
     st.divider()
 
-    st.subheader("CEO Pipeline & Potential Client Registry")
+    st.header("CEO Pipeline & Potential Client Registry")
     st.markdown("All prospective client captures from Section 6 and direct registrations are automatically logged here.")
     
     df_pipeline = get_pipeline_dataframe()
