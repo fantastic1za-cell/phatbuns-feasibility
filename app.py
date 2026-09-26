@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Interface (Modular Implementation)
+# app.py - Main Streamlit Interface (Full Feasibility Layout)
 import os
 import io
 import re
@@ -46,7 +46,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom Styling for Neat Spacing & Dark Theme
+# Custom Styling for Dark Theme & Financial Cards
 st.markdown("""
 <style>
 .stApp { background-color: #111111; color: #FFFFFF; }
@@ -54,7 +54,26 @@ st.markdown("""
 .brand-title { color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; }
 .green-divider { border: none; height: 3px; background-color: #72BF44; border-radius: 2px; margin: 15px 0; }
 
-/* Brand Card Block Styling */
+.calc-box {
+    background-color: #1A202C;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #2D3748;
+    margin-bottom: 15px;
+}
+.calc-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #72BF44;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.calc-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: #FFFFFF;
+}
+
 .brand-card-block {
     background-color: #1A1A1A;
     padding: 20px;
@@ -68,36 +87,11 @@ st.markdown("""
     margin-bottom: 12px;
     display: block;
 }
-.brand-card-header {
-    font-size: 20px;
-    font-weight: 800;
-    color: #FFFFFF;
-    margin-bottom: 4px;
-}
-.brand-tagline {
-    font-size: 13px;
-    font-weight: 700;
-    color: #C53030;
-    margin-bottom: 12px;
-}
-.brand-overview {
-    font-size: 13.5px;
-    line-height: 1.6;
-    color: #E2E8F0;
-    margin-bottom: 16px;
-}
-.brand-link-row {
-    margin-top: 10px;
-    font-size: 14px;
-}
-.brand-link-row a {
-    color: #63B3ED !important;
-    text-decoration: none;
-    font-weight: 600;
-}
-.brand-link-row a:hover {
-    text-decoration: underline;
-}
+.brand-card-header { font-size: 20px; font-weight: 800; color: #FFFFFF; margin-bottom: 4px; }
+.brand-tagline { font-size: 13px; font-weight: 700; color: #C53030; margin-bottom: 12px; }
+.brand-overview { font-size: 13.5px; line-height: 1.6; color: #E2E8F0; margin-bottom: 16px; }
+.brand-link-row { margin-top: 10px; font-size: 14px; }
+.brand-link-row a { color: #63B3ED !important; text-decoration: none; font-weight: 600; }
 .direct-dl-btn {
     display: block;
     width: 100%;
@@ -129,14 +123,20 @@ with tab1:
     analysis_mode = st.radio(
         "Select Feasibility Analysis Mode:",
         [
-            "1. I have a Landlord Proposal / Offer Sheet", 
+            "1. I have a Landlord Proposal / Offer Sheet (OCR Auto-Extract)", 
             "2. No Proposal — Check Mall Viability & Propose Target Rates",
             "3. Update Old/Legacy Franchisee Pack to New Format"
         ],
         index=0
     )
 
-    if "3. Update Old/Legacy" in analysis_mode:
+    if "1. I have a Landlord Proposal" in analysis_mode:
+        st.subheader("📄 Landlord Offer Sheet / Proposal Extraction")
+        proposal_file = st.file_uploader("Upload Landlord Proposal / Offer Sheet (PDF, PNG, JPG)", type=["pdf", "png", "jpg", "jpeg"])
+        if proposal_file:
+            st.success("Proposal ingested. Review auto-populated lease metrics below.")
+
+    elif "3. Update Old/Legacy" in analysis_mode:
         st.subheader("♻️ Legacy Franchisee Pack Converter")
         legacy_file = st.file_uploader("Upload Legacy PDF Pack (.pdf)", type=["pdf"])
         if legacy_file:
@@ -152,24 +152,65 @@ with tab1:
     selected_model = st.radio("Select Model Type", options=list(STORE_MODELS.keys()), index=1, horizontal=True)
     model_data = STORE_MODELS[selected_model]
 
+    st.subheader("📐 Store Footprint & Seating Capacity Calculator")
     col_int, col_ext = st.columns(2)
-    with col_int: internal_gla = st.number_input("Internal Area (sqm)", value=model_data["default_gla"])
+    with col_int: internal_gla = st.number_input("Internal Area (sqm)", value=float(model_data["default_gla"]))
     with col_ext: external_gla = st.number_input("External / Patio Area (sqm)", value=0.0)
     total_gla = internal_gla + external_gla
+
+    # Dynamic Seating Calculation
+    foh_ratio = model_data.get("foh_pct", 0.10)
+    foh_area = (internal_gla * foh_ratio) + external_gla
+    est_standard_seats = int(math.floor((foh_area * 0.70) / 1.4)) if foh_area > 0 else 0
+    est_hightop_seats = int(math.floor((foh_area * 0.30) / 1.0)) if foh_area > 0 else 0
+    total_est_seats = est_standard_seats + est_hightop_seats
+
+    s_col1, s_col2, s_col3 = st.columns(3)
+    with s_col1:
+        st.markdown(f'<div class="calc-box"><div class="calc-title">Standard Dining Seats</div><div class="calc-val">{est_standard_seats} Seats</div></div>', unsafe_allow_html=True)
+    with s_col2:
+        st.markdown(f'<div class="calc-box"><div class="calc-title">High-Top / Counter Seats</div><div class="calc-val">{est_hightop_seats} Seats</div></div>', unsafe_allow_html=True)
+    with s_col3:
+        st.markdown(f'<div class="calc-box"><div class="calc-title">Total Seating Capacity</div><div class="calc-val">{total_est_seats} Seats</div></div>', unsafe_allow_html=True)
 
     blueprint_file = st.file_uploader("Upload Store Blueprint / Layout Plan", type=["pdf", "png", "jpg", "jpeg"])
     blueprint_pil = Image.open(blueprint_file).convert("RGB") if blueprint_file and not blueprint_file.name.endswith('.pdf') else None
 
     st.divider()
-    st.header("Commercial Capital & Lease Modeling")
+    st.header("Commercial Capital & Detailed Lease Modeling")
+    
     col_c1, col_c2 = st.columns(2)
-    with col_c1: turnkey_capital = st.number_input("Turnkey Capital (Excl. VAT)", value=model_data["turnkey_capital"])
-    with col_c2: working_capital = st.number_input("Working Capital", value=model_data["working_capital"])
+    with col_c1: turnkey_capital = st.number_input("Turnkey Capital (Excl. VAT)", value=float(model_data["turnkey_capital"]))
+    with col_c2: working_capital = st.number_input("Working Capital", value=float(model_data["working_capital"]))
 
-    int_rent = st.number_input("Internal Base Rent (R / sqm)", value=220.0)
-    ext_rent = st.number_input("External Base Rent (R / sqm)", value=0.0)
-    ops_cost = st.number_input("Ops Cost (R / sqm)", value=32.50)
-    total_lease = (internal_gla * int_rent) + (external_gla * ext_rent) + (total_gla * ops_cost)
+    st.subheader("🏢 Landlord Rental & Operational Cost Schedule")
+    l_col1, l_col2, l_col3 = st.columns(3)
+    with l_col1:
+        int_rent = st.number_input("Internal Base Rent (R / sqm)", value=220.0)
+        ext_rent = st.number_input("External Base Rent (R / sqm)", value=0.0)
+    with l_col2:
+        rates_cost = st.number_input("Rates & Taxes (R / sqm)", value=18.50)
+        ops_cost = st.number_input("Ops Cost (R / sqm)", value=32.50)
+    with l_col3:
+        generator_cost = st.number_input("Generator / Utility Recovery (R / sqm)", value=15.00)
+        marketing_pct = st.number_input("Marketing Levy (% of Base Rental)", value=5.0)
+
+    st.subheader("📈 Turnover Rent Clause")
+    t_col1, t_col2 = st.columns(2)
+    with t_col1:
+        turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0)
+    with t_col2:
+        turnover_threshold = st.number_input("Monthly Turnover Threshold (R / month)", value=650000.0)
+
+    # Monthly Lease Outlay Calculation
+    base_rent_total = (internal_gla * int_rent) + (external_gla * ext_rent)
+    ops_total = total_gla * ops_cost
+    rates_total = total_gla * rates_cost
+    gen_total = total_gla * generator_cost
+    mktg_total = base_rent_total * (marketing_pct / 100.0)
+    total_lease_monthly = base_rent_total + ops_total + rates_total + gen_total + mktg_total
+
+    st.markdown(f'<div class="calc-box"><div class="calc-title">Total Monthly Lease Outlay (Excl. VAT)</div><div class="calc-val">R {int(round(total_lease_monthly)):,} / month</div></div>', unsafe_allow_html=True)
 
     st.divider()
     st.header("Dispatch Feasibility Pack")
@@ -184,8 +225,8 @@ with tab1:
     if st.button("⚡ Generate & Sync Feasibility Pack"):
         pdf_buf = generate_pdf_report(
             location_name, shop_code, "Germiston, GP", internal_gla, external_gla, total_gla,
-            selected_model, 26, 32, turnkey_capital, working_capital, int_rent, ext_rent, ops_cost,
-            total_lease, 7.0, selected_model, 7.42, payback_data, pnl_data, blueprint_pil,
+            selected_model, est_standard_seats, est_hightop_seats, turnkey_capital, working_capital, int_rent, ext_rent, ops_cost,
+            total_lease_monthly, turnover_clause_pct, selected_model, 7.42, payback_data, pnl_data, blueprint_pil,
             applicant_name=app_name, applicant_email=app_email, applicant_mobile=app_mobile,
             applicant_address=app_address
         )
