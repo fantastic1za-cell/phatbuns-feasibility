@@ -80,16 +80,26 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     working_cap = turnkey_cap * 0.15
     client_name = data.get("client_name", "Prospective Investor")
 
-    # ================= PAGE 1: COVER IMAGE & SUMMARY BANNER =================
+    # ================= PAGE 1: COVER / HERO BANNER =================
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     cover_img_path = os.path.join(assets_dir, "phatbuns_hero.jpg")
     
     if os.path.exists(cover_img_path):
-        story.append(RLImage(cover_img_path, width=523, height=260))
+        story.append(RLImage(cover_img_path, width=523, height=240))
+        story.append(Spacer(1, 10))
     else:
-        story.append(Paragraph("<b>PHATBUNS MASTER BRAND IDENTITY & INVESTOR SHOWCASE</b>", title_style))
-    story.append(Spacer(1, 10))
-    
+        # High-impact branded header box if image is absent
+        header_table_data = [[Paragraph("<font color='white' size=14><b>PHATBUNS SOUTH AFRICA — MASTER FRANCHISE SYSTEM</b></font><br/><font color='#FF6600' size=10>EXECUTIVE INVESTOR FEASIBILITY PACK</font>", cell_style)]]
+        ht = Table(header_table_data, colWidths=[523])
+        ht.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), primary_color),
+            ('TOPPADDING', (0,0), (-1,-1), 16),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 16),
+            ('LEFTPADDING', (0,0), (-1,-1), 16),
+        ]))
+        story.append(ht)
+        story.append(Spacer(1, 15))
+
     story.append(Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", title_style))
     story.append(Paragraph(f"FULL SIT-DOWN MODEL ({footprint:.2f} M²) | MASTER FEASIBILITY PACK", subtitle_style))
     story.append(Spacer(1, 10))
