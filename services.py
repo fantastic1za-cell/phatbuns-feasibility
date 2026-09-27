@@ -116,7 +116,6 @@ def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_
 
         msg = EmailMessage()
         msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Investor Review ({location_name})"
-        # Formatted sender name displaying Phatbuns South Africa cleanly in client inboxes
         msg['From'] = f"Phatbuns South Africa <{sender_email}>"
         msg['To'] = recipient_email
         
