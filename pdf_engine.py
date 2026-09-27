@@ -12,7 +12,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         pagesize=A4,
         rightMargin=36,
         leftMargin=36,
-        topMargin=48,  # Increased top margin to prevent header overlap
+        topMargin=48,  # Clears header text overlap
         bottomMargin=36
     )
     
@@ -74,12 +74,12 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         canvas.saveState()
         canvas.setFont('Helvetica-Bold', 8)
         canvas.setFillColor(accent_color)
-        canvas.drawString(36, 818, "PHAT buns") # Adjusted Y coordinate
+        canvas.drawString(36, 818, "PHAT buns")
         
         canvas.setFont('Helvetica', 8)
         canvas.setFillColor(colors.HexColor("#666666"))
         header_text = "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
-        canvas.drawString(90, 818, header_text) # Adjusted Y coordinate
+        canvas.drawString(90, 818, header_text)
         
         canvas.drawRightString(559, 20, f"Page {doc_obj.page} of 8")
         canvas.restoreState()
@@ -380,7 +380,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(t_video)
     story.append(PageBreak())
 
-    # ================= PAGE 8: NCNDA & SIGNATURES =================
+    # ================= PAGE 8: FULL FORMAL NCNDA & SIGNATURES =================
     story.append(make_section_header("NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)"))
     story.append(Spacer(1, 2))
     story.append(Paragraph("<font size=8 color='#1B365D'><b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b></font>", ParagraphStyle('SubNC', parent=cell_bold, alignment=1)))
