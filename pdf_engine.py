@@ -22,6 +22,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     primary_color = colors.HexColor("#1A1A1A")
     accent_color = colors.HexColor("#FF6600")
     bg_light = colors.HexColor("#F9F9F9")
+    header_bar_bg = colors.HexColor("#1B365D") # Professional Dark Navy Bar
     
     title_style = ParagraphStyle(
         'DocTitle',
@@ -58,6 +59,18 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         fontName='Helvetica-Bold'
     )
 
+    def make_section_header(title_text):
+        """Helper to create solid dark navigation header bars matching Photo 1."""
+        p = Paragraph(f"<font color='white'><b>{title_text}</b></font>", ParagraphStyle('HBar', parent=cell_bold, textColor=colors.white))
+        t = Table([[p]], colWidths=[523])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), header_bar_bg),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ]))
+        return t
+
     def add_header_footer(canvas, doc_obj):
         canvas.saveState()
         canvas.setFont('Helvetica-Bold', 8)
@@ -80,7 +93,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     working_cap = turnkey_cap * 0.15
     client_name = data.get("client_name", "Prospective Investor")
 
-    # ================= PAGE 1: EXACT SATURDAY COVER DESIGN =================
+    # ================= PAGE 1: EXACT COVER DESIGN =================
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     cover_img_path = os.path.join(assets_dir, "Cover.JPG")
     
@@ -88,7 +101,6 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         story.append(RLImage(cover_img_path, width=523, height=260))
         story.append(Spacer(1, 10))
     else:
-        # Fallback if image asset is missing in repo
         header_table_data = [[Paragraph("<font color='white' size=14><b>PHATBUNS SOUTH AFRICA — MASTER FRANCHISE SYSTEM</b></font><br/><font color='#FF6600' size=10>EXECUTIVE INVESTOR FEASIBILITY PACK</font>", cell_style)]]
         ht = Table(header_table_data, colWidths=[523])
         ht.setStyle(TableStyle([
@@ -122,7 +134,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(PageBreak())
 
     # ================= PAGE 2: SITE PROFILE & LEASE STRUCTURE =================
-    story.append(Paragraph("01. SITE PROFILE & CAPITAL SCHEDULE", cell_bold))
+    story.append(make_section_header("01. SITE PROFILE & CAPITAL SCHEDULE"))
     story.append(Spacer(1, 3))
     
     table_data_1 = [
@@ -145,7 +157,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(t1)
     story.append(Spacer(1, 10))
 
-    story.append(Paragraph("02. LEASE STRUCTURE & PROPOSED LANDLORD OFFER TARGETS", cell_bold))
+    story.append(make_section_header("02. LEASE STRUCTURE & PROPOSED LANDLORD OFFER TARGETS"))
     story.append(Spacer(1, 3))
     table_data_2 = [
         [Paragraph("LEASE CLAUSE/PROVISION", cell_bold), Paragraph("TERMS & RATE STRUCTURE", cell_bold), Paragraph("FINANCIAL ALIGNMENT", cell_bold)],
@@ -167,7 +179,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(PageBreak())
 
     # ================= PAGE 3: CATCHMENT & RECOVERY MATRIX =================
-    story.append(Paragraph("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE", cell_bold))
+    story.append(make_section_header("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE"))
     story.append(Spacer(1, 3))
     table_data_c = [
         [Paragraph("CATCHMENT METRIC", cell_bold), Paragraph("DATA POINT / LOCATION ANALYSIS (5KM & 10KM RADIUS)", cell_bold)],
@@ -187,7 +199,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(tc)
     story.append(Spacer(1, 10))
 
-    story.append(Paragraph("04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX", cell_bold))
+    story.append(make_section_header("04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX"))
     story.append(Spacer(1, 3))
     
     table_data_3 = [
@@ -213,12 +225,12 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(PageBreak())
 
     # ================= PAGE 4: OPERATIONS & EQUIPMENT =================
-    story.append(Paragraph("05. OPERATIONS, STAFFING & CHANNEL BREAKDOWN", cell_bold))
+    story.append(make_section_header("05. OPERATIONS, STAFFING & CHANNEL BREAKDOWN"))
     story.append(Spacer(1, 3))
     story.append(Paragraph("• Revenue Channel Split: Online Deliveries (UberEats/Mr D): 45% | Takeaway & Counter: 30% | In-Store Express Dining: 25%", cell_style))
     story.append(Paragraph("• Staffing Structure (BCEA 8-Hour Shifts): 1 x Store Manager, 2 x Shift Supervisors (Floor Leads & POS), 3 x Line Grillers & Fryers, 2 x Till Operators/Runners, 2 x Cleaners & Scullery (SANHA Hygiene Compliance).", cell_style))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("06. TURNKEY KITCHEN EQUIPMENT MANIFEST", cell_bold))
+    story.append(make_section_header("06. TURNKEY KITCHEN EQUIPMENT MANIFEST"))
     story.append(Spacer(1, 3))
     table_data_eq = [
         [Paragraph("STATION / CATEGORY", cell_bold), Paragraph("EQUIPMENT SPECIFICATION & DEPLOYMENT", cell_bold)],
@@ -241,25 +253,21 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(PageBreak())
 
     # ================= PAGE 5: BRAND HERITAGE & GOVERNANCE =================
-    story.append(Paragraph("07. BRAND HERITAGE, USP & PRODUCT STANDARDS", cell_bold))
+    story.append(make_section_header("07. BRAND HERITAGE, USP & PRODUCT STANDARDS"))
     story.append(Spacer(1, 3))
     story.append(Paragraph("Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. Phatbuns brings a premier culinary disruption specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles.", cell_style))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION", cell_bold))
+    story.append(make_section_header("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION"))
     story.append(Spacer(1, 3))
     story.append(Paragraph("Franchisees benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D).", cell_style))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("09. FRANCHISEE SUPPORT, TRAINING & OPERATIONAL GOVERNANCE", cell_bold))
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("Every Phatbuns franchise partner receives extensive onboarding and operational training covering a 4-week intensive program across back-of-house grill mastery, inventory control, and front-of-house guest hospitality.", cell_style))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("10. GOVERNANCE, COMPLIANCE & NEXT STEPS", cell_bold))
+    story.append(make_section_header("09. GOVERNANCE, COMPLIANCE & NEXT STEPS"))
     story.append(Spacer(1, 3))
     story.append(Paragraph("To proceed with site allocation, prospective investors must: (1) Execute the attached NCNDA, (2) Submit verified proof of unencumbered cash equity, (3) Settle review administrative fees, and (4) Sign formal franchise agreements upon executive board approval.", cell_style))
     story.append(PageBreak())
 
     # ================= PAGE 6: 5-YEAR PRO FORMA P&L =================
-    story.append(Paragraph("11. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST", cell_bold))
+    story.append(make_section_header("10. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST"))
     story.append(Spacer(1, 3))
     story.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 35% COGS | 9% Royalties & Marketing | E&OE", cell_style))
     story.append(Spacer(1, 5))
@@ -283,7 +291,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(t4)
     story.append(Spacer(1, 8))
     
-    story.append(Paragraph("11A. AGGREGATE 5-YEAR FINANCIAL RETURN (ROI) & MASTER RECOMMENDATION", cell_bold))
+    story.append(make_section_header("10A. AGGREGATE 5-YEAR FINANCIAL RETURN (ROI) & RECOMMENDATION"))
     story.append(Spacer(1, 3))
     table_data_roi = [
         [Paragraph("FINANCIAL METRIC / AGGREGATE CATEGORY", cell_bold), Paragraph("5-YEAR PROJECTED CUMULATIVE VALUE (ZAR)", cell_bold)],
@@ -304,7 +312,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(PageBreak())
 
     # ================= PAGE 7: BLUEPRINT & BRAND MENUS =================
-    story.append(Paragraph("12. SITE DEVELOPMENT LEASING & FLOOR PLAN LAYOUT", cell_bold))
+    story.append(make_section_header("11. SITE DEVELOPMENT LEASING & FLOOR PLAN LAYOUT"))
     story.append(Spacer(1, 3))
     if blueprint_images:
         for title, img in blueprint_images:
@@ -320,7 +328,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         story.append(Paragraph("Standard modular kitchen layout engineered for SANHA Halal compliance and customer throughput.", cell_style))
     
     story.append(Spacer(1, 10))
-    story.append(Paragraph("13. BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE", cell_bold))
+    story.append(make_section_header("12. BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE"))
     story.append(Spacer(1, 2))
     story.append(Paragraph("• Phatbuns Smash Burgers: Artisan Angus beef patties & signature sauces.", cell_style))
     story.append(Paragraph("• PhatVille Sliders & Sides: Nashville-style hot sliders & crinkle fries.", cell_style))
@@ -328,42 +336,49 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(Paragraph("• Doorstep Desserts: Warm waffles, dough tubs, and gelato sundaes.", cell_style))
     story.append(PageBreak())
 
-    # ================= PAGE 8: FULL LEGAL NCNDA & SIGNATURES =================
-    story.append(Paragraph("14. NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)", cell_bold))
-    story.append(Spacer(1, 4))
-    ncnda_text = (
-        "This Non-Disclosure and Non-Circumvention Agreement ('Agreement') is entered into by and between "
-        "Phatbuns South Africa (hereinafter referred to as the 'Disclosing Party') and the undersigned prospective "
-        "franchisee or investor (hereinafter referred to as the 'Receiving Party'). The parties wish to explore a "
-        "commercial franchise business relationship under the Phatbuns brand.\n\n"
-        "1. Purpose & Scope: The Disclosing Party will share proprietary operational manuals, financial models, site layouts, "
-        "and brand assets strictly for evaluation purposes.\n"
-        "2. FASA & CPA Compliance: All disclosures adhere strictly to the Franchise Association of South Africa (FASA) "
-        "guidelines and the Consumer Protection Act (CPA No. 68 of 2008).\n"
-        "3. POPIA Compliance: Both parties commit to protecting personal information pursuant to the Protection of "
-        "Personal Information Act (POPIA No. 4 of 2013).\n"
-        "4. Confidentiality & Non-Circumvention: The Receiving Party covenants not to disclose trade secrets, duplicate "
-        "proprietary systems, or bypass Phatbuns SA to deal directly with landlords or suppliers introduced herein for a "
-        "period of 24 months.\n"
-        "5. Governing Law: This Agreement is governed by the laws of the Republic of South Africa."
-    )
-    story.append(Paragraph(ncnda_text, cell_style))
-    story.append(Spacer(1, 20))
+    # ================= PAGE 8: MATCHING PHOTO 3 NCNDA LAYOUT =================
+    story.append(make_section_header("NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)"))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph("<font size=8 color='#1B365D'><b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b></font>", ParagraphStyle('SubNC', parent=cell_bold, alignment=1)))
+    story.append(Spacer(1, 6))
     
-    table_data_sig = [
-        [Paragraph("For: PHATBUNS SOUTH AFRICA", cell_bold), Paragraph(f"For: {client_name}", cell_bold)],
-        [Paragraph("Authorized Signature: ______________________", cell_style), Paragraph("Authorized Signature: ______________________", cell_style)],
-        [Paragraph("Name: Nisaar Ally", cell_style), Paragraph(f"Name: {client_name}", cell_style)],
-        [Paragraph("Title: SA Master Rights Holder", cell_style), Paragraph("Title: Prospective Franchisee", cell_style)],
-        [Paragraph("Date: 2026-09-28 | Place: Johannesburg", cell_style), Paragraph("Date: ______________ | Place: _____________", cell_style)]
+    intro_ncnda = (
+        "<b>Entered into by and between:</b><br/>"
+        "<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), and "
+        f"<b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), "
+        f"full legal details: <b>{client_name}</b> | Email: <b>nisaar@fantastic1.com</b> | Mobile: <b>+27 (0)68 710 1939</b> | Target node: <b>{loc_name}</b>.<br/><br/>"
+        "<b>1. PURPOSE & SCOPE OF DISCUSSION</b><br/>"
+        "The Parties wish to enter into discussions concerning a potential business relationship relating to a fast-food franchise opportunity under the Phatbuns brand in South Africa (the 'Permitted Purpose'). In connection with this, the Disclosing Party will share proprietary business systems, financial models, recipes, operational manuals, and strategic information.<br/><br/>"
+        "<b>2. FASA COMPLIANCE & ETHICAL STANDARDS</b><br/>"
+        "The Parties acknowledge that this Agreement and subsequent franchise disclosures are intended to comply with the ethical frameworks and guidelines established by the Franchise Association of South Africa (FASA) and the Consumer Protection Act, No. 68 of 2008 (CPA). All negotiations, document exchanges, and disclosures shall be carried out in good faith and transparency.<br/><br/>"
+        "<b>3. PROTECTION OF PERSONAL INFORMATION (POPIA)</b><br/>"
+        "Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA) in relation to any personal information processed under this Agreement: (a) The Receiving Party shall only process personal information strictly for the Permitted Purpose; (b) Appropriate technical security measures shall be maintained; (c) Information shall be securely destroyed when no longer required.<br/><br/>"
+        "<b>4. CONFIDENTIALITY OBLIGATIONS</b><br/>"
+        "The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa, including financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies.<br/><br/>"
+        "<b>5. NON-CIRCUMVENTION</b><br/>"
+        "The Receiving Party covenants that it will not, directly or indirectly, circumvent, bypass, or avoid Phatbuns South Africa to enter into any business transaction, franchise system, or contract with suppliers, landlords, or partners introduced herein by the Disclosing Party during discussions. The Receiving Party shall not use the Disclosing Party's concepts to establish a competing business for 24 months following termination.<br/><br/>"
+        "<b>6. GOVERNING LAW AND JURISDICTION</b><br/>"
+        "This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa under the exclusive jurisdiction of the High Court of South Africa."
+    )
+    story.append(Paragraph(intro_ncnda, cell_style))
+    story.append(Spacer(1, 10))
+    
+    table_data_sig_p3 = [
+        [Paragraph("<b>For: PHATBUNS SOUTH AFRICA</b>", cell_bold), Paragraph("<b>For: THE RECEIVING PARTY</b>", cell_bold)],
+        [Paragraph("Authorized Signature: ______________________<br/>Name: Nisaar Ally<br/>Title: SA Master Rights Holder<br/>Date: ____ / ____ / 2026 | Place: Johannesburg", cell_style),
+         Paragraph(f"Authorized Signature: ______________________<br/>Name: {client_name}<br/>Title: Prospective Franchisee<br/>Date: ____ / ____ / 2026 | ID: _________________", cell_style)]
     ]
-    tsig = Table(table_data_sig, colWidths=[250, 273])
-    tsig.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    tsig_p3 = Table(table_data_sig_p3, colWidths=[260, 263])
+    tsig_p3.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
+        ('BACKGROUND', (0,0), (-1,0), bg_light),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 6),
         ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
     ]))
-    story.append(tsig)
+    story.append(tsig_p3)
 
     doc.build(story, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
     buffer.seek(0)
