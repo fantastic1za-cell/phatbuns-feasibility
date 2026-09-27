@@ -80,15 +80,15 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     working_cap = turnkey_cap * 0.15
     client_name = data.get("client_name", "Prospective Investor")
 
-    # ================= PAGE 1: COVER / HERO BANNER =================
+    # ================= PAGE 1: EXACT SATURDAY COVER DESIGN =================
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     cover_img_path = os.path.join(assets_dir, "phatbuns_hero.jpg")
     
     if os.path.exists(cover_img_path):
-        story.append(RLImage(cover_img_path, width=523, height=240))
+        story.append(RLImage(cover_img_path, width=523, height=260))
         story.append(Spacer(1, 10))
     else:
-        # High-impact branded header box if image is absent
+        # Fallback if image asset is missing in repo
         header_table_data = [[Paragraph("<font color='white' size=14><b>PHATBUNS SOUTH AFRICA — MASTER FRANCHISE SYSTEM</b></font><br/><font color='#FF6600' size=10>EXECUTIVE INVESTOR FEASIBILITY PACK</font>", cell_style)]]
         ht = Table(header_table_data, colWidths=[523])
         ht.setStyle(TableStyle([
