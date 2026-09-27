@@ -1,4 +1,4 @@
-# pdf_engine.py - Production PDF Report Engine (Fail-Safe Key Lookups & Auto-Flow)
+# pdf_engine.py - Production PDF Report Engine (Fail-Safe Structural Parsing)
 import os
 import io
 import math
@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
@@ -142,6 +143,7 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, model, max_seats, high_seats, capital, wc, int_rent, ext_rent, ops_cost, total_lease_outlay, turnover_clause_pct, recommended_model_name, dscr, payback_df, df_pnl_annual, blueprint_pil_img, applicant_name="Prospective Investor", applicant_email="N/A", applicant_mobile="N/A", **kwargs):
+    styles = getSampleStyleSheet()
     site_p = SITE_PROFILES.get(loc_name, {
         "landlord": "Redefine Properties / Abcon",
         "mall_size": "10,008 m² Convenience Center",
@@ -161,16 +163,16 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     LIGHT_BG = colors.HexColor('#F7FAFC')
     BORDER_COLOR = colors.HexColor('#CBD5E0')
 
-    title_style = ParagraphStyle('TitleStyle', fontName='Helvetica-Bold', fontSize=14, textColor=WHITE_TEXT, leading=16)
-    subtitle_style = ParagraphStyle('SubTitleStyle', fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, leading=10, alignment=2)
-    sec_banner_style = ParagraphStyle('SecBannerStyle', fontName='Helvetica-Bold', fontSize=8.5, textColor=WHITE_TEXT, leading=10)
-    body_bold = ParagraphStyle('BodyBold', fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=DARK_TEXT)
-    body_regular = ParagraphStyle('BodyRegular', fontName='Helvetica', fontSize=7, leading=9, textColor=DARK_TEXT)
-    body_white_bold = ParagraphStyle('BodyWhiteBold', fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=WHITE_TEXT)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, textColor=WHITE_TEXT, leading=16)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, textColor=ORANGE_BRAND, leading=10, alignment=2)
+    sec_banner_style = ParagraphStyle('SecBannerStyle', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=8.5, textColor=WHITE_TEXT, leading=10)
+    body_bold = ParagraphStyle('BodyBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=DARK_TEXT)
+    body_regular = ParagraphStyle('BodyRegular', parent=styles['Normal'], fontName='Helvetica', fontSize=7, leading=9, textColor=DARK_TEXT)
+    body_white_bold = ParagraphStyle('BodyWhiteBold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7, leading=9, textColor=WHITE_TEXT)
 
     elements = []
 
-    # PAGE 1: COVER
+    # PAGE 1: COVER PAGE
     cover_img_bytes = create_cover_page_image()
     elements.append(RLImage(cover_img_bytes, width=558, height=775))
     elements.append(PageBreak())
@@ -261,7 +263,7 @@ def generate_pdf_report(loc_name, shop, suburb, int_gla, ext_gla, total_gla, mod
     elements.append(t_pnl)
     elements.append(Spacer(1, 6))
 
-    # SECTION 11B: SAFE 5-YEAR CASH COMPARISON
+    # SECTION 11B: FAIL-SAFE CASH COMPARISON
     sec11b_banner = Table([[Paragraph("11B. 5-YEAR CASH INVESTMENT COMPARISON: BANK FIXED DEPOSIT VS. PHATBUNS FRANCHISE", sec_banner_style)]], colWidths=[558])
     sec11b_banner.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,-1), NAVY_HEADER), ('PADDING', (0,0), (-1,-1), 3)]))
     elements.append(sec11b_banner)
