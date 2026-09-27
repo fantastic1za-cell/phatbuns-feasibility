@@ -1,142 +1,156 @@
-# services.py - Complete Google Drive, Gmail & PDF Extraction Services
 import os
-import io
-import re
 import smtplib
 from email.message import EmailMessage
 import streamlit as st
 
+# Google Cloud / Drive API imports with fail-safe checks
 try:
-    from pypdf import PdfReader
-    HAS_PYPDF = True
-except ImportError:
-    HAS_PYPDF = False
-
-try:
-    from google.oauth2.service_account import Credentials
+    from google.oauth2 import service_account
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseUpload
-    HAS_GDRIVE = True
+    GOOGLE_API_AVAILABLE = True
 except ImportError:
-    HAS_GDRIVE = False
-
-SCOPES = ["https://www.googleapis.com/auth/drive"]
+    GOOGLE_API_AVAILABLE = False
 
 def get_drive_service():
-    if not HAS_GDRIVE:
+    """
+    Initializes and returns the Google Drive API service using Streamlit Secrets.
+    Includes fail-safe handling if credentials are missing or inactive.
+    """
+    if not GOOGLE_API_AVAILABLE:
         return None
+    
     try:
         if "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
-            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+            creds = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
+            )
             return build("drive", "v3", credentials=creds)
-    except Exception as e:
-        print(f"Drive Service Error: {e}")
+    except Exception:
+        pass
     return None
 
-def upload_pdf_to_drive(pdf_bytes, file_name, location_name="General"):
-    drive_service = get_drive_service()
-    if not drive_service:
-        return None, "(Drive API Inactive - check st.secrets)"
-    
+def get_or_create_folder(service, folder_name, parent_id=None):
+    """
+    Finds or creates a folder on Google Drive (e.g., Locations/{location_name}).
+    """
     try:
-        folder_query = f"name = '{location_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        results = drive_service.files().list(q=folder_query, spaces='drive', fields="files(id, name)").execute()
-        folders = results.get('files', [])
+        query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+        if parent_id:
+            query += f" and '{parent_id}' in parents"
+            
+        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        files = results.get('files', [])
         
-        if folders:
-            folder_id = folders[0]['id']
-        else:
-            folder_metadata = {
-                'name': location_name,
-                'mimeType': 'application/vnd.google-apps.folder'
-            }
-            folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
-            folder_id = folder.get('id')
+        if files:
+            return files[0]['id']
+        
+        # Create folder if it doesn't exist
+        folder_metadata = {
+            'name': folder_name,
+            'mimeType': 'application/vnd.google-apps.folder'
+        }
+        if parent_id:
+            folder_metadata['parents'] = [parent_id]
+            
+        folder = service.files().create(body=folder_metadata, fields='id').execute()
+        return folder.get('id')
+    except Exception:
+        return None
 
+def sync_file_to_drive(file_obj, location_name):
+    """
+    Uploads an uploaded file or generated PDF directly into the 
+    dedicated Google Drive location folder: Locations/{location_name}/
+    """
+    service = get_drive_service()
+    if not service:
+        return False, "Drive API Inactive"
+        
+    try:
+        # Root 'Locations' folder
+        root_folder_id = get_or_create_folder(service, "Locations")
+        if not root_folder_id:
+            return False, "Could not create root folder"
+            
+        # Site-specific subfolder
+        loc_folder_id = get_or_create_folder(service, location_name, root_folder_id)
+        if not loc_folder_id:
+            return False, "Could not create location folder"
+            
+        # Prepare file metadata and stream
+        file_name = getattr(file_obj, "name", "feasibility_report.pdf")
+        
+        if hasattr(file_obj, "getvalue"):
+            file_bytes = file_obj.getvalue()
+        elif hasattr(file_obj, "read"):
+            file_obj.seek(0)
+            file_bytes = file_obj.read()
+        else:
+            file_bytes = file_obj
+
+        from io import BytesIO
+        media = MediaIoBaseUpload(BytesIO(file_bytes), mimetype='application/octet-stream', resumable=True)
+        
         file_metadata = {
             'name': file_name,
-            'parents': [folder_id]
+            'parents': [loc_folder_id]
         }
-        media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf', resumable=True)
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
-        return file.get('webViewLink'), "Uploaded Successfully to Google Drive"
-    except Exception as e:
-        return None, f"Drive Upload Error: {str(e)}"
-
-def send_feasibility_email(to_email, pdf_bytes, file_name, location_name):
-    try:
-        gmail_user = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
-        gmail_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
         
-        if not gmail_password:
-            return False, "Gmail App Password not configured in secrets."
+        # Check if file already exists in folder to update or create new
+        query = f"name = '{file_name}' and '{loc_folder_id}' in parents and trashed = false"
+        existing = service.files().list(q=query, spaces='drive', fields="files(id)").execute().get('files', [])
+        
+        if existing:
+            service.files().update(fileId=existing[0]['id'], media_body=media).execute()
+        else:
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            
+        return True, "Synced Successfully"
+    except Exception as e:
+        return False, f"Sync Error: {str(e)}"
+
+def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_name):
+    """
+    Dispatches the compiled feasibility PDF report via Gmail SMTP 
+    using credentials stored in Streamlit Secrets.
+    """
+    try:
+        sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
+        app_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
+        
+        if not app_password:
+            return False, "Gmail App Password not configured."
 
         msg = EmailMessage()
-        msg['Subject'] = f"Phatbuns Feasibility & Franchise Pack - {location_name}"
-        msg['From'] = gmail_user
-        msg['To'] = to_email
-        msg.set_content(f"Dear Prospective Partner,\n\nPlease find attached the formal Phatbuns Feasibility Pack and Investment Matrix for {location_name}.\n\nKind Regards,\nNisaar Ally\nSA Master Rights Holder")
-
-        msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=file_name)
-
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(gmail_user, gmail_password)
-            smtp.send_message(msg)
-        return True, "Email dispatched successfully"
-    except Exception as e:
-        return False, f"Email dispatch failed: {str(e)}"
-
-def extract_legacy_pdf_parameters(pdf_file_bytes):
-    extracted_data = {}
-    if not HAS_PYPDF:
-        return extracted_data
-    
-    try:
-        reader = PdfReader(io.BytesIO(pdf_file_bytes))
-        full_text = ""
-        for page in reader.pages:
-            t = page.extract_text()
-            if t:
-                full_text += t + "\n"
-            
-        loc_match = re.search(r"(?:New Corner|Mall|Site|Location)[^\|\n]*[:\|\-]?\s*([^\n\(]+)", full_text, re.IGNORECASE)
-        if loc_match:
-            extracted_data["location_name"] = loc_match.group(0).strip().replace("PHATBUNS FEASIBILITY", "").strip()
-        else:
-            extracted_data["location_name"] = "New Corner Northcliff"
-
-        shop_match = re.search(r"(?:Shop|Unit|Store)\s*([0-9A-Za-z\s\-]+)", full_text, re.IGNORECASE)
-        if shop_match:
-            extracted_data["shop_code"] = shop_match.group(1).strip()
-        else:
-            extracted_data["shop_code"] = "RL 03"
-
-        gla_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:m²|sqm|sq m)", full_text, re.IGNORECASE)
-        if gla_match:
-            extracted_data["internal_gla"] = float(gla_match.group(1))
-        else:
-            extracted_data["internal_gla"] = 167.0
-
-        rent_match = re.search(r"R\s*([\d,]+(?:\.\d+)?)\s*/\s*(?:m²|sqm)", full_text, re.IGNORECASE)
-        if rent_match:
-            extracted_data["int_rent"] = float(rent_match.group(1).replace(",", ""))
-        else:
-            extracted_data["int_rent"] = 350.0
-
-        cap_match = re.search(r"(?:Turnkey|Capital|Setup)\s*(?:Cost)?[:\|\-]?\s*R\s*([\d,]+)", full_text, re.IGNORECASE)
-        if cap_match:
-            extracted_data["turnkey_capital"] = float(cap_match.group(1).replace(",", ""))
-        else:
-            extracted_data["turnkey_capital"] = 3100000.0
-
-        wc_match = re.search(r"(?:Working Capital)\s*[:\|\-]?\s*R\s*([\d,]+)", full_text, re.IGNORECASE)
-        if wc_match:
-            extracted_data["working_capital"] = float(wc_match.group(1).replace(",", ""))
-        else:
-            extracted_data["working_capital"] = 750000.0
-
-    except Exception as e:
-        print(f"Extraction Exception: {e}")
+        msg['Subject'] = f"Phatbuns Franchise Feasibility Pack - {location_name}"
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
         
-    return extracted_data
+        msg.set_content(
+            f"Dear {recipient_name},\n\n"
+            f"Please find attached the official Phatbuns franchise feasibility and investment pack "
+            f"for your prospective site at {location_name}.\n\n"
+            f"This confidential pack includes financial models, layout structures, and brand standards.\n\n"
+            f"Best regards,\n"
+            f"Nisaar Ally\n"
+            f"SA Master Rights Holder | Phatbuns South Africa"
+        )
+        
+        # Attach the compiled PDF report
+        msg.add_attachment(
+            pdf_bytes,
+            maintype='application',
+            subtype='pdf',
+            filename=f"Phatbuns_{location_name}_Feasibility_Report.pdf"
+        )
+        
+        # Connect to Gmail SMTP secure server
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(sender_email, app_password)
+            smtp.send_message(msg)
+            
+        return True, "Email Dispatched Successfully"
+    except Exception as e:
+        return False, f"Email Error: {str(e)}"
