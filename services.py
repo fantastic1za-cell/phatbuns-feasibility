@@ -1,4 +1,4 @@
-# services.py - External Services, Database, Email & Google Drive Sync Engine
+# services.py - Production Service Engine (Drive Folder Hierarchy & Safe Extraction)
 import os
 import io
 import re
@@ -39,7 +39,6 @@ GDRIVE_SCOPES = [
 LOCATIONS_ROOT_DRIVE_ID = "1vGItMiw-ZYqzBOXvLfl0xkbhh7uYkhf5"
 DB_FILE = "phatbuns_franchisees.db"
 
-# Fail-Safe Database Operations & Schema Management
 def init_db(force_recreate=False):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
@@ -150,7 +149,6 @@ def get_pipeline_dataframe():
     conn.close()
     return df
 
-# Google Drive API Operations
 def get_drive_service():
     if not HAS_GDRIVE:
         return None
@@ -184,21 +182,13 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
         ).execute()
         
         files = results.get('files', [])
-        
         if files:
             return files[0]['id']
         else:
-            file_metadata = {
-                'name': clean_name, 
-                'mimeType': 'application/vnd.google-apps.folder'
-            }
+            file_metadata = {'name': clean_name, 'mimeType': 'application/vnd.google-apps.folder'}
             if parent_id:
                 file_metadata['parents'] = [parent_id]
-            folder = service.files().create(
-                body=file_metadata, 
-                fields='id', 
-                supportsAllDrives=True
-            ).execute()
+            folder = service.files().create(body=file_metadata, fields='id', supportsAllDrives=True).execute()
             return folder.get('id')
     except Exception as e:
         print(f"Drive Folder Error: {e}")
@@ -207,16 +197,8 @@ def get_or_create_drive_folder(service, folder_name, parent_id=None):
 def upload_pdf_to_drive(service, file_bytes, filename, parent_folder_id):
     try:
         media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
-        file_metadata = {
-            'name': filename, 
-            'parents': [parent_folder_id]
-        }
-        file = service.files().create(
-            body=file_metadata, 
-            media_body=media, 
-            fields='id', 
-            supportsAllDrives=True
-        ).execute()
+        file_metadata = {'name': filename, 'parents': [parent_folder_id]}
+        file = service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
         return file.get('id')
     except Exception as e:
         print(f"Drive Upload Error: {e}")
@@ -233,19 +215,18 @@ def sync_pdf_to_local_and_cloud(location_name, pdf_bytes, pdf_filename):
 
     drive_service = get_drive_service()
     if not drive_service:
-        return local_file_path, "Local saved, but Drive API credentials active check failed"
+        return local_file_path, "Local saved (Drive API Inactive - check st.secrets)"
 
     try:
         site_folder_id = get_or_create_drive_folder(drive_service, loc_clean, parent_id=LOCATIONS_ROOT_DRIVE_ID)
         if site_folder_id:
             file_id = upload_pdf_to_drive(drive_service, pdf_bytes, pdf_filename, site_folder_id)
             if file_id:
-                return local_file_path, f"✅ Created folder & synced output to Google Drive: 'Locations/{loc_clean}/{pdf_filename}'"
-        return local_file_path, "Local saved, Google Drive folder creation skipped"
+                return local_file_path, f"✅ Folder created & PDF uploaded to Google Drive: 'Locations/{loc_clean}/{pdf_filename}'"
+        return local_file_path, "Local saved, Drive folder sync skipped"
     except Exception as e:
-        return local_file_path, f"Drive Exception: {str(e)}"
+        return local_file_path, f"Drive Sync Exception: {str(e)}"
 
-# Email Dispatchers
 def send_franchisee_email_pack(recipient_email, recipient_name, site_name, pdf_bytes, pdf_filename):
     sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
     sender_password = "ehyjsvzhffmbvuaf"
@@ -336,7 +317,6 @@ def send_investor_lead_notification(data):
     except Exception as e:
         return False, str(e)
 
-# Legacy PDF Parameter Extraction Engine
 def extract_legacy_pdf_parameters(pdf_file_bytes):
     extracted_data = {}
     if not HAS_PYPDF:
@@ -348,32 +328,26 @@ def extract_legacy_pdf_parameters(pdf_file_bytes):
         for page in reader.pages:
             full_text += page.extract_text() + "\n"
             
-        # Parse Location
         loc_match = re.search(r"Location Name\s*\|\s*([^\n\(]+)", full_text)
         if loc_match:
             extracted_data["location_name"] = loc_match.group(1).strip()
             
-        # Parse Shop Code
         shop_match = re.search(r"Shop\s*([0-9A-Za-z]+)", full_text)
         if shop_match:
             extracted_data["shop_code"] = shop_match.group(1).strip()
 
-        # Parse GLA / Footprint
         gla_match = re.search(r"(\d+)\s*m²", full_text)
         if gla_match:
             extracted_data["internal_gla"] = float(gla_match.group(1))
 
-        # Parse Rent Rate
         rent_match = re.search(r"R\s*([\d,]+)\s*/\s*m²", full_text)
         if rent_match:
             extracted_data["int_rent"] = float(rent_match.group(1).replace(",", ""))
 
-        # Parse Turnkey Capital
         cap_match = re.search(r"R\s*([\d,]+)\s*Excl\.\s*VAT", full_text)
         if cap_match:
             extracted_data["turnkey_capital"] = float(cap_match.group(1).replace(",", ""))
 
-        # Parse Working Capital
         wc_match = re.search(r"WORKING CAPITAL\s*R\s*([\d,]+)", full_text)
         if wc_match:
             extracted_data["working_capital"] = float(wc_match.group(1).replace(",", ""))
