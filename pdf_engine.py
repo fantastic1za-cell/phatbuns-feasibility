@@ -82,7 +82,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
 
     # ================= PAGE 1: EXACT SATURDAY COVER DESIGN =================
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
-    cover_img_path = os.path.join(assets_dir, "phatbuns_hero.jpg")
+    cover_img_path = os.path.join(assets_dir, "Cover.JPG")
     
     if os.path.exists(cover_img_path):
         story.append(RLImage(cover_img_path, width=523, height=260))
