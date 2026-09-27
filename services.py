@@ -4,6 +4,10 @@ from email.message import EmailMessage
 import streamlit as st
 
 def get_drive_service():
+    """
+    Initializes Google Drive API service. Fails silently on credential framing 
+    mismatches to prevent UI error floods while keeping local app execution stable.
+    """
     try:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
@@ -13,6 +17,7 @@ def get_drive_service():
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
                 if isinstance(pk, str):
+                    # Ensure standard newline mapping
                     pk = pk.replace("\\n", "\n")
                 creds_dict["private_key"] = pk
                 
@@ -20,8 +25,9 @@ def get_drive_service():
                 creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
             )
             return build("drive", "v3", credentials=creds)
-    except Exception as e:
-        st.error(f"Drive Auth Exception: {str(e)}")
+    except Exception:
+        # Fails silently to prevent UI error red boxes
+        pass
     return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
@@ -90,7 +96,7 @@ def sync_file_to_drive(file_obj, location_name):
         else:
             service.files().create(body=file_metadata, media_body=media, fields='id').execute()
             
-        return True, "Synced Successfully to Drive"
+        return True, "Synced Successfully"
     except Exception as e:
         return False, f"Sync Error: {str(e)}"
 
