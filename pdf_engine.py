@@ -28,20 +28,20 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         'DocTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=15,
-        leading=18,
+        fontSize=14,
+        leading=16,
         textColor=primary_color,
-        spaceAfter=4
+        spaceAfter=3
     )
     
     subtitle_style = ParagraphStyle(
         'DocSubtitle',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=9,
-        leading=12,
+        fontSize=8,
+        leading=10,
         textColor=accent_color,
-        spaceAfter=10
+        spaceAfter=6
     )
     
     cell_style = ParagraphStyle(
@@ -92,13 +92,14 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     working_cap = turnkey_cap * 0.15
     client_name = data.get("client_name", "Prospective Investor")
 
-    # ================= PAGE 1: COVER =================
+    # ================= PAGE 1: COVER & SITE EVALUATION SUMMARY =================
     assets_dir = os.path.join(os.path.dirname(__file__), "assets")
     cover_img_path = os.path.join(assets_dir, "Cover.JPG")
     
     if os.path.exists(cover_img_path):
-        story.append(RLImage(cover_img_path, width=523, height=260))
-        story.append(Spacer(1, 10))
+        # Increased cover image height to fill approximately half of the page (~360pt)
+        story.append(RLImage(cover_img_path, width=523, height=360))
+        story.append(Spacer(1, 8))
     else:
         header_table_data = [[Paragraph("<font color='white' size=14><b>PHATBUNS SOUTH AFRICA — MASTER FRANCHISE SYSTEM</b></font><br/><font color='#FF6600' size=10>EXECUTIVE INVESTOR FEASIBILITY PACK</font>", cell_style)]]
         ht = Table(header_table_data, colWidths=[523])
@@ -109,11 +110,12 @@ def generate_feasibility_pdf(data, blueprint_images=None):
             ('LEFTPADDING', (0,0), (-1,-1), 16),
         ]))
         story.append(ht)
-        story.append(Spacer(1, 15))
+        story.append(Spacer(1, 10))
 
+    # Site evaluation content placed directly underneath the cover image on Page 1
     story.append(Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", title_style))
     story.append(Paragraph(f"FULL SIT-DOWN MODEL ({footprint:.2f} M²) | MASTER FEASIBILITY PACK", subtitle_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 4))
     
     summary_data = [
         [Paragraph("TURNKEY SETUP", cell_bold), Paragraph("WORKING CAPITAL", cell_bold), Paragraph("BASE NET RENTAL", cell_bold), Paragraph("OPS COST", cell_bold)],
@@ -126,8 +128,8 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(tsum)
     story.append(PageBreak())
@@ -333,7 +335,6 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(Spacer(1, 2))
 
     menu_drive = "https://drive.google.com/drive/folders/14K_pChaU-dYfNlKi-HvzcEytFY6qOR_m"
-    video_drive = "https://drive.google.com/drive/folders/17BKYGZCzDE85KrOPJGdkDIOGI0D5x5_i"
     
     menu_table_data = [
         [Paragraph("BRAND & CONCEPT", cell_bold), Paragraph("MENU SPECIFICATION & OVERVIEW", cell_bold), Paragraph("CHANNELS & DOWNLOAD LINKS", cell_bold)],
