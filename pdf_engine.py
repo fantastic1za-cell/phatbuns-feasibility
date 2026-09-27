@@ -12,7 +12,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         pagesize=A4,
         rightMargin=36,
         leftMargin=36,
-        topMargin=36,
+        topMargin=48,  # Increased top margin to prevent header overlap
         bottomMargin=36
     )
     
@@ -74,12 +74,12 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         canvas.saveState()
         canvas.setFont('Helvetica-Bold', 8)
         canvas.setFillColor(accent_color)
-        canvas.drawString(36, 810, "PHAT buns")
+        canvas.drawString(36, 818, "PHAT buns") # Adjusted Y coordinate
         
         canvas.setFont('Helvetica', 8)
         canvas.setFillColor(colors.HexColor("#666666"))
         header_text = "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
-        canvas.drawString(90, 810, header_text)
+        canvas.drawString(90, 818, header_text) # Adjusted Y coordinate
         
         canvas.drawRightString(559, 20, f"Page {doc_obj.page} of 8")
         canvas.restoreState()
@@ -310,7 +310,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(troi)
     story.append(PageBreak())
 
-    # ================= PAGE 7: CLICKABLE BRAND MENUS & MEDIA SHOWCASE (MATCHING PHOTO 2) =================
+    # ================= PAGE 7: CLICKABLE BRAND MENUS & MEDIA SHOWCASE =================
     story.append(make_section_header("11. BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE"))
     story.append(Spacer(1, 2))
     story.append(Paragraph("<font size=8 color='#FF6600'><b>CLICKABLE DOWNLOAD LINKS FOR BRAND MENUS, STORE VISUALS & VIDEO WALK-THROUGHS</b></font>", ParagraphStyle('SubM', parent=cell_bold, alignment=1)))
