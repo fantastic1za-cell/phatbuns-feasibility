@@ -4,17 +4,12 @@ from email.message import EmailMessage
 import streamlit as st
 
 def get_drive_service():
-    """
-    Initializes and returns the Google Drive API service using Streamlit Secrets.
-    Handles TOML multiline string formatting and reports explicit auth errors.
-    """
     try:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         
         if "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
-            
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
                 if isinstance(pk, str):
@@ -25,16 +20,11 @@ def get_drive_service():
                 creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
             )
             return build("drive", "v3", credentials=creds)
-        else:
-            st.warning("GCP Service Account secrets not found in Streamlit config.")
     except Exception as e:
         st.error(f"Drive Auth Exception: {str(e)}")
     return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
-    """
-    Finds or creates a folder on Google Drive (e.g., Locations/{location_name}).
-    """
     try:
         query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         if parent_id:
@@ -59,10 +49,6 @@ def get_or_create_folder(service, folder_name, parent_id=None):
         return None
 
 def sync_file_to_drive(file_obj, location_name):
-    """
-    Uploads an uploaded file or generated PDF directly into the 
-    dedicated Google Drive location folder: Locations/{location_name}/
-    """
     service = get_drive_service()
     if not service:
         return False, "Drive API Inactive"
@@ -110,7 +96,7 @@ def sync_file_to_drive(file_obj, location_name):
 
 def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_name):
     """
-    Dispatches the compiled feasibility PDF report via Gmail SMTP.
+    Dispatches the compiled feasibility PDF report via Gmail SMTP with professional executive write-up.
     """
     try:
         sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
@@ -120,24 +106,40 @@ def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_
             return False, "Gmail App Password not configured."
 
         msg = EmailMessage()
-        msg['Subject'] = f"Phatbuns Franchise Feasibility Pack - {location_name}"
+        msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Investor Review ({location_name})"
         msg['From'] = sender_email
         msg['To'] = recipient_email
         
-        msg.set_content(
+        email_body = (
             f"Dear {recipient_name},\n\n"
-            f"Please find attached the official Phatbuns franchise feasibility and investment pack "
-            f"for your prospective site at {location_name}.\n\n"
-            f"Best regards,\n"
+            f"Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.\n\n"
+            f"We are excited to share our comprehensive Master Franchisee Investor Pack for {location_name}. "
+            f"Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.\n\n"
+            f"Please find attached to this email (Consolidated within the Feasibility PDF Pack):\n"
+            f"1. Executive Cover Page & Brand Identity Presentation\n"
+            f"2. Site Evaluation & Commercial Investment Analysis ({location_name})\n"
+            f"3. Financial Outlay & Debt Serviceability Breakdown\n"
+            f"4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)\n"
+            f"5. Development Layout & Leasing Site Plan (Rendered)\n"
+            f"6. Addendum — Brand Menus with Direct Google Drive Download Links\n"
+            f"7. Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)\n\n"
+            f"Next Steps:\n"
+            f"Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.\n\n"
+            f"Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.\n\n"
+            f"Warm regards,\n\n"
             f"Nisaar Ally\n"
-            f"SA Master Rights Holder | Phatbuns South Africa"
+            f"SA Master Rights Holder | Phatbuns South Africa\n"
+            f"Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712\n"
+            f"Email: nisaar@fantastic1.com"
         )
+        
+        msg.set_content(email_body)
         
         msg.add_attachment(
             pdf_bytes,
             maintype='application',
             subtype='pdf',
-            filename=f"Phatbuns_{location_name}_Feasibility_Report.pdf"
+            filename=f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf"
         )
         
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
