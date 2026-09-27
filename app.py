@@ -277,7 +277,7 @@ with tab1:
     with t_col1:
         turnover_clause_pct = st.number_input("Annual Turnover Clause (%)", value=7.0)
     with t_col2:
-        dyn_turnover_threshold = float(round((internal_gla * int_rent) / 0.07))
+        dyn_turnover_threshold = float(round((internal_gla * int_rent) / 0.07)) if int_rent > 0 else 354286.0
         turnover_threshold = st.number_input("Monthly Turnover Threshold (R / month)", value=dyn_turnover_threshold)
 
     # Monthly Lease Outlay Calculation
