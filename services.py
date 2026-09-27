@@ -119,30 +119,51 @@ def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_
         msg['From'] = f"Phatbuns South Africa <{sender_email}>"
         msg['To'] = recipient_email
         
-        email_body = (
-            f"Dear {recipient_name},\n\n"
-            f"Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.\n\n"
-            f"We are excited to share our comprehensive Master Franchisee Investor Pack for {location_name}. "
-            f"Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.\n\n"
-            f"Please find attached to this email (Consolidated within the Feasibility PDF Pack):\n"
-            f"1. Executive Cover Page & Brand Identity Presentation\n"
-            f"2. Site Evaluation & Commercial Investment Analysis ({location_name})\n"
-            f"3. Financial Outlay & Debt Serviceability Breakdown\n"
-            f"4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)\n"
-            f"5. Development Layout & Leasing Site Plan (Rendered)\n"
-            f"6. Addendum — Brand Menus with Direct Google Drive Download Links\n"
-            f"7. Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)\n\n"
-            f"Next Steps:\n"
-            f"Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.\n\n"
-            f"Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.\n\n"
-            f"Warm regards,\n\n"
-            f"Nisaar Ally\n"
-            f"SA Master Rights Holder | Phatbuns South Africa\n"
-            f"Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712\n"
-            f"Email: nisaar@fantastic1.com"
-        )
+        # HTML Email body with 30px height icons positioned above Warm regards
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; font-size: 14px; color: #1A1A1A; line-height: 1.5;">
+            <p>Dear {recipient_name},</p>
+            
+            <p>Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.</p>
+            
+            <p>We are excited to share our comprehensive Master Franchisee Investor Pack for <b>{location_name}</b>. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.</p>
+            
+            <p><b>Please find attached to this email (Consolidated within the Feasibility PDF Pack):</b></p>
+            <ol>
+                <li>Executive Cover Page & Brand Identity Presentation</li>
+                <li>Site Evaluation & Commercial Investment Analysis ({location_name})</li>
+                <li>Financial Outlay & Debt Serviceability Breakdown</li>
+                <li>5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)</li>
+                <li>Development Layout & Leasing Site Plan (Rendered)</li>
+                <li>Addendum — Brand Menus with Direct Google Drive Download Links</li>
+                <li>Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)</li>
+            </ol>
+            
+            <p><b>Next Steps:</b><br/>
+            Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.</p>
+            
+            <p>Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.</p>
+            
+            <div style="margin-top: 30px; margin-bottom: 15px;">
+                <img src="https://i.imgur.com/7kZ0h7T.png" alt="Phatbuns Icon" height="30" style="vertical-align: middle; margin-right: 15px;" />
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Flag_of_South_Africa.svg" alt="South African Flag" height="30" style="vertical-align: middle;" />
+            </div>
+            
+            <p>Warm regards,</p>
+            
+            <p>
+                <b>Nisaar Ally</b><br/>
+                SA Master Rights Holder | Phatbuns South Africa<br/>
+                Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712<br/>
+                Email: <a href="mailto:nisaar@fantastic1.com">nisaar@fantastic1.com</a>
+            </p>
+        </body>
+        </html>
+        """
         
-        msg.set_content(email_body)
+        msg.set_content("Please view this email in an HTML-compatible email client.")
+        msg.add_alternative(html_content, subtype='html')
         
         msg.add_attachment(
             pdf_bytes,
