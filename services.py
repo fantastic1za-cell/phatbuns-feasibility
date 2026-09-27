@@ -1,12 +1,13 @@
 import os
+import json
 import smtplib
 from email.message import EmailMessage
 import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service. Fails silently on credential framing 
-    mismatches to prevent UI error floods while keeping local app execution stable.
+    Initializes Google Drive API service by writing secrets to a temporary 
+    JSON file to completely bypass PEM framing/newline decoding issues.
     """
     try:
         from google.oauth2 import service_account
@@ -14,20 +15,18 @@ def get_drive_service():
         
         if "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
-            if "private_key" in creds_dict:
-                pk = creds_dict["private_key"]
-                if isinstance(pk, str):
-                    # Ensure standard newline mapping
-                    pk = pk.replace("\\n", "\n")
-                creds_dict["private_key"] = pk
+            
+            # Write out to a temporary local credentials file in the container
+            creds_path = "/tmp/gcp_creds.json"
+            with open(creds_path, "w") as f:
+                json.dump(creds_dict, f)
                 
-            creds = service_account.Credentials.from_service_account_info(
-                creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
+            creds = service_account.Credentials.from_service_account_file(
+                creds_path, scopes=["https://www.googleapis.com/auth/drive"]
             )
             return build("drive", "v3", credentials=creds)
-    except Exception:
-        # Fails silently to prevent UI error red boxes
-        pass
+    except Exception as e:
+        st.error(f"Drive Sync Error: {str(e)}")
     return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
@@ -96,14 +95,11 @@ def sync_file_to_drive(file_obj, location_name):
         else:
             service.files().create(body=file_metadata, media_body=media, fields='id').execute()
             
-        return True, "Synced Successfully"
+        return True, "Synced Successfully to Drive"
     except Exception as e:
         return False, f"Sync Error: {str(e)}"
 
 def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_name):
-    """
-    Dispatches the compiled feasibility PDF report via Gmail SMTP with professional executive write-up.
-    """
     try:
         sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
         app_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
