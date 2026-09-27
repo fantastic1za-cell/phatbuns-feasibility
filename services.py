@@ -109,28 +109,28 @@ def extract_legacy_pdf_parameters(pdf_file_bytes):
         else:
             extracted_data["location_name"] = "New Corner Northcliff"
 
-        # 2. Shop Code Extraction (e.g., "Shop RL 03" or "RL03")[span_1](start_span)[span_1](end_span)
+        # 2. Shop Code Extraction
         shop_match = re.search(r"(?:Shop|Unit|Store)\s*([0-9A-Za-z\s\-]+)", full_text, re.IGNORECASE)
         if shop_match:
             extracted_data["shop_code"] = shop_match.group(1).strip()
         else:
             extracted_data["shop_code"] = "RL 03"
 
-        # 3. GLA / Area Extraction (e.g., "167sqm" or "167 m²")[span_2](start_span)[span_2](end_span)
+        # 3. GLA / Area Extraction
         gla_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:m²|sqm|sq m)", full_text, re.IGNORECASE)
         if gla_match:
             extracted_data["internal_gla"] = float(gla_match.group(1))
         else:
             extracted_data["internal_gla"] = 167.0
 
-        # 4. Rental Rate Extraction (e.g., "R350.00/m²")[span_3](start_span)[span_3](end_span)
+        # 4. Rental Rate Extraction
         rent_match = re.search(r"R\s*([\d,]+(?:\.\d+)?)\s*/\s*(?:m²|sqm)", full_text, re.IGNORECASE)
         if rent_match:
             extracted_data["int_rent"] = float(rent_match.group(1).replace(",", ""))
         else:
             extracted_data["int_rent"] = 350.0
 
-        # 5. Capital & Working Capital[span_4](start_span)[span_4](end_span)
+        # 5. Capital & Working Capital
         cap_match = re.search(r"(?:Turnkey|Capital|Setup)\s*(?:Cost)?[:\|\-]?\s*R\s*([\d,]+)", full_text, re.IGNORECASE)
         if cap_match:
             extracted_data["turnkey_capital"] = float(cap_match.group(1).replace(",", ""))
