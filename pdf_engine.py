@@ -12,7 +12,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         pagesize=A4,
         rightMargin=36,
         leftMargin=36,
-        topMargin=48,  # Clears header text overlap
+        topMargin=54,  # Increased top margin to comfortably fit the 2-line centered header
         bottomMargin=36
     )
     
@@ -72,15 +72,21 @@ def generate_feasibility_pdf(data, blueprint_images=None):
 
     def add_header_footer(canvas, doc_obj):
         canvas.saveState()
+        
+        # Line 1: Centered Brand & Confidentiality Notice
         canvas.setFont('Helvetica-Bold', 8)
         canvas.setFillColor(accent_color)
-        canvas.drawString(36, 818, "PHAT buns")
+        # We center across the A4 width (595pt total width, centered at x=297.5)
+        canvas.drawCentredString(297.5, 822, "PHAT BUNS — CONFIDENTIAL INFORMATION")
         
-        canvas.setFont('Helvetica', 8)
+        # Line 2: Centered Contact & Representative Details
+        canvas.setFont('Helvetica', 7.5)
         canvas.setFillColor(colors.HexColor("#666666"))
-        header_text = "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
-        canvas.drawString(90, 818, header_text)
+        header_line2 = "Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
+        canvas.drawCentredString(297.5, 811, header_line2)
         
+        # Page Number Footer
+        canvas.setFont('Helvetica', 8)
         canvas.drawRightString(559, 20, f"Page {doc_obj.page} of 8")
         canvas.restoreState()
 
@@ -97,7 +103,6 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     cover_img_path = os.path.join(assets_dir, "Cover.JPG")
     
     if os.path.exists(cover_img_path):
-        # Increased cover image height to fill approximately half of the page (~360pt)
         story.append(RLImage(cover_img_path, width=523, height=360))
         story.append(Spacer(1, 8))
     else:
@@ -112,7 +117,6 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         story.append(ht)
         story.append(Spacer(1, 10))
 
-    # Site evaluation content placed directly underneath the cover image on Page 1
     story.append(Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", title_style))
     story.append(Paragraph(f"FULL SIT-DOWN MODEL ({footprint:.2f} M²) | MASTER FEASIBILITY PACK", subtitle_style))
     story.append(Spacer(1, 4))
@@ -128,8 +132,8 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(tsum)
     story.append(PageBreak())
