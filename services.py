@@ -17,15 +17,12 @@ def get_drive_service():
             
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
-                # Clean up literal newline artifacts or escaped characters
                 pk = pk.replace("\\n", "\n")
                 
-                # Ensure correct PEM framing if flattened by TOML parser
                 if "-----BEGIN PRIVATE KEY-----" in pk and "-----END PRIVATE KEY-----" in pk:
                     header = "-----BEGIN PRIVATE KEY-----"
                     footer = "-----END PRIVATE KEY-----"
                     body = pk.replace(header, "").replace(footer, "").replace("\n", "").strip()
-                    # Re-chunk body into standard 64-character lines with real newlines
                     chunks = [body[i:i+64] for i in range(0, len(body), 64)]
                     pk = f"{header}\n" + "\n".join(chunks) + f"\n{footer}\n"
                     
@@ -119,7 +116,8 @@ def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_
 
         msg = EmailMessage()
         msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Investor Review ({location_name})"
-        msg['From'] = sender_email
+        # Formatted sender name displaying Phatbuns South Africa cleanly in client inboxes
+        msg['From'] = f"Phatbuns South Africa <{sender_email}>"
         msg['To'] = recipient_email
         
         email_body = (
