@@ -1,13 +1,12 @@
 import os
-import json
 import smtplib
 from email.message import EmailMessage
 import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service by writing secrets to a temporary 
-    JSON file to completely bypass PEM framing/newline decoding issues.
+    Initializes Google Drive API service. Explicitly normalizes and re-frames 
+    the RSA private key to permanently resolve Streamlit TOML PEM MalformedFraming errors.
     """
     try:
         from google.oauth2 import service_account
@@ -16,13 +15,24 @@ def get_drive_service():
         if "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
             
-            # Write out to a temporary local credentials file in the container
-            creds_path = "/tmp/gcp_creds.json"
-            with open(creds_path, "w") as f:
-                json.dump(creds_dict, f)
+            if "private_key" in creds_dict:
+                pk = creds_dict["private_key"]
+                # Clean up literal newline artifacts or escaped characters
+                pk = pk.replace("\\n", "\n")
                 
-            creds = service_account.Credentials.from_service_account_file(
-                creds_path, scopes=["https://www.googleapis.com/auth/drive"]
+                # Ensure correct PEM framing if flattened by TOML parser
+                if "-----BEGIN PRIVATE KEY-----" in pk and "-----END PRIVATE KEY-----" in pk:
+                    header = "-----BEGIN PRIVATE KEY-----"
+                    footer = "-----END PRIVATE KEY-----"
+                    body = pk.replace(header, "").replace(footer, "").replace("\n", "").strip()
+                    # Re-chunk body into standard 64-character lines with real newlines
+                    chunks = [body[i:i+64] for i in range(0, len(body), 64)]
+                    pk = f"{header}\n" + "\n".join(chunks) + f"\n{footer}\n"
+                    
+                creds_dict["private_key"] = pk
+                
+            creds = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
             )
             return build("drive", "v3", credentials=creds)
     except Exception as e:
