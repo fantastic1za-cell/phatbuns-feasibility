@@ -6,7 +6,7 @@ import streamlit as st
 def get_drive_service():
     """
     Initializes and returns the Google Drive API service using Streamlit Secrets.
-    Automatically normalizes private key newline formatting.
+    Fails silently if credentials are unformatted, preventing UI error floods.
     """
     try:
         from google.oauth2 import service_account
@@ -15,17 +15,18 @@ def get_drive_service():
         if "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
             
-            # Robustly fix private key formatting if literal \n strings were passed
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
-                creds_dict["private_key"] = pk.replace("\\n", "\n")
+                if isinstance(pk, str):
+                    pk = pk.encode().decode('unicode_escape')
+                creds_dict["private_key"] = pk
                 
             creds = service_account.Credentials.from_service_account_info(
                 creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
             )
             return build("drive", "v3", credentials=creds)
-    except Exception as e:
-        st.error(f"Drive Auth Error: {str(e)}")
+    except Exception:
+        pass
     return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
