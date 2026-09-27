@@ -143,7 +143,7 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         [Paragraph("Store Footprint", cell_style), Paragraph(f"{footprint:.2f} m² Full Sit-Down Model", cell_style), Paragraph("10% Prior to Store Opening", cell_style), Paragraph(f"R {turnkey_cap * 0.1:,.2f}", cell_style)],
         [Paragraph("Managing Agent", cell_style), Paragraph(managing_agent, cell_style), Paragraph("Total Turnkey Capital Outlay", cell_bold), Paragraph(f"R {turnkey_cap:,.2f}", cell_bold)],
         [Paragraph("Mall GLA Size", cell_style), Paragraph("Regional / Community Retail Node", cell_style), Paragraph("Working Capital Reserve", cell_style), Paragraph(f"R {working_cap:,.2f}", cell_style)],
-        [Paragraph("Site Plan Attached", cell_style), Paragraph("Yes (Rendered on Page 6)", cell_style), Paragraph("Landlord Rental Deposit", cell_style), Paragraph(f"R {base_rent * footprint:,.2f}", cell_style)],
+        [Paragraph("Site Plan Attached", cell_style), Paragraph("Yes (Rendered on Page 7)", cell_style), Paragraph("Landlord Rental Deposit", cell_style), Paragraph(f"R {base_rent * footprint:,.2f}", cell_style)],
     ]
     t1 = Table(table_data_1, colWidths=[110, 150, 160, 103])
     t1.setStyle(TableStyle([
@@ -310,40 +310,48 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     story.append(troi)
     story.append(PageBreak())
 
-    # ================= PAGE 7: CLICKABLE BRAND MENUS & MEDIA SHOWCASE =================
-    story.append(make_section_header("11. BRAND PORTFOLIO & GLOBAL MEDIA SHOWCASE"))
+    # ================= PAGE 7: FLOOR PLAN LAYOUT & BRAND CATALOGS =================
+    story.append(make_section_header("11. SITE DEVELOPMENT LEASING & FLOOR PLAN LAYOUT"))
+    story.append(Spacer(1, 4))
+    
+    if blueprint_images:
+        for title, img in blueprint_images:
+            story.append(Paragraph(f"<b>Layout Ref: {title}</b>", cell_bold))
+            story.append(Spacer(1, 4))
+            if img:
+                img_path = f"/tmp/{title.replace(' ', '_').replace('.', '_')}.png"
+                img.save(img_path)
+                story.append(RLImage(img_path, width=480, height=260))
+            else:
+                story.append(Paragraph("[Blueprint Document Attached & Synchronized to Drive Folder]", cell_style))
+            story.append(Spacer(1, 10))
+    else:
+        story.append(Paragraph("Standard modular kitchen layout engineered for SANHA Halal compliance and customer throughput.", cell_style))
+        story.append(Spacer(1, 10))
+
+    story.append(make_section_header("12. BRAND PORTFOLIO & CLICKABLE CHANNELS"))
     story.append(Spacer(1, 2))
-    story.append(Paragraph("<font size=8 color='#FF6600'><b>CLICKABLE DOWNLOAD LINKS FOR BRAND MENUS, STORE VISUALS & VIDEO WALK-THROUGHS</b></font>", ParagraphStyle('SubM', parent=cell_bold, alignment=1)))
-    story.append(Spacer(1, 6))
 
-    story.append(Paragraph("<b>CLICKABLE BRAND MENUS & CONCEPT CATALOGS (GOOGLE DRIVE)</b>", cell_bold))
-    story.append(Spacer(1, 3))
-
-    drive_base = "https://drive.google.com/drive/folders/1-PhatbunsMasterRepository"
+    menu_drive = "https://drive.google.com/drive/folders/14K_pChaU-dYfNlKi-HvzcEytFY6qOR_m"
+    video_drive = "https://drive.google.com/drive/folders/17BKYGZCzDE85KrOPJGdkDIOGI0D5x5_i"
     
     menu_table_data = [
-        [Paragraph("BRAND & CONCEPT", cell_bold), Paragraph("MENU SPECIFICATION & OVERVIEW", cell_bold), Paragraph("GOOGLE DRIVE DOWNLOAD LINK", cell_bold)],
+        [Paragraph("BRAND & CONCEPT", cell_bold), Paragraph("MENU SPECIFICATION & OVERVIEW", cell_bold), Paragraph("CHANNELS & DOWNLOAD LINKS", cell_bold)],
         [Paragraph("<b>Phatbuns Smash Burgers</b><br/><font size=7 color='#666666'>Artisan Smash Burgers & Signature Buns</font>", cell_style),
          Paragraph("Hand-pressed Angus beef smash patties served on seeded brioche, topped with proprietary secret sauces, Cheesy Doritos, and buttermilk fried chicken.", cell_style),
-         Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📥 DOWNLOAD MENU (PDF)</b></font></a>", cell_style)],
+         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/phatbuns_sa'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
         [Paragraph("<b>PhatVille Sliders & Sides</b><br/><font size=7 color='#666666'>Nashville Hot Sliders & Loaded Sides</font>", cell_style),
          Paragraph("Nashville-style sliders, crispy tender boxes, dusted crinkle fries, and specialized dipping sauces optimized for rapid kitchen assembly.", cell_style),
-         Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📥 DOWNLOAD MENU (PDF)</b></font></a>", cell_style)],
+         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/phatville_sa'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
         [Paragraph("<b>Butter Brûlée Signature Drinks</b><br/><font size=7 color='#666666'>Signature Beverages & Artisan Mocktails</font>", cell_style),
          Paragraph("Hand-crafted specialty iced teas, indulgent gourmet milkshakes, artisanal refresher coolers, and barista specialty coffees.", cell_style),
-         Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📥 DOWNLOAD MENU (PDF)</b></font></a>", cell_style)],
-        [Paragraph("<b>Butter Brûlée Cookies & Desserts</b><br/><font size=7 color='#666666'>Classic & Exclusive Artisanal Cookies</font>", cell_style),
-         Paragraph("Gourmet freshly baked classic cookies, stuffed exclusive artisan ranges, cookie caviar tiramisu, and specialty sweet pairings.", cell_style),
-         Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📥 DOWNLOAD MENU (PDF)</b></font></a>", cell_style)],
-        [Paragraph("<b>Butter Brûlée Seasonal Specials</b><br/><font size=7 color='#666666'>Luxury Milk Cakes & Special Feasts</font>", cell_style),
-         Paragraph("Artisanal seasonal dessert offerings, caramelized french toast, pistachio kunafa treats, and high-margin signature drinks.", cell_style),
-         Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📥 DOWNLOAD MENU (PDF)</b></font></a>", cell_style)],
+         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/butterbrulee_sa'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
         [Paragraph("<b>Doorstep Desserts</b><br/><font size=7 color='#666666'>Waffles, Dough Tubs & Gelato Sundaes</font>", cell_style),
          Paragraph("Indulgent double-stick waffle sticks, freshly baked dough tubs, Lotus Biscoff crunch cakes, gelato sundaes, and dessert delivery boxes.", cell_style),
-         Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📥 DOWNLOAD MENU (PDF)</b></font></a>", cell_style)],
+         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/doorstepdesserts'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
     ]
     
-    t_menu = Table(menu_table_data, colWidths=[140, 243, 140])
+    t_menu = Table(menu_table_data, colWidths=[130, 253, 140])
     t_menu.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), bg_light),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
@@ -354,30 +362,6 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         ('RIGHTPADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(t_menu)
-    story.append(Spacer(1, 8))
-
-    story.append(Paragraph("<b>GLOBAL STORE VISUALS & VIDEO WALK-THROUGHS</b>", cell_bold))
-    story.append(Spacer(1, 3))
-
-    video_table_data = [
-        [Paragraph("STORE LOCATION / MEDIA TYPE", cell_bold), Paragraph("VISUAL CONTENT DESCRIPTION", cell_bold), Paragraph("DIRECT WATCH / VIEW LINK", cell_bold)],
-        [Paragraph("Sample Store Gallery & Photos", cell_style), Paragraph("High-resolution photos of operational Phatbuns stores, interiors & lighting.", cell_style), Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>📺 VIEW PHOTO GALLERY</b></font></a>", cell_style)],
-        [Paragraph("Phatbuns UK Store Video 1", cell_style), Paragraph("Full video walk-through of active UK franchise store operations.", cell_style), Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>▶ WATCH UK VIDEO 1</b></font></a>", cell_style)],
-        [Paragraph("Phatbuns UK Store Video 2", cell_style), Paragraph("Secondary UK store video showcasing peak trading & kitchen throughput.", cell_style), Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>▶ WATCH UK VIDEO 2</b></font></a>", cell_style)],
-        [Paragraph("Phatbuns Dubai Flagship Video", cell_style), Paragraph("Flagship Dubai store layout, luxury finishes & customer experience.", cell_style), Paragraph(f"<a href='{drive_base}'><font color='#1B365D'><b>▶ WATCH DUBAI VIDEO</b></font></a>", cell_style)],
-    ]
-
-    t_video = Table(video_table_data, colWidths=[140, 243, 140])
-    t_video.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t_video)
     story.append(PageBreak())
 
     # ================= PAGE 8: FULL FORMAL NCNDA & SIGNATURES =================
