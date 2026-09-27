@@ -6,19 +6,21 @@ import streamlit as st
 def get_drive_service():
     """
     Initializes and returns the Google Drive API service using Streamlit Secrets.
-    Fails silently if credentials are unformatted, preventing UI error floods.
+    Handles TOML multiline string formatting and sanitizes private keys safely.
     """
     try:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         
         if "gcp_service_account" in st.secrets:
+            # Convert StSecretsRow or Dict securely
             creds_dict = dict(st.secrets["gcp_service_account"])
             
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
+                # Clean up literal newline escape sequences if present
                 if isinstance(pk, str):
-                    pk = pk.encode().decode('unicode_escape')
+                    pk = pk.replace("\\n", "\n")
                 creds_dict["private_key"] = pk
                 
             creds = service_account.Credentials.from_service_account_info(
@@ -26,6 +28,7 @@ def get_drive_service():
             )
             return build("drive", "v3", credentials=creds)
     except Exception:
+        # Fails silently so app execution and local PDF downloads are never blocked
         pass
     return None
 
