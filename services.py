@@ -1,80 +1,46 @@
 import os
 import smtplib
-import json
-import re
-import tempfile
 from email.message import EmailMessage
+from io import BytesIO
 import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service using User OAuth credentials if available 
-    (to utilize your personal 402 GB storage quota), or falls back to Service Account.
+    Initializes Google Drive API service using User OAuth credentials.
+    Bypasses Service Account 0-quota limits by directly utilizing the 
+    user's personal Google Drive storage.
     """
     try:
         from google.oauth2.credentials import Credentials
-        from google.auth.transport.requests import Request
         from googleapiclient.discovery import build
         
-        # 1. First Priority: Check for User OAuth Credentials (uses your 402 GB quota)
-        if "gcp_user_oauth" in st.secrets:
-            oauth_data = dict(st.secrets["gcp_user_oauth"])
-            creds = Credentials(
-                token=oauth_data.get("token"),
-                refresh_token=oauth_data.get("refresh_token"),
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=oauth_data.get("client_id"),
-                client_secret=oauth_data.get("client_secret"),
-                scopes=["https://www.googleapis.com/auth/drive"]
-            )
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            return build("drive", "v3", credentials=creds)
-
-        # 2. Second Priority: Fallback to Service Account Credentials
-        if "gcp_service_account" in st.secrets:
-            from google.oauth2 import service_account
-            creds_dict = dict(st.secrets["gcp_service_account"])
+        if "gcp_user_oauth" not in st.secrets:
+            st.error("Authentication Error: Missing [gcp_user_oauth] in Streamlit secrets.")
+            return None
             
-            if "private_key" in creds_dict:
-                pk = str(creds_dict["private_key"])
-                pk_clean = pk.replace("\\n", "\n").replace("\r", "")
-                body = re.sub(r'-----.*?-----', '', pk_clean)
-                b64_chars = "".join(re.findall(r'[A-Za-z0-9+/=]', body))
-                chunks = [b64_chars[i:i+64] for i in range(0, len(b64_chars), 64)]
-                formatted_pem = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(chunks) + "\n-----END PRIVATE KEY-----\n"
-                creds_dict["private_key"] = formatted_pem
-            
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp:
-                json.dump(creds_dict, temp)
-                temp_path = temp.name
-                
-            try:
-                creds = service_account.Credentials.from_service_account_file(
-                    temp_path, scopes=["https://www.googleapis.com/auth/drive"]
-                )
-                return build("drive", "v3", credentials=creds)
-            finally:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-                    
+        oauth_data = st.secrets["gcp_user_oauth"]
+        creds = Credentials(
+            token=None,
+            refresh_token=oauth_data["refresh_token"],
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=oauth_data["client_id"],
+            client_secret=oauth_data["client_secret"],
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+        
+        return build("drive", "v3", credentials=creds)
     except Exception as e:
         st.error(f"Drive API Connection Error: {str(e)}")
-    return None
+        return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
+    """Finds or creates a subfolder within Google Drive."""
     try:
         query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         if parent_id:
             query += f" and '{parent_id}' in parents"
             
-        results = service.files().list(
-            q=query, 
-            spaces='drive', 
-            fields="files(id, name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
-        ).execute()
+        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
         files = results.get('files', [])
         
         if files:
@@ -87,37 +53,29 @@ def get_or_create_folder(service, folder_name, parent_id=None):
         if parent_id:
             folder_metadata['parents'] = [parent_id]
             
-        folder = service.files().create(
-            body=folder_metadata, 
-            fields='id',
-            supportsAllDrives=True
-        ).execute()
+        folder = service.files().create(body=folder_metadata, fields='id').execute()
         return folder.get('id')
     except Exception:
         return None
 
 def sync_file_to_drive(file_obj, location_name):
+    """Uploads or updates the generated PDF report in the designated Google Drive folder."""
     service = get_drive_service()
     if not service:
         return False, "Drive API Inactive (Check Secrets)"
         
     try:
         from googleapiclient.http import MediaIoBaseUpload
-        from io import BytesIO
         
-        root_folder_id = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("PARENT_FOLDER_ID")
-        
+        root_folder_id = st.secrets.get("DRIVE_FOLDER_ID")
         if not root_folder_id:
-            root_folder_id = get_or_create_folder(service, "Locations")
-            
-        if not root_folder_id:
-            return False, "Drive Error: Please specify DRIVE_FOLDER_ID in secrets"
+            return False, "Drive Error: DRIVE_FOLDER_ID not found in secrets."
             
         loc_folder_id = get_or_create_folder(service, location_name, root_folder_id)
         if not loc_folder_id:
-            return False, f"Could not create location subfolder '{location_name}' inside target Drive folder"
+            return False, f"Could not create location subfolder '{location_name}' inside target Drive folder."
             
-        file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
+        file_name = getattr(file_obj, "name", f"Feasibility_Report_{location_name.replace(' ', '_')}.pdf")
         
         if hasattr(file_obj, "getvalue"):
             file_bytes = file_obj.getvalue()
@@ -127,7 +85,7 @@ def sync_file_to_drive(file_obj, location_name):
         else:
             file_bytes = file_obj
 
-        media = MediaIoBaseUpload(BytesIO(file_bytes), mimetype='application/octet-stream', resumable=True)
+        media = MediaIoBaseUpload(BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
         
         file_metadata = {
             'name': file_name,
@@ -135,101 +93,43 @@ def sync_file_to_drive(file_obj, location_name):
         }
         
         query = f"name = '{file_name}' and '{loc_folder_id}' in parents and trashed = false"
-        existing = service.files().list(
-            q=query, 
-            spaces='drive', 
-            fields="files(id)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
-        ).execute().get('files', [])
+        existing = service.files().list(q=query, spaces='drive', fields="files(id)").execute().get('files', [])
         
         if existing:
-            service.files().update(
-                fileId=existing[0]['id'], 
-                media_body=media,
-                supportsAllDrives=True
-            ).execute()
+            service.files().update(fileId=existing[0]['id'], media_body=media).execute()
         else:
-            service.files().create(
-                body=file_metadata, 
-                media_body=media, 
-                fields='id',
-                supportsAllDrives=True
-            ).execute()
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
             
-        return True, "Synced Successfully to Google Drive"
+        return True, "Synced Successfully to Google Drive!"
     except Exception as e:
         return False, f"Sync Error: {str(e)}"
 
-def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_name):
+def send_report_via_email(recipient_email, file_bytes, file_name, location_name):
+    """Sends the generated PDF feasibility report directly via Gmail SMTP."""
     try:
-        sender_email = st.secrets.get("GMAIL_USER", "fantastic1za@gmail.com")
-        app_password = st.secrets.get("GMAIL_APP_PASSWORD", "")
+        gmail_user = st.secrets.get("GMAIL_USER")
+        gmail_pass = st.secrets.get("GMAIL_APP_PASSWORD")
         
-        if not app_password:
-            return False, "Gmail App Password not configured."
-
+        if not gmail_user or not gmail_pass:
+            return False, "Gmail credentials missing in secrets."
+            
         msg = EmailMessage()
-        msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Investor Review ({location_name})"
-        msg['From'] = f"Phatbuns South Africa <{sender_email}>"
+        msg['Subject'] = f"Feasibility Report - {location_name}"
+        msg['From'] = gmail_user
         msg['To'] = recipient_email
-        
-        html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; font-size: 14px; color: #1A1A1A; line-height: 1.5;">
-            <p>Dear {recipient_name},</p>
-            
-            <p>Thank you for taking the time to show interest in the Phatbuns South Africa franchise expansion program.</p>
-            
-            <p>We are excited to share our comprehensive Master Franchisee Investor Pack for <b>{location_name}</b>. Phatbuns represents a premier, high-growth commercial brand footprint across South Africa.</p>
-            
-            <p><b>Please find attached to this email (Consolidated within the Feasibility PDF Pack):</b></p>
-            <ol>
-                <li>Executive Cover Page & Brand Identity Presentation</li>
-                <li>Site Evaluation & Commercial Investment Analysis ({location_name})</li>
-                <li>Financial Outlay & Debt Serviceability Breakdown</li>
-                <li>5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)</li>
-                <li>Development Layout & Leasing Site Plan (Rendered)</li>
-                <li>Addendum — Brand Menus with Direct Google Drive Download Links</li>
-                <li>Master Non-Circumvention, Non-Disclosure & Confidentiality Agreement (NCNDA)</li>
-            </ol>
-            
-            <p><b>Next Steps:</b><br/>
-            Please review the attached documents, sign the NCNDA execution page, and return a copy to proceed with formal site allocation and executive approval.</p>
-            
-            <p>Should you have any questions or require additional information, please feel free to reach out directly via call or WhatsApp.</p>
-            
-            <div style="margin-top: 30px; margin-bottom: 15px;">
-                <img src="https://i.imgur.com/7kZ0h7T.png" alt="Phatbuns Icon" height="30" style="vertical-align: middle; margin-right: 15px;" />
-                <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Flag_of_South_Africa.svg" alt="South African Flag" height="30" style="vertical-align: middle;" />
-            </div>
-            
-            <p>Warm regards,</p>
-            
-            <p>
-                <b>Nisaar Ally</b><br/>
-                SA Master Rights Holder | Phatbuns South Africa<br/>
-                Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712<br/>
-                Email: <a href="mailto:nisaar@fantastic1.com">nisaar@fantastic1.com</a>
-            </p>
-        </body>
-        </html>
-        """
-        
-        msg.set_content("Please view this email in an HTML-compatible email client.")
-        msg.add_alternative(html_content, subtype='html')
+        msg.set_content(f"Hi,\n\nPlease find attached the generated feasibility report for {location_name}.\n\nBest regards,\nMr Mobile SA")
         
         msg.add_attachment(
-            pdf_bytes,
+            file_bytes,
             maintype='application',
             subtype='pdf',
-            filename=f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf"
+            filename=file_name
         )
         
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-            smtp.login(sender_email, app_password)
-            smtp.send_message(msg)
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(gmail_user, gmail_pass)
+            server.send_message(msg)
             
-        return True, "Email Dispatched Successfully"
+        return True, "Email sent successfully!"
     except Exception as e:
         return False, f"Email Error: {str(e)}"
