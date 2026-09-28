@@ -8,36 +8,43 @@ import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service. Extracts raw base64 key bytes using regex 
-    and reconstructs a valid RFC 1421 PEM block (exact 64-character wrapping) to 
-    eliminate cryptography/OpenSSL MalformedFraming errors.
+    Initializes Google Drive API service using User OAuth credentials if available 
+    (to utilize your personal 402 GB storage quota), or falls back to Service Account.
     """
     try:
-        from google.oauth2 import service_account
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
         from googleapiclient.discovery import build
         
+        # 1. First Priority: Check for User OAuth Credentials (uses your 402 GB quota)
+        if "gcp_user_oauth" in st.secrets:
+            oauth_data = dict(st.secrets["gcp_user_oauth"])
+            creds = Credentials(
+                token=oauth_data.get("token"),
+                refresh_token=oauth_data.get("refresh_token"),
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=oauth_data.get("client_id"),
+                client_secret=oauth_data.get("client_secret"),
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            return build("drive", "v3", credentials=creds)
+
+        # 2. Second Priority: Fallback to Service Account Credentials
         if "gcp_service_account" in st.secrets:
+            from google.oauth2 import service_account
             creds_dict = dict(st.secrets["gcp_service_account"])
             
             if "private_key" in creds_dict:
                 pk = str(creds_dict["private_key"])
-                
-                # Un-escape escaped newline characters
                 pk_clean = pk.replace("\\n", "\n").replace("\r", "")
-                
-                # Strip out any existing header/footer markers or trailing hyphens
                 body = re.sub(r'-----.*?-----', '', pk_clean)
-                
-                # Extract pure Base64 characters only
                 b64_chars = "".join(re.findall(r'[A-Za-z0-9+/=]', body))
-                
-                # Re-wrap strictly into 64-character lines required by cryptography.io
                 chunks = [b64_chars[i:i+64] for i in range(0, len(b64_chars), 64)]
                 formatted_pem = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(chunks) + "\n-----END PRIVATE KEY-----\n"
-                
                 creds_dict["private_key"] = formatted_pem
             
-            # Write to temporary credentials file to bypass dictionary parsing bugs
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp:
                 json.dump(creds_dict, temp)
                 temp_path = temp.name
@@ -61,7 +68,13 @@ def get_or_create_folder(service, folder_name, parent_id=None):
         if parent_id:
             query += f" and '{parent_id}' in parents"
             
-        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        results = service.files().list(
+            q=query, 
+            spaces='drive', 
+            fields="files(id, name)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
         files = results.get('files', [])
         
         if files:
@@ -74,7 +87,11 @@ def get_or_create_folder(service, folder_name, parent_id=None):
         if parent_id:
             folder_metadata['parents'] = [parent_id]
             
-        folder = service.files().create(body=folder_metadata, fields='id').execute()
+        folder = service.files().create(
+            body=folder_metadata, 
+            fields='id',
+            supportsAllDrives=True
+        ).execute()
         return folder.get('id')
     except Exception:
         return None
@@ -88,15 +105,19 @@ def sync_file_to_drive(file_obj, location_name):
         from googleapiclient.http import MediaIoBaseUpload
         from io import BytesIO
         
-        root_folder_id = get_or_create_folder(service, "Locations")
+        root_folder_id = st.secrets.get("DRIVE_FOLDER_ID") or st.secrets.get("PARENT_FOLDER_ID")
+        
         if not root_folder_id:
-            return False, "Could not create root 'Locations' folder"
+            root_folder_id = get_or_create_folder(service, "Locations")
+            
+        if not root_folder_id:
+            return False, "Drive Error: Please specify DRIVE_FOLDER_ID in secrets"
             
         loc_folder_id = get_or_create_folder(service, location_name, root_folder_id)
         if not loc_folder_id:
-            return False, "Could not create location subfolder"
+            return False, f"Could not create location subfolder '{location_name}' inside target Drive folder"
             
-        file_name = getattr(file_obj, "name", "feasibility_report.pdf")
+        file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
         
         if hasattr(file_obj, "getvalue"):
             file_bytes = file_obj.getvalue()
@@ -114,14 +135,29 @@ def sync_file_to_drive(file_obj, location_name):
         }
         
         query = f"name = '{file_name}' and '{loc_folder_id}' in parents and trashed = false"
-        existing = service.files().list(q=query, spaces='drive', fields="files(id)").execute().get('files', [])
+        existing = service.files().list(
+            q=query, 
+            spaces='drive', 
+            fields="files(id)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute().get('files', [])
         
         if existing:
-            service.files().update(fileId=existing[0]['id'], media_body=media).execute()
+            service.files().update(
+                fileId=existing[0]['id'], 
+                media_body=media,
+                supportsAllDrives=True
+            ).execute()
         else:
-            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            service.files().create(
+                body=file_metadata, 
+                media_body=media, 
+                fields='id',
+                supportsAllDrives=True
+            ).execute()
             
-        return True, "Synced Successfully to Drive"
+        return True, "Synced Successfully to Google Drive"
     except Exception as e:
         return False, f"Sync Error: {str(e)}"
 
