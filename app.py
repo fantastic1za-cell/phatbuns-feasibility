@@ -14,7 +14,7 @@ except ImportError as e:
 st.set_page_config(
     page_title="Phatbuns Franchise Feasibility Engine",
     page_icon="🍔",
-    layout="centered"
+    layout="wide"
 )
 
 def main():
@@ -94,7 +94,7 @@ def main():
             beneficial_occupation_months = st.number_input("Beneficial Occupation (Months free)", value=float(st.session_state.form_data.get("beneficial_occupation_months", 2.0)), step=0.5)
             lease_period_years = st.number_input("Initial Lease Period (Years)", value=float(st.session_state.form_data.get("lease_period_years", 5.0)), step=1.0)
         
-        submitted = st.form_submit_button("⚡ Generate & Sync Feasibility Pack")
+        submitted = st.form_submit_button("⚡ Generate & Process Feasibility Pack", type="primary")
 
     if submitted:
         # Save session inputs
@@ -127,11 +127,16 @@ def main():
                     except Exception:
                         pass
             
-            # Generate PDF bytes
+            # Generate PDF bytes via engine
             pdf_bytes = generate_feasibility_pdf(st.session_state.form_data, blueprint_images)
-            
-            # Sync to Google Drive
-            sync_status = "Drive API Inactive"
+            file_name = f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf"
+
+            # Store in session state so actions persist
+            st.session_state["pdf_bytes"] = pdf_bytes
+            st.session_state["file_name"] = file_name
+            st.session_state["location_name"] = location_name
+
+            # Auto-sync proposal and blueprints to Cloud if desired
             if MODULES_LOADED:
                 class BytesFileWrapper:
                     def __init__(self, content, name):
@@ -140,9 +145,8 @@ def main():
                     def getvalue(self):
                         return self.content
                 
-                report_file = BytesFileWrapper(pdf_bytes, f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
-                success, msg = sync_file_to_drive(report_file, location_name)
-                sync_status = msg if success else f"({msg})"
+                report_file = BytesFileWrapper(pdf_bytes, file_name)
+                sync_file_to_drive(report_file, location_name)
 
                 if uploaded_proposal:
                     sync_file_to_drive(uploaded_proposal, location_name)
@@ -150,24 +154,70 @@ def main():
                     for bp in uploaded_blueprints:
                         sync_file_to_drive(bp, location_name)
 
-        st.success(f"PDF Generated Successfully! | {sync_status}")
+        st.success("Feasibility Report Generated & Backed Up to Google Drive Successfully!")
 
-        # Download button for immediate local access
-        st.download_button(
-            label="📥 Download PDF Direct",
-            data=pdf_bytes,
-            file_name=f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf",
-            mime="application/pdf"
-        )
+    # Render persistent output action options if the PDF exists in session state
+    if "pdf_bytes" in st.session_state:
+        p_bytes = st.session_state["pdf_bytes"]
+        f_name = st.session_state["file_name"]
+        loc_name = st.session_state["location_name"]
 
-        # Email dispatch if client email is provided
-        if client_email and MODULES_LOADED:
-            with st.spinner(f"Dispatched email report to {client_email}..."):
-                email_success, email_msg = send_feasibility_email(client_email, client_name or "Valued Partner", pdf_bytes, location_name)
-                if email_success:
-                    st.success(f"Email successfully dispatched to {client_email}!")
+        st.markdown("---")
+        st.subheader("📤 Output & Distribution Hub")
+        
+        col_dl, col_cl, col_em = st.columns(3)
+        
+        # 1. Local Device Download
+        with col_dl:
+            st.markdown("### 📥 Local Storage")
+            st.download_button(
+                label="Download PDF Direct",
+                data=p_bytes,
+                file_name=f_name,
+                mime="application/pdf",
+                use_container_width=True
+            )
+            
+        # 2. Manual Cloud Re-Sync Button
+        with col_cl:
+            st.markdown("### ☁️ Cloud Backup")
+            if st.button("Re-Sync to Drive", use_container_width=True):
+                with st.spinner("Syncing to personal Google Drive..."):
+                    if MODULES_LOADED:
+                        class BytesFileWrapper:
+                            def __init__(self, content, name):
+                                self.content = content
+                                self.name = name
+                            def getvalue(self):
+                                return self.content
+                        report_file = BytesFileWrapper(p_bytes, f_name)
+                        success, msg = sync_file_to_drive(report_file, loc_name)
+                        if success:
+                            st.success(msg)
+                        else:
+                            st.error(msg)
+                    else:
+                        st.error("Modules not loaded.")
+                        
+        # 3. Direct Email Distribution Section
+        with col_em:
+            st.markdown("### 📧 Direct Email")
+            target_email = st.text_input("Send to Email", value=st.session_state.form_data.get("client_email", ""))
+            if st.button("Dispatch Email Report", use_container_width=True):
+                if target_email and MODULES_LOADED:
+                    with st.spinner(f"Dispatched email report to {target_email}..."):
+                        email_success, email_msg = send_feasibility_email(
+                            target_email, 
+                            st.session_state.form_data.get("client_name") or "Valued Partner", 
+                            p_bytes, 
+                            loc_name
+                        )
+                        if email_success:
+                            st.success(f"Email successfully dispatched to {target_email}!")
+                        else:
+                            st.error(f"Email dispatch failed: {email_msg}")
                 else:
-                    st.warning(f"PDF generated and synced, but email dispatch failed: {email_msg}")
+                    st.warning("Please enter a valid recipient email address.")
 
 if __name__ == "__main__":
     main()
