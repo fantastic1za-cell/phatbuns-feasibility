@@ -3,8 +3,8 @@ from io import BytesIO
 
 def generate_feasibility_pdf(form_data, blueprint_images=None):
     """
-    Compiles the complete multi-page enterprise-grade Phatbuns master investor pack 
-    into raw PDF bytes using WeasyPrint, maintaining exact branding and layout structure.
+    Compiles the complete 8-page master investor prospectus matching the exact 
+    Rondebuilt layout standard into raw PDF bytes using WeasyPrint.
     """
     if blueprint_images is None:
         blueprint_images = []
@@ -24,9 +24,9 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
     lease_period_years = form_data.get("lease_period_years", 5.0)
     
     monthly_operating_cost = base_net_rental * store_footprint
-    annual_base_rent = monthly_operating_cost * 12
+    working_capital = 450000.0
     
-    # Construct full multi-page HTML template matching master prospectus format
+    # Construct full multi-page HTML template matching exact Rondebuilt prospectus formatting
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -35,11 +35,11 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <style>
             @page {{
                 size: A4;
-                margin: 15mm 15mm 18mm 15mm;
+                margin: 12mm 15mm 15mm 15mm;
                 @bottom-left {{
-                    content: "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939";
-                    font-size: 6.5pt;
-                    color: #555;
+                    content: "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712";
+                    font-size: 6pt;
+                    color: #444;
                 }}
                 @bottom-right {{
                     content: "Page " counter(page) " of 8";
@@ -51,69 +51,69 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
             body {{
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                 color: #2c3e50;
-                line-height: 1.4;
+                line-height: 1.35;
                 margin: 0;
                 padding: 0;
             }}
             .cover-page {{
                 text-align: center;
                 page-break-after: always;
-                padding-top: 40mm;
+                padding-top: 25mm;
             }}
             .cover-brand {{
-                font-size: 36pt;
+                font-size: 32pt;
                 font-weight: 900;
                 color: #ff7518;
                 margin: 0;
                 letter-spacing: 2px;
             }}
             .cover-subtitle {{
-                font-size: 14pt;
+                font-size: 11pt;
                 font-weight: bold;
                 color: #1a1a1a;
-                margin-top: 10px;
-                margin-bottom: 40mm;
+                margin-top: 8px;
+                margin-bottom: 25mm;
             }}
             .page-break {{
                 page-break-before: always;
             }}
             .header-bar {{
                 border-bottom: 2px solid #ff7518;
-                padding-bottom: 6px;
-                margin-bottom: 15px;
+                padding-bottom: 4px;
+                margin-bottom: 12px;
             }}
             .brand-sm {{
-                font-size: 14pt;
+                font-size: 13pt;
                 font-weight: bold;
                 color: #ff7518;
                 margin: 0;
             }}
             h2 {{
                 color: #ff7518;
-                font-size: 11pt;
+                font-size: 10pt;
                 border-bottom: 1px solid #e0e0e0;
                 padding-bottom: 3px;
-                margin-top: 14px;
-                margin-bottom: 8px;
+                margin-top: 12px;
+                margin-bottom: 6px;
                 text-transform: uppercase;
             }}
             .metric-table {{
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 6px;
-                margin-bottom: 12px;
+                margin-top: 4px;
+                margin-bottom: 10px;
             }}
             .metric-table th, .metric-table td {{
                 border: 1px solid #d0d0d0;
-                padding: 6px 10px;
+                padding: 5px 8px;
                 text-align: left;
-                font-size: 8.5pt;
+                font-size: 8pt;
             }}
             .metric-table th {{
                 background-color: #f8f9fa;
                 color: #333;
                 text-transform: uppercase;
-                font-size: 8pt;
+                font-size: 7.5pt;
             }}
         </style>
     </head>
@@ -121,11 +121,11 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <!-- PAGE 1: COVER & EXECUTIVE SUMMARY -->
         <div class="cover-page">
-            <div style="font-size: 12pt; font-weight: bold; color: #777; letter-spacing: 1px;">EXPRESS MODEL ({store_footprint:.0f} M²)</div>
+            <div style="font-size: 10pt; font-weight: bold; color: #555; letter-spacing: 1px;">EXPRESS MODEL ({store_footprint:.0f} M²)</div>
             <h1 class="cover-brand">PHAT BUNS</h1>
             <div class="cover-subtitle">SOUTH AFRICA<br>SITE EVALUATION & INVESTMENT ANALYSIS — {location_name.upper()}</div>
             
-            <table class="metric-table" style="margin-top: 20mm;">
+            <table class="metric-table" style="margin-top: 15mm;">
                 <tr>
                     <th>Turnkey Setup</th>
                     <th>Working Capital</th>
@@ -133,10 +133,10 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                     <th>Ops Cost</th>
                 </tr>
                 <tr>
-                    <td><strong>R {turnkey_capital:,.0f}</strong><br><span style="font-size: 7.5pt; color: #666;">Excl. VAT (Turnkey)</span></td>
-                    <td><strong>R 450,000</strong><br><span style="font-size: 7.5pt; color: #666;">Suggested Reserve</span></td>
-                    <td><strong>R {base_net_rental:.0f}/m²</strong><br><span style="font-size: 7.5pt; color: #666;">pm Excl. VAT</span></td>
-                    <td><strong>R 45,000</strong><br><span style="font-size: 7.5pt; color: #666;">Gross Terms</span></td>
+                    <td><strong>R {turnkey_capital:,.0f}</strong><br><span style="font-size: 7pt; color: #666;">Excl. VAT (Turnkey)</span></td>
+                    <td><strong>R {working_capital:,.0f}</strong><br><span style="font-size: 7pt; color: #666;">Suggested Reserve</span></td>
+                    <td><strong>R {base_net_rental:.0f}/m²</strong><br><span style="font-size: 7pt; color: #666;">pm Excl. VAT</span></td>
+                    <td><strong>R 45,000</strong><br><span style="font-size: 7pt; color: #666;">Gross Terms</span></td>
                 </tr>
             </table>
         </div>
@@ -144,7 +144,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 2: SITE PROFILE & LEASE TERMS -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 8pt; color: #666;">01. SITE PROFILE & CAPITAL SCHEDULE</div>
+            <div style="font-size: 7.5pt; color: #666;">01. SITE PROFILE & CAPITAL SCHEDULE</div>
         </div>
 
         <h2>01. Site Profile & Capital Schedule</h2>
@@ -236,10 +236,10 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <div class="page-break"></div>
 
-        <!-- PAGE 3: RECOVERY HORIZON & OPS -->
+        <!-- PAGE 3: RECOVERY MATRIX & OPS -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 8pt; color: #666;">04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX</div>
+            <div style="font-size: 7.5pt; color: #666;">04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX</div>
         </div>
 
         <h2>04. Financial Recovery & Unit Sales Target Matrix</h2>
@@ -327,7 +327,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 4: 5-YEAR PRO FORMA P&L -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 8pt; color: #666;">11. 5-YEAR PRO FORMA INCOME STATEMENT & INVESTMENT COMPARISON</div>
+            <div style="font-size: 7.5pt; color: #666;">11. 5-YEAR PRO FORMA INCOME STATEMENT & INVESTMENT COMPARISON</div>
         </div>
 
         <h2>11A. 5-Year Pro Forma Income Statement & P&L Forecast</h2>
@@ -408,10 +408,10 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <div class="page-break"></div>
 
-        <!-- PAGE 5: BRAND PORTFOLIO & MENUS -->
+        <!-- PAGE 5: BRAND PORTFOLIO -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 8pt; color: #666;">BRAND PORTFOLIO & DIGITAL CATALOGS</div>
+            <div style="font-size: 7.5pt; color: #666;">BRAND PORTFOLIO & DIGITAL CATALOGS</div>
         </div>
 
         <h2>Brand Portfolio & Concept Overview</h2>
@@ -443,27 +443,27 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 6: LEGAL & SIGN-OFF -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 8pt; color: #666;">GOVERNANCE, COMPLIANCE & SIGN-OFF</div>
+            <div style="font-size: 7.5pt; color: #666;">GOVERNANCE, COMPLIANCE & SIGN-OFF</div>
         </div>
 
         <h2>Non-Disclosure & Non-Circumvention Agreement (NCNDA)</h2>
-        <p style="font-size: 8.5pt;">
+        <p style="font-size: 8pt;">
             Entered into by and between <strong>PHATBUNS SOUTH AFRICA</strong> (Franchisor) and <strong>{client_name}</strong> (Prospective Franchisee). 
             All disclosures, financial models, recipes, and operational workflows are shared under strict confidentiality in compliance with the Consumer Protection Act (CPA) and FASA guidelines.
         </p>
 
-        <table class="metric-table" style="margin-top: 30px;">
+        <table class="metric-table" style="margin-top: 25px;">
             <tr>
                 <th style="width: 50%;">For: PHATBUNS SOUTH AFRICA</th>
                 <th style="width: 50%;">For: THE RECEIVING PARTY</th>
             </tr>
             <tr>
-                <td style="height: 60px; vertical-align: bottom;">
+                <td style="height: 55px; vertical-align: bottom;">
                     <strong>Authorized Signature:</strong> ______________________<br>
                     <strong>Name:</strong> Nisaar Ally<br>
                     <strong>Title:</strong> SA Master Rights Holder
                 </td>
-                <td style="height: 60px; vertical-align: bottom;">
+                <td style="height: 55px; vertical-align: bottom;">
                     <strong>Authorized Signature:</strong> ______________________<br>
                     <strong>Name:</strong> {client_name}<br>
                     <strong>Title:</strong> Prospective Franchisee
