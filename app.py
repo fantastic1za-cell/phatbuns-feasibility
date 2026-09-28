@@ -1,144 +1,98 @@
 import streamlit as st
 import os
+from pdf_engine import generate_feasibility_pdf
+from services import sync_file_to_drive, send_feasibility_email
 
-# Fail-safe module imports
-try:
-    from proposals import parse_landlord_proposal, process_blueprint_files
-    from services import sync_file_to_drive, send_feasibility_email
-    from pdf_engine import generate_feasibility_pdf
-    MODULES_LOADED = True
-except ImportError as e:
-    MODULES_LOADED = False
-    IMPORT_ERROR = str(e)
+st.set_page_config(page_title="Phatbuns SA Feasibility Generator", page_icon="🍔", layout="centered")
 
-st.set_page_config(
-    page_title="Phatbuns Franchise Feasibility Engine",
-    page_icon="🍔",
-    layout="centered"
-)
+st.title("🍔 Phatbuns SA — Executive Feasibility Generator")
+st.markdown("### Master Franchisee Site Evaluation & Investor Pack Generator")
 
-def main():
-    st.title("🍔 Phatbuns Franchise Feasibility Engine")
-    st.markdown("### Enterprise-Grade Automated Proposal & Feasibility Pack Generator")
+with st.form("feasibility_form"):
+    st.subheader("1. Investor & Contact Details")
+    recipient_email = st.text_input("Prospective Franchisee Email", value="nisaar@fantastic1.com")
+    recipient_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp", value="+27 82 786 7712")
     
-    if not MODULES_LOADED:
-        st.error(f"System Warning: Module import error detected ({IMPORT_ERROR}). Running in baseline fallback mode.")
+    st.subheader("2. Site & Location Parameters")
+    location_name = st.text_input("Location Name / Node", value="New Corner Northcliff (Shop RL 03)")
+    store_footprint = st.number_input("Store Footprint (m²)", value=167.0, step=1.0)
+    managing_agent = st.text_input("Managing Agent / Landlord", value="Redefine Properties / Abcon")
+    
+    st.subheader("3. Comprehensive Lease & Financial Proposal Details")
+    col1, col2 = st.columns(2)
+    with col1:
+        base_net_rental = st.number_input("Base Net Rental Rate (R/m²)", value=350.0, step=10.0)
+        annual_escalation = st.number_input("Annual Rental Escalation (%)", value=7.5, step=0.5)
+        turnover_rental_pct = st.number_input("Turnover Rental Clause (%)", value=8.0, step=0.5)
+    with col2:
+        turnkey_capital = st.number_input("Turnkey Capital Outlay (R)", value=3100000.0, step=50000.0)
+        beneficial_occupation_months = st.number_input("Beneficial Occupation (Months free)", value=2.0, step=0.5)
+        lease_period_years = st.number_input("Initial Lease Period (Years)", value=5.0, step=1.0)
 
-    # Initialize Session State for form persistence
-    if "form_data" not in st.session_state:
-        st.session_state.form_data = {
-            "location_name": "New Corner Northcliff (Shop RL 03)",
-            "store_footprint": 167.0,
-            "base_net_rental": 350.0,
-            "turnkey_capital": 3100000.0,
-            "managing_agent": "Redefine Properties / Abcon",
-            "client_name": "",
-            "client_email": "",
-            "client_mobile": ""
-        }
+    submitted = st.form_submit_button("⚡ Generate & Sync Feasibility Pack")
 
-    with st.expander("📥 1. Ingest Landlord Proposal / Legacy Pack", expanded=True):
-        uploaded_proposal = st.file_uploader(
-            "Upload Landlord Proposal, Lease Agreement, or Feasibility PDF",
-            type=["pdf", "png", "jpg", "jpeg"]
-        )
-        
-        if uploaded_proposal:
-            if st.button("⚡ Extract & Parse Proposal Data"):
-                with st.spinner("Extracting parameters from document..."):
-                    parsed_data = parse_landlord_proposal(uploaded_proposal)
-                    st.session_state.form_data.update({
-                        "location_name": parsed_data.get("location_name", st.session_state.form_data["location_name"]),
-                        "store_footprint": parsed_data.get("store_footprint", st.session_state.form_data["store_footprint"]),
-                        "base_net_rental": parsed_data.get("base_net_rental", st.session_state.form_data["base_net_rental"]),
-                        "turnkey_capital": parsed_data.get("turnkey_capital", st.session_state.form_data["turnkey_capital"]),
-                        "managing_agent": parsed_data.get("managing_agent", st.session_state.form_data["managing_agent"])
-                    })
-                st.success("Proposal parameters extracted and loaded successfully!")
-
-    with st.expander("📐 2. Upload Store Blueprints & Mall Layout Plans"):
-        uploaded_blueprints = st.file_uploader(
-            "Upload Blueprints / Mall Plans (Multi-format: PDF, PNG, JPG)",
-            type=["pdf", "png", "jpg", "jpeg"],
-            accept_multiple_files=True
-        )
-
-    with st.form("feasibility_form"):
-        st.markdown("### 📋 3. Dispatch & Site Feasibility Parameters")
-        
-        client_name = st.text_input("Prospective Franchisee Full Name", value=st.session_state.form_data.get("client_name", ""))
-        client_email = st.text_input("Prospective Franchisee Email", value=st.session_state.form_data.get("client_email", ""))
-        client_mobile = st.text_input("Prospective Franchisee Mobile / WhatsApp", value=st.session_state.form_data.get("client_mobile", ""))
-        
-        st.markdown("---")
-        location_name = st.text_input("Location Name / Node", value=st.session_state.form_data["location_name"])
-        store_footprint = st.number_input("Store Footprint (m²)", value=float(st.session_state.form_data["store_footprint"]))
-        base_net_rental = st.number_input("Base Net Rental Rate (R/m²)", value=float(st.session_state.form_data["base_net_rental"]))
-        turnkey_capital = st.number_input("Turnkey Capital Outlay (R)", value=float(st.session_state.form_data["turnkey_capital"]))
-        managing_agent = st.text_input("Managing Agent / Landlord", value=st.session_state.form_data["managing_agent"])
-        
-        submitted = st.form_submit_button("⚡ Generate & Sync Feasibility Pack")
-
-    if submitted:
-        # Save session inputs
-        st.session_state.form_data.update({
+if submitted:
+    with st.spinner("Compiling Master Feasibility PDF Pack..."):
+        # Compile input dictionary containing all detailed lease terms for verification
+        feasibility_data = {
+            "client_name": recipient_email.split('@')[0].title(),
+            "recipient_email": recipient_email,
+            "recipient_mobile": recipient_mobile,
             "location_name": location_name,
             "store_footprint": store_footprint,
             "base_net_rental": base_net_rental,
+            "annual_escalation": annual_escalation,
+            "turnover_rental_pct": turnover_rental_pct,
             "turnkey_capital": turnkey_capital,
-            "managing_agent": managing_agent,
-            "client_name": client_name,
-            "client_email": client_email,
-            "client_mobile": client_mobile
-        })
+            "beneficial_occupation_months": beneficial_occupation_months,
+            "lease_period_years": lease_period_years,
+            "managing_agent": managing_agent
+        }
+        
+        # Load blueprint images if available in assets
+        blueprint_images = []
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        if os.path.exists(assets_dir):
+            for f in os.listdir(assets_dir):
+                if f.lower().endswith(('.png', '.jpg', '.jpeg')) and f != "Cover.JPG":
+                    from PIL import Image
+                    img_path = os.path.join(assets_dir, f)
+                    try:
+                        im = Image.open(img_path)
+                        blueprint_images.append((f, im))
+                    except Exception:
+                        pass
 
-        with st.spinner("Compiling enterprise-grade 8-page investment pack..."):
-            # Process uploaded blueprints if available
-            blueprint_images = process_blueprint_files(uploaded_blueprints) if 'uploaded_blueprints' in locals() else []
-            
-            # Generate PDF bytes
-            pdf_bytes = generate_feasibility_pdf(st.session_state.form_data, blueprint_images)
-            
-            # Sync to Google Drive
-            sync_status = "Drive API Inactive"
-            if MODULES_LOADED:
-                # Create a pseudo file object for Drive upload
-                class BytesFileWrapper:
-                    def __init__(self, content, name):
-                        self.content = content
-                        self.name = name
-                    def getvalue(self):
-                        return self.content
-                
-                report_file = BytesFileWrapper(pdf_bytes, f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
-                success, msg = sync_file_to_drive(report_file, location_name)
-                sync_status = msg if success else f"({msg})"
+        # Generate PDF bytes
+        pdf_bytes = generate_feasibility_pdf(feasibility_data, blueprint_images)
 
-                # Also sync uploaded proposals/blueprints if any
-                if uploaded_proposal:
-                    sync_file_to_drive(uploaded_proposal, location_name)
-                if 'uploaded_blueprints' in locals() and uploaded_blueprints:
-                    for bp in uploaded_blueprints:
-                        sync_file_to_drive(bp, location_name)
+    st.success("PDF Generated Successfully!")
+    
+    # Direct Download Option
+    st.download_button(
+        label="📥 Download PDF Direct",
+        data=pdf_bytes,
+        file_name=f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf",
+        mime="application/pdf"
+    )
 
-        st.success(f"PDF Generated Successfully! | {sync_status}")
+    # Sync to Google Drive
+    with st.spinner("Synchronizing to Google Drive..."):
+        success_drive, drive_msg = sync_file_to_drive(pdf_bytes, location_name)
+        if success_drive:
+            st.success(f"Google Drive Sync: {drive_msg}")
+        else:
+            st.warning(f"Drive Sync Notice: {drive_msg}")
 
-        # Download button for immediate local access
-        st.download_button(
-            label="📥 Download PDF Direct",
-            data=pdf_bytes,
-            file_name=f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf",
-            mime="application/pdf"
+    # Dispatch Email
+    with st.spinner("Dispatching Executive Email Pack..."):
+        success_email, email_msg = send_feasibility_email(
+            recipient_email, 
+            feasibility_data["client_name"], 
+            pdf_bytes, 
+            location_name
         )
-
-        # Email dispatch if client email is provided
-        if client_email and MODULES_LOADED:
-            with st.spinner(f"Dispatched email report to {client_email}..."):
-                email_success, email_msg = send_feasibility_email(client_email, client_name or "Valued Partner", pdf_bytes, location_name)
-                if email_success:
-                    st.success(f"Email successfully dispatched to {client_email}!")
-                else:
-                    st.warning(f"PDF generated and synced, but email dispatch failed: {email_msg}")
-
-if __name__ == "__main__":
-    main()
+        if success_email:
+            st.success(f"Email successfully dispatched to {recipient_email}!")
+        else:
+            st.error(f"Email Error: {email_msg}")
