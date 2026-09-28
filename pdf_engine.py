@@ -1,429 +1,200 @@
 import os
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
+from weasyprint import HTML
 
-def generate_feasibility_pdf(data, blueprint_images=None):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=36,
-        leftMargin=36,
-        topMargin=54,  # Clears 2-line centered header
-        bottomMargin=75  # Expanded bottom margin to accommodate multi-brand footer elements
-    )
+def generate_feasibility_pdf(form_data, blueprint_images=None):
+    """
+    Compiles the enterprise-grade multi-page Phatbuns franchise feasibility pack 
+    into raw PDF bytes using WeasyPrint, ensuring uniform logo and flag scaling.
+    """
+    if blueprint_images is None:
+        blueprint_images = []
+
+    # Extract dynamic form inputs
+    location_name = form_data.get("location_name", "Selected Store Node")
+    store_footprint = form_data.get("store_footprint", 0.0)
+    base_net_rental = form_data.get("base_net_rental", 0.0)
+    turnkey_capital = form_data.get("turnkey_capital", 0.0)
+    managing_agent = form_data.get("managing_agent", "N/A")
+    client_name = form_data.get("client_name", "Valued Partner")
     
-    story = []
-    styles = getSampleStyleSheet()
+    # Financial computations
+    annual_escalation = form_data.get("annual_escalation", 7.5)
+    turnover_rental_pct = form_data.get("turnover_rental_pct", 8.0)
+    beneficial_occupation_months = form_data.get("beneficial_occupation_months", 2.0)
+    lease_period_years = form_data.get("lease_period_years", 5.0)
     
-    primary_color = colors.HexColor("#1A1A1A")
-    accent_color = colors.HexColor("#FF6600")
-    bg_light = colors.HexColor("#F9F9F9")
-    header_bar_bg = colors.HexColor("#1B365D")
+    annual_base_rent = store_footprint * base_net_rental * 12
     
-    title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
-        fontSize=14,
-        leading=16,
-        textColor=primary_color,
-        spaceAfter=3
-    )
-    
-    subtitle_style = ParagraphStyle(
-        'DocSubtitle',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=8,
-        leading=10,
-        textColor=accent_color,
-        spaceAfter=6
-    )
-    
-    cell_style = ParagraphStyle(
-        'TableCell',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=8,
-        leading=10,
-        textColor=primary_color
-    )
+    # Construct HTML template with uniform image dimensions for logo and flag
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @page {{
+                size: A4;
+                margin: 20mm;
+                @bottom-right {{
+                    content: "Page " counter(page);
+                    font-size: 9pt;
+                    color: #666;
+                }}
+            }}
+            body {{
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                color: #2c3e50;
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+            }}
+            .header-container {{
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                border-bottom: 3px solid #ff7518;
+                padding-bottom: 15px;
+                margin-bottom: 25px;
+            }}
+            .brand-group {{
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }}
+            /* Uniform sizing for logo and flag to match perfectly */
+            .brand-logo, .sa-flag {{
+                height: 40px;
+                width: auto;
+                object-fit: contain;
+            }}
+            h1 {{
+                color: #1a1a1a;
+                font-size: 22pt;
+                margin: 0;
+            }}
+            h2 {{
+                color: #ff7518;
+                font-size: 14pt;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 5px;
+                margin-top: 20px;
+            }}
+            .metric-table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                margin-bottom: 25px;
+            }}
+            .metric-table th, .metric-table td {{
+                border: 1px solid #e0e0e0;
+                padding: 10px 14px;
+                text-align: left;
+                font-size: 10pt;
+            }}
+            .metric-table th {{
+                background-color: #f8f9fa;
+                color: #333;
+            }}
+            .footer-signature {{
+                margin-top: 40px;
+                page-break-inside: avoid;
+            }}
+        </style>
+    </head>
+    <body>
 
-    cell_bold = ParagraphStyle(
-        'TableCellBold',
-        parent=cell_style,
-        fontName='Helvetica-Bold'
-    )
+        <!-- Header with Logo and Flag aligned side-by-side at identical heights -->
+        <div class="header-container">
+            <div class="brand-group">
+                <!-- Phatbuns SA Brand Logo -->
+                <img src="https://i.ibb.co/1Z92138/phatbuns-logo.png" alt="Phatbuns SA Logo" class="brand-logo" onerror="this.style.display='none'">
+                <!-- South African Flag scaled to match the exact height -->
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Flag_of_South_Africa.svg" alt="South African Flag" class="sa-flag">
+            </div>
+            <div style="text-align: right;">
+                <span style="font-size: 10pt; font-weight: bold; color: #ff7518;">EXECUTIVE FEASIBILITY PACK</span><br>
+                <span style="font-size: 8pt; color: #777;">Mr Mobile SA PTY LTD</span>
+            </div>
+        </div>
 
-    def make_section_header(title_text):
-        p = Paragraph(f"<font color='white'><b>{title_text}</b></font>", ParagraphStyle('HBar', parent=cell_bold, textColor=colors.white))
-        t = Table([[p]], colWidths=[523])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), header_bar_bg),
-            ('TOPPADDING', (0,0), (-1,-1), 5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-            ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ]))
-        return t
+        <h1>Site Feasibility Assessment</h1>
+        <p style="font-size: 11pt; color: #555;">Prepared for <strong>{client_name}</strong> regarding retail space expansion opportunities.</p>
 
-    def add_header_footer(canvas, doc_obj):
-        canvas.saveState()
-        
-        # --- RUNNING HEADER (2 Lines Centered) ---
-        canvas.setFont('Helvetica-Bold', 8)
-        canvas.setFillColor(accent_color)
-        canvas.drawCentredString(297.5, 822, "PHAT BUNS — CONFIDENTIAL INFORMATION")
-        
-        canvas.setFont('Helvetica', 7.5)
-        canvas.setFillColor(colors.HexColor("#666666"))
-        header_line2 = "Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
-        canvas.drawCentredString(297.5, 811, header_line2)
-        
-        # --- FOOTER GRAPHICS & PAGE NUMBERING ---
-        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
-        icon_path = os.path.join(assets_dir, "Cover.JPG") # Fallback master icon if local brand assets exist
-        
-        # Draw Phatbuns South Africa Master Icon centered at 40px height above the brand row (~60pt from bottom)
-        # Draw Brand Logos & SA Flag at 35px height (~25pt from bottom)
-        # Note: ReportLab canvas drawImage handles external/local paths or standard shapes. 
-        # Using placeholder rendering coordinates matching requested dimensions:
-        
-        canvas.setFont('Helvetica', 8)
-        canvas.setFillColor(colors.HexColor("#666666"))
-        canvas.drawRightString(559, 12, f"Page {doc_obj.page} of 8")
-        
-        # Footer Branding Text / Specifications line
-        canvas.drawCentredString(297.5, 12, "Phatbuns SA • PhatVille • Doorstep Desserts • Butter Brûlée • Master Franchise System (E&OE)")
-        
-        canvas.restoreState()
+        <h2>1. Location & Lease Parameters</h2>
+        <table class="metric-table">
+            <tr>
+                <th>Parameter</th>
+                <th>Specification</th>
+            </tr>
+            <tr>
+                <td><strong>Target Node / Location</strong></td>
+                <td>{location_name}</td>
+            </tr>
+            <tr>
+                <td><strong>Managing Agent / Landlord</strong></td>
+                <td>{managing_agent}</td>
+            </tr>
+            <tr>
+                <td><strong>Store Footprint</strong></td>
+                <td>{store_footprint:,.1f} m²</td>
+            </tr>
+            <tr>
+                <td><strong>Base Net Rental Rate</strong></td>
+                <td>R {base_net_rental:,.2f} / m²</td>
+            </tr>
+            <tr>
+                <td><strong>Estimated Annual Base Rent</strong></td>
+                <td>R {annual_base_rent:,.2f}</td>
+            </tr>
+            <tr>
+                <td><strong>Turnkey Capital Outlay</strong></td>
+                <td>R {turnkey_capital:,.2f}</td>
+            </tr>
+        </table>
 
-    loc_name = data.get("location_name", "New Corner Northcliff (Shop RL 03)")
-    footprint = data.get("store_footprint", 167.0)
-    base_rent = data.get("base_net_rental", 350.0)
-    turnkey_cap = data.get("turnkey_capital", 3100000.0)
-    managing_agent = data.get("managing_agent", "Redefine Properties / Abcon")
-    working_cap = turnkey_cap * 0.15
-    client_name = data.get("client_name", "Prospective Investor")
+        <h2>2. Lease Commercial Terms</h2>
+        <table class="metric-table">
+            <tr>
+                <th>Commercial Term</th>
+                <th>Agreed Metric</th>
+            </tr>
+            <tr>
+                <td>Initial Lease Period</td>
+                <td>{lease_period_years} Years</td>
+            </tr>
+            <tr>
+                <td>Annual Rental Escalation</td>
+                <td>{annual_escalation}% p.a.</td>
+            </tr>
+            <tr>
+                <td>Turnover Rental Clause</td>
+                <td>{turnover_rental_pct}% of Gross Turnover</td>
+            </tr>
+            <tr>
+                <td>Beneficial Occupation Period</td>
+                <td>{beneficial_occupation_months} Months Rent-Free</td>
+            </tr>
+        </table>
 
-    # ================= PAGE 1: COVER & SITE EVALUATION SUMMARY =================
-    assets_dir = os.path.join(os.path.dirname(__file__), "assets")
-    cover_img_path = os.path.join(assets_dir, "Cover.JPG")
-    
-    if os.path.exists(cover_img_path):
-        story.append(RLImage(cover_img_path, width=523, height=360))
-        story.append(Spacer(1, 8))
-    else:
-        header_table_data = [[Paragraph("<font color='white' size=14><b>PHATBUNS SOUTH AFRICA — MASTER FRANCHISE SYSTEM</b></font><br/><font color='#FF6600' size=10>EXECUTIVE INVESTOR FEASIBILITY PACK</font>", cell_style)]]
-        ht = Table(header_table_data, colWidths=[523])
-        ht.setStyle(TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), primary_color),
-            ('TOPPADDING', (0,0), (-1,-1), 16),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 16),
-            ('LEFTPADDING', (0,0), (-1,-1), 16),
-        ]))
-        story.append(ht)
-        story.append(Spacer(1, 10))
+        <div class="footer-signature">
+            <h2>Next Steps:</h2>
+            <p>Please review the attached documentation, verify the financial metrics on page 1, and return an executed copy to proceed with formal store rollout and corporate approval.</p>
+            <p>Should you have any questions or require modifications to the layout footprint, please feel free to reach out directly.</p>
+            
+            <br>
+            <p><strong>Warm regards,</strong></p>
+            <p>
+                <strong>Nisaar Ally</strong><br>
+                <span style="color: #666; font-size: 9pt;">SA Master Rights Holder | Phatbuns Expansion</span><br>
+                <span style="color: #666; font-size: 9pt;">Mobile: +27 (0)68 710 1939 | Email: nisaar@fantastic1.com</span>
+            </p>
+        </div>
 
-    story.append(Paragraph(f"SITE EVALUATION & INVESTMENT ANALYSIS — {loc_name.upper()}", title_style))
-    story.append(Paragraph(f"FULL SIT-DOWN MODEL ({footprint:.2f} M²) | MASTER FEASIBILITY PACK", subtitle_style))
-    story.append(Spacer(1, 4))
-    
-    summary_data = [
-        [Paragraph("TURNKEY SETUP", cell_bold), Paragraph("WORKING CAPITAL", cell_bold), Paragraph("BASE NET RENTAL", cell_bold), Paragraph("OPS COST", cell_bold)],
-        [Paragraph(f"R {turnkey_cap:,.2f}", cell_style), Paragraph(f"R {working_cap:,.2f}", cell_style), Paragraph(f"R {base_rent:.2f}/m² pm", cell_style), Paragraph(f"R {base_rent * footprint * 0.1:,.2f}", cell_style)],
-        [Paragraph("Excl. VAT (Turnkey)", cell_style), Paragraph("Suggested Reserve", cell_style), Paragraph("Gross Rental Terms", cell_style), Paragraph("Estimated Opex", cell_style)]
-    ]
-    tsum = Table(summary_data, colWidths=[130, 130, 133, 130])
-    tsum.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-    ]))
-    story.append(tsum)
-    story.append(PageBreak())
+    </body>
+    </html>
+    """
 
-    # ================= PAGE 2: SITE PROFILE & LEASE =================
-    story.append(make_section_header("01. SITE PROFILE & CAPITAL SCHEDULE"))
-    story.append(Spacer(1, 3))
-    
-    table_data_1 = [
-        [Paragraph("SITE PARAMETER", cell_bold), Paragraph("SPECIFICATION", cell_bold), Paragraph("TURNKEY CAPITAL SCHEDULE (EXCL. VAT)", cell_bold), Paragraph("AMOUNT", cell_bold)],
-        [Paragraph("Location Name", cell_style), Paragraph(loc_name, cell_style), Paragraph("50% Deposit on Signing Agreement", cell_style), Paragraph(f"R {turnkey_cap * 0.5:,.2f}", cell_style)],
-        [Paragraph("Address / Node", cell_style), Paragraph("High-Traffic Commercial Retail Node", cell_style), Paragraph("40% Beneficial Occupation (BO)", cell_style), Paragraph(f"R {turnkey_cap * 0.4:,.2f}", cell_style)],
-        [Paragraph("Store Footprint", cell_style), Paragraph(f"{footprint:.2f} m² Full Sit-Down Model", cell_style), Paragraph("10% Prior to Store Opening", cell_style), Paragraph(f"R {turnkey_cap * 0.1:,.2f}", cell_style)],
-        [Paragraph("Managing Agent", cell_style), Paragraph(managing_agent, cell_style), Paragraph("Total Turnkey Capital Outlay", cell_bold), Paragraph(f"R {turnkey_cap:,.2f}", cell_bold)],
-        [Paragraph("Mall GLA Size", cell_style), Paragraph("Regional / Community Retail Node", cell_style), Paragraph("Working Capital Reserve", cell_style), Paragraph(f"R {working_cap:,.2f}", cell_style)],
-        [Paragraph("Site Plan Attached", cell_style), Paragraph("Yes (Rendered on Page 7)", cell_style), Paragraph("Landlord Rental Deposit", cell_style), Paragraph(f"R {base_rent * footprint:,.2f}", cell_style)],
-    ]
-    t1 = Table(table_data_1, colWidths=[110, 150, 160, 103])
-    t1.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t1)
-    story.append(Spacer(1, 10))
-
-    story.append(make_section_header("02. LEASE STRUCTURE & PROPOSED LANDLORD OFFER TARGETS"))
-    story.append(Spacer(1, 3))
-    table_data_2 = [
-        [Paragraph("LEASE CLAUSE/PROVISION", cell_bold), Paragraph("TERMS & RATE STRUCTURE", cell_bold), Paragraph("FINANCIAL ALIGNMENT", cell_bold)],
-        [Paragraph("Lease Period & Renewal", cell_style), Paragraph("5 Years Initial Period + 5-Year Renewal Option", cell_style), Paragraph("60 Months Base Amortization", cell_style)],
-        [Paragraph("Base Net Rental Rate Target", cell_style), Paragraph(f"R {base_rent:.2f}/m²/month (Excl. VAT)", cell_style), Paragraph(f"R {base_rent * footprint:,.2f}/month", cell_style)],
-        [Paragraph("Annual Rental Escalation", cell_style), Paragraph("7.5% per annum effective anniversary", cell_style), Paragraph("Predictable cost curve", cell_style)],
-        [Paragraph("Monthly Turnover Rental Clause", cell_style), Paragraph("8.0% of net turnover vs Base Net Rental (whichever greater)", cell_style), Paragraph(f"Effective Threshold: > R {base_rent * footprint * 3:,.2f} p.m.", cell_style)],
-        [Paragraph("Beneficial Occupation (BO)", cell_style), Paragraph("2 Month Rent-Free BO for Turnkey Store Fitout", cell_style), Paragraph("Fitout Schedule: 60 Days", cell_style)],
-    ]
-    t2 = Table(table_data_2, colWidths=[140, 203, 180])
-    t2.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t2)
-    story.append(PageBreak())
-
-    # ================= PAGE 3: CATCHMENT & RECOVERY =================
-    story.append(make_section_header("03. DYNAMIC CATCHMENT & LOCATION INTELLIGENCE"))
-    story.append(Spacer(1, 3))
-    table_data_c = [
-        [Paragraph("CATCHMENT METRIC", cell_bold), Paragraph("DATA POINT / LOCATION ANALYSIS (5KM & 10KM RADIUS)", cell_bold)],
-        [Paragraph("LSM/ESM Profile", cell_style), Paragraph("LSM 8-10+ / High Disposable Income & Affluent Residential Node", cell_style)],
-        [Paragraph("Monthly / Annual Footfall", cell_style), Paragraph("160,000–210,000 visits/month (~2.1M–2.5M Annually across node)", cell_style)],
-        [Paragraph("Catchment Household Count", cell_style), Paragraph("110,000–135,000 Active Households (10 km Radius Core Demographic)", cell_style)],
-        [Paragraph("In-Mall & 10km Competitors", cell_style), Paragraph("Woolworths Food, Checkers Hyper, Spur, RocoMamas, Burger King, KFC, McDonald's, Nando's", cell_style)],
-    ]
-    tc = Table(table_data_c, colWidths=[150, 373])
-    tc.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(tc)
-    story.append(Spacer(1, 10))
-
-    story.append(make_section_header("04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX"))
-    story.append(Spacer(1, 3))
-    
-    table_data_3 = [
-        [Paragraph("RECOVERY HORIZON", cell_bold), Paragraph("REQUIRED TURNOVER/MONTH", cell_bold), Paragraph("REQUIRED UNITS/MONTH", cell_bold), Paragraph("REQUIRED UNITS/DAY", cell_bold)],
-        [Paragraph("Operational Breakeven", cell_style), Paragraph("R 310,000", cell_style), Paragraph("1,636 units", cell_style), Paragraph("55 units / day", cell_style)],
-        [Paragraph("12 Months Recovery Target", cell_style), Paragraph("R 744,000", cell_style), Paragraph("3,980 units", cell_style), Paragraph("133 units / day", cell_style)],
-        [Paragraph("24 Months Recovery Target", cell_style), Paragraph("R 527,000", cell_style), Paragraph("2,808 units", cell_style), Paragraph("94 units / day", cell_style)],
-        [Paragraph("36 Months Recovery Target", cell_style), Paragraph("R 465,000", cell_style), Paragraph("2,417 units", cell_style), Paragraph("81 units / day", cell_style)],
-        [Paragraph("48 Months Recovery Target", cell_style), Paragraph("R 410,000", cell_style), Paragraph("2,132 units", cell_style), Paragraph("71 units / day", cell_style)],
-        [Paragraph("60 Months Recovery Target", cell_style), Paragraph("R 380,000", cell_style), Paragraph("1,975 units", cell_style), Paragraph("66 units / day", cell_style)],
-    ]
-    t3 = Table(table_data_3, colWidths=[140, 130, 130, 123])
-    t3.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t3)
-    story.append(Spacer(1, 8))
-    story.append(Paragraph("Detailed Investment Recovery Window: 12 to 24 Months Target Analysis with active daily unit velocity modeled against peak footfall conversion. (E&OE).", cell_style))
-    story.append(PageBreak())
-
-    # ================= PAGE 4: OPERATIONS & EQUIPMENT =================
-    story.append(make_section_header("05. OPERATIONS, STAFFING & CHANNEL BREAKDOWN"))
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("• Revenue Channel Split: Online Deliveries (UberEats/Mr D): 45% | Takeaway & Counter: 30% | In-Store Express Dining: 25%", cell_style))
-    story.append(Paragraph("• Staffing Structure (BCEA 8-Hour Shifts): 1 x Store Manager, 2 x Shift Supervisors (Floor Leads & POS), 3 x Line Grillers & Fryers, 2 x Till Operators/Runners, 2 x Cleaners & Scullery (SANHA Hygiene Compliance).", cell_style))
-    story.append(Spacer(1, 10))
-    story.append(make_section_header("06. TURNKEY KITCHEN EQUIPMENT MANIFEST"))
-    story.append(Spacer(1, 3))
-    table_data_eq = [
-        [Paragraph("STATION / CATEGORY", cell_bold), Paragraph("EQUIPMENT SPECIFICATION & DEPLOYMENT", cell_bold)],
-        [Paragraph("Smash Grill Station", cell_style), Paragraph("Chrome Smash Griddle (3-Phase Heavy Duty), Bun Toaster & Pass-Through Heated Holding Cabinet.", cell_style)],
-        [Paragraph("Frying & Prep Line", cell_style), Paragraph("Dual-Pan High-Recovery Deep Fryer, 3-Door Under-Counter Prep Fridge with Topping Rail.", cell_style)],
-        [Paragraph("Extraction Canopy", cell_style), Paragraph("Stainless Steel Wall-Mounted Extraction Canopy complete with ANSUL Fire Suppression System.", cell_style)],
-        [Paragraph("POS & Automation", cell_style), Paragraph("Dual-Screen Touch POS Terminal, Kitchen Display System (KDS), Thermal Printers & Router setup.", cell_style)],
-        [Paragraph("Beverage & Shakes", cell_style), Paragraph("Heavy Duty Commercial Variable Speed Blender & Commercial Ice Machine (40kg/24hr capacity).", cell_style)],
-        [Paragraph("Storage & Washup", cell_style), Paragraph("Stainless Steel Work Tables, Double Bowl Scullery Sink, Hand Wash Basin & Wall Shelving units.", cell_style)],
-    ]
-    teq = Table(table_data_eq, colWidths=[130, 393])
-    teq.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(teq)
-    story.append(PageBreak())
-
-    # ================= PAGE 5: BRAND HERITAGE & GOVERNANCE =================
-    story.append(make_section_header("07. BRAND HERITAGE, USP & PRODUCT STANDARDS"))
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. Phatbuns brings a premier culinary disruption specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients and proteins adhere strictly to central supply chain quality assurance protocols, ensuring 100% consistency, Halal compliance (SANHA), and exceptional taste profiles.", cell_style))
-    story.append(Spacer(1, 10))
-    story.append(make_section_header("08. MARKETING, LAUNCH STRATEGY & DIGITAL ACQUISITION"))
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("Franchisees benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships (UberEats, Mr D).", cell_style))
-    story.append(Spacer(1, 10))
-    story.append(make_section_header("09. GOVERNANCE, COMPLIANCE & NEXT STEPS"))
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("To proceed with site allocation, prospective investors must: (1) Execute the attached NCNDA, (2) Submit verified proof of unencumbered cash equity, (3) Settle review administrative fees, and (4) Sign formal franchise agreements upon executive board approval.", cell_style))
-    story.append(PageBreak())
-
-    # ================= PAGE 6: 5-YEAR PRO FORMA P&L =================
-    story.append(make_section_header("10. 5-YEAR PRO FORMA INCOME STATEMENT & P&L FORECAST"))
-    story.append(Spacer(1, 3))
-    story.append(Paragraph("Standard Model Parameters: 50% Debt Funding @ 11.75% Prime Rate | 35% COGS | 9% Royalties & Marketing | E&OE", cell_style))
-    story.append(Spacer(1, 5))
-    
-    table_data_4 = [
-        [Paragraph("FINANCIAL METRIC", cell_bold), Paragraph("YEAR 1", cell_bold), Paragraph("YEAR 2", cell_bold), Paragraph("YEAR 3", cell_bold), Paragraph("YEAR 4", cell_bold), Paragraph("YEAR 5", cell_bold)],
-        [Paragraph("Gross Revenue", cell_style), Paragraph("R 8,500,000", cell_style), Paragraph("R 9,350,000", cell_style), Paragraph("R 10,285,000", cell_style), Paragraph("R 11,313,500", cell_style), Paragraph("R 12,444,850", cell_style)],
-        [Paragraph("Cost of Sales (35%)", cell_style), Paragraph("R 2,975,000", cell_style), Paragraph("R 3,272,500", cell_style), Paragraph("R 3,599,750", cell_style), Paragraph("R 3,959,725", cell_style), Paragraph("R 4,355,698", cell_style)],
-        [Paragraph("Gross Profit", cell_style), Paragraph("R 5,525,000", cell_style), Paragraph("R 6,077,500", cell_style), Paragraph("R 6,685,250", cell_style), Paragraph("R 7,353,775", cell_style), Paragraph("R 8,089,152", cell_style)],
-        [Paragraph("Operating Expenses", cell_style), Paragraph("R 4,200,000", cell_style), Paragraph("R 4,536,000", cell_style), Paragraph("R 4,898,880", cell_style), Paragraph("R 5,290,790", cell_style), Paragraph("R 5,713,952", cell_style)],
-        [Paragraph("Net Operating Profit", cell_style), Paragraph("R 1,325,000", cell_style), Paragraph("R 1,541,500", cell_style), Paragraph("R 1,786,370", cell_style), Paragraph("R 2,062,985", cell_style), Paragraph("R 2,375,200", cell_style)],
-    ]
-    t4 = Table(table_data_4, colWidths=[130, 78, 78, 78, 78, 81])
-    t4.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t4)
-    story.append(Spacer(1, 8))
-    
-    story.append(make_section_header("10A. AGGREGATE 5-YEAR FINANCIAL RETURN (ROI) & RECOMMENDATION"))
-    story.append(Spacer(1, 3))
-    table_data_roi = [
-        [Paragraph("FINANCIAL METRIC / AGGREGATE CATEGORY", cell_bold), Paragraph("5-YEAR PROJECTED CUMULATIVE VALUE (ZAR)", cell_bold)],
-        [Paragraph("Total Landlord Rentals Paid (5 Years)", cell_style), Paragraph(f"R {base_rent * footprint * 60:,.2f}", cell_style)],
-        [Paragraph("Total Central Royalties Paid (9% over 5 Years)", cell_style), Paragraph("R 4,120,500.00", cell_style)],
-        [Paragraph("Cumulative Net Operating Profit (After Debt Service)", cell_style), Paragraph("R 9,089,055.00", cell_style)],
-        [Paragraph("Site Feasibility & Master Recommendation", cell_bold), Paragraph("Phatbuns South Africa advises this site as Feasible. Recommended Model: Full Sit-Down / Inline Store. (E&OE).", cell_bold)],
-    ]
-    troi = Table(table_data_roi, colWidths=[200, 323])
-    troi.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(troi)
-    story.append(PageBreak())
-
-    # ================= PAGE 7: FLOOR PLAN LAYOUT & BRAND CATALOGS =================
-    story.append(make_section_header("11. SITE DEVELOPMENT LEASING & FLOOR PLAN LAYOUT"))
-    story.append(Spacer(1, 4))
-    
-    if blueprint_images:
-        for title, img in blueprint_images:
-            story.append(Paragraph(f"<b>Layout Ref: {title}</b>", cell_bold))
-            story.append(Spacer(1, 4))
-            if img:
-                img_path = f"/tmp/{title.replace(' ', '_').replace('.', '_')}.png"
-                img.save(img_path)
-                story.append(RLImage(img_path, width=480, height=260))
-            else:
-                story.append(Paragraph("[Blueprint Document Attached & Synchronized to Drive Folder]", cell_style))
-            story.append(Spacer(1, 10))
-    else:
-        story.append(Paragraph("Standard modular kitchen layout engineered for SANHA Halal compliance and customer throughput.", cell_style))
-        story.append(Spacer(1, 10))
-
-    story.append(make_section_header("12. BRAND PORTFOLIO & CLICKABLE CHANNELS"))
-    story.append(Spacer(1, 2))
-
-    menu_drive = "https://drive.google.com/drive/folders/14K_pChaU-dYfNlKi-HvzcEytFY6qOR_m"
-    
-    menu_table_data = [
-        [Paragraph("BRAND & CONCEPT", cell_bold), Paragraph("MENU SPECIFICATION & OVERVIEW", cell_bold), Paragraph("CHANNELS & DOWNLOAD LINKS", cell_bold)],
-        [Paragraph("<b>Phatbuns Smash Burgers</b><br/><font size=7 color='#666666'>Artisan Smash Burgers & Signature Buns</font>", cell_style),
-         Paragraph("Hand-pressed Angus beef smash patties served on seeded brioche, topped with proprietary secret sauces, Cheesy Doritos, and buttermilk fried chicken.", cell_style),
-         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/phatbuns_sa'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
-        [Paragraph("<b>PhatVille Sliders & Sides</b><br/><font size=7 color='#666666'>Nashville Hot Sliders & Loaded Sides</font>", cell_style),
-         Paragraph("Nashville-style sliders, crispy tender boxes, dusted crinkle fries, and specialized dipping sauces optimized for rapid kitchen assembly.", cell_style),
-         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/phatville_sa'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
-        [Paragraph("<b>Butter Brûlée Signature Drinks</b><br/><font size=7 color='#666666'>Signature Beverages & Artisan Mocktails</font>", cell_style),
-         Paragraph("Hand-crafted specialty iced teas, indulgent gourmet milkshakes, artisanal refresher coolers, and barista specialty coffees.", cell_style),
-         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/butterbrulee_sa'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
-        [Paragraph("<b>Doorstep Desserts</b><br/><font size=7 color='#666666'>Waffles, Dough Tubs & Gelato Sundaes</font>", cell_style),
-         Paragraph("Indulgent double-stick waffle sticks, freshly baked dough tubs, Lotus Biscoff crunch cakes, gelato sundaes, and dessert delivery boxes.", cell_style),
-         Paragraph(f"<a href='{menu_drive}'><font color='#1B365D'><b>📥 DOWNLOAD MENU</b></font></a><br/><a href='https://www.instagram.com/doorstepdesserts'><font color='#FF6600'><b>🌐 INSTAGRAM / SOCIAL</b></font></a>", cell_style)],
-    ]
-    
-    t_menu = Table(menu_table_data, colWidths=[130, 253, 140])
-    t_menu.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('LEFTPADDING', (0,0), (-1,-1), 4),
-        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(t_menu)
-    story.append(PageBreak())
-
-    # ================= PAGE 8: FULL FORMAL NCNDA & SIGNATURES =================
-    story.append(make_section_header("NON-DISCLOSURE AND NON-CIRCUMVENTION AGREEMENT (NCNDA)"))
-    story.append(Spacer(1, 2))
-    story.append(Paragraph("<font size=8 color='#1B365D'><b>PHATBUNS SOUTH AFRICA FAST FOOD FRANCHISE</b></font>", ParagraphStyle('SubNC', parent=cell_bold, alignment=1)))
-    story.append(Spacer(1, 6))
-    
-    intro_ncnda = (
-        "<b>Entered into by and between:</b><br/>"
-        "<b>1. PHATBUNS SOUTH AFRICA</b> (hereinafter referred to as the 'Disclosing Party' or 'Franchisor'), and "
-        f"<b>2. THE UNDERSIGNED PARTY</b> (hereinafter referred to as the 'Receiving Party' or 'Prospective Franchisee'), "
-        f"full legal details: <b>{client_name}</b> | Email: <b>nisaar@fantastic1.com</b> | Mobile: <b>+27 (0)68 710 1939</b> | Target node: <b>{loc_name}</b>.<br/><br/>"
-        "<b>1. PURPOSE & SCOPE OF DISCUSSION</b><br/>"
-        "The Parties wish to enter into discussions concerning a potential business relationship relating to a fast-food franchise opportunity under the Phatbuns brand in South Africa (the 'Permitted Purpose'). In connection with this, the Disclosing Party will share proprietary business systems, financial models, recipes, operational manuals, and strategic information.<br/><br/>"
-        "<b>2. FASA COMPLIANCE & ETHICAL STANDARDS</b><br/>"
-        "The Parties acknowledge that this Agreement and subsequent franchise disclosures are intended to comply with the ethical frameworks and guidelines established by the Franchise Association of South Africa (FASA) and the Consumer Protection Act, No. 68 of 2008 (CPA). All negotiations, document exchanges, and disclosures shall be carried out in good faith and transparency.<br/><br/>"
-        "<b>3. PROTECTION OF PERSONAL INFORMATION (POPIA)</b><br/>"
-        "Both Parties explicitly commit to complying with the Protection of Personal Information Act, No. 4 of 2013 (POPIA) in relation to any personal information processed under this Agreement: (a) The Receiving Party shall only process personal information strictly for the Permitted Purpose; (b) Appropriate technical security measures shall be maintained; (c) Information shall be securely destroyed when no longer required.<br/><br/>"
-        "<b>4. CONFIDENTIALITY OBLIGATIONS</b><br/>"
-        "The Receiving Party agrees to maintain strict confidentiality regarding all Confidential Information disclosed by Phatbuns South Africa, including financial projections, supply chain data, setup costs, operational workflows, brand secrets, and marketing methodologies.<br/><br/>"
-        "<b>5. NON-CIRCUMVENTION</b><br/>"
-        "The Receiving Party covenants that it will not, directly or indirectly, circumvent, bypass, or avoid Phatbuns South Africa to enter into any business transaction, franchise system, or contract with suppliers, landlords, or partners introduced herein by the Disclosing Party during discussions. The Receiving Party shall not use the Disclosing Party's concepts to establish a competing business for 24 months following termination.<br/><br/>"
-        "<b>6. GOVERNING LAW AND JURISDICTION</b><br/>"
-        "This Agreement shall be governed by, construed, and enforced in accordance with the laws of the Republic of South Africa under the exclusive jurisdiction of the High Court of South Africa."
-    )
-    story.append(Paragraph(intro_ncnda, cell_style))
-    story.append(Spacer(1, 10))
-    
-    table_data_sig_p3 = [
-        [Paragraph("<b>For: PHATBUNS SOUTH AFRICA</b>", cell_bold), Paragraph("<b>For: THE RECEIVING PARTY</b>", cell_bold)],
-        [Paragraph("Authorized Signature: ______________________<br/>Name: Nisaar Ally<br/>Title: SA Master Rights Holder<br/>Date: ____ / ____ / 2026 | Place: Johannesburg", cell_style),
-         Paragraph(f"Authorized Signature: ______________________<br/>Name: {client_name}<br/>Title: Prospective Franchisee<br/>Date: ____ / ____ / 2026 | ID: _________________", cell_style)]
-    ]
-    tsig_p3 = Table(table_data_sig_p3, colWidths=[260, 263])
-    tsig_p3.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#CCCCCC")),
-        ('BACKGROUND', (0,0), (-1,0), bg_light),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-        ('LEFTPADDING', (0,0), (-1,-1), 6),
-        ('RIGHTPADDING', (0,0), (-1,-1), 6),
-    ]))
-    story.append(tsig_p3)
-
-    doc.build(story, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
-    buffer.seek(0)
-    return buffer.getvalue()
+    # Generate PDF bytes via WeasyPrint
+    pdf_file_bytes = HTML(string=html_content).write_pdf()
+    return pdf_file_bytes
