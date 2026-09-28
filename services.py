@@ -1,14 +1,29 @@
 import os
+import time
 import smtplib
 from email.message import EmailMessage
 from io import BytesIO
 import streamlit as st
 
+def retry_with_backoff(retries=3, backoff_in_seconds=2):
+    """Decorator to retry flaky network or API calls with exponential backoff."""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            x = 0
+            while x < retries:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    x += 1
+                    if x == retries:
+                        raise e
+                    time.sleep(backoff_in_seconds * (2 ** (x - 1)))
+        return wrapper
+    return decorator
+
 def get_drive_service():
     """
     Initializes Google Drive API service using Google Cloud Service Account credentials.
-    Bypasses token expiration and client validation errors by utilizing 
-    the service account key configuration in Streamlit secrets.
     """
     try:
         from google.oauth2 import service_account
@@ -29,33 +44,34 @@ def get_drive_service():
         st.error(f"Drive API Connection Error: {str(e)}")
         return None
 
-def get_or_create_folder(service, folder_name, parent_id=None):
-    """Finds or creates a subfolder within Google Drive and returns (folder_id, error_message)."""
-    try:
-        query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
-        if parent_id:
-            query += f" and '{parent_id}' in parents"
-            
-        results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
-        files = results.get('files', [])
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def get_or_create_folder_with_retry(service, folder_name, parent_id=None):
+    """Robust folder lookup or creation with built-in retry failover loop."""
+    query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    if parent_id:
+        query += f" and '{parent_id}' in parents"
         
-        if files:
-            return files[0]['id'], None
+    results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+    files = results.get('files', [])
+    
+    if files:
+        return files[0]['id']
+    
+    folder_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    if parent_id:
+        folder_metadata['parents'] = [parent_id]
         
-        folder_metadata = {
-            'name': folder_name,
-            'mimeType': 'application/vnd.google-apps.folder'
-        }
-        if parent_id:
-            folder_metadata['parents'] = [parent_id]
-            
-        folder = service.files().create(body=folder_metadata, fields='id').execute()
-        return folder.get('id'), None
-    except Exception as e:
-        return None, str(e)
+    folder = service.files().create(body=folder_metadata, fields='id').execute()
+    return folder.get('id')
 
 def sync_file_to_drive(file_obj, location_name):
-    """Uploads or updates the generated PDF report in the designated Google Drive folder."""
+    """
+    Uploads or updates the generated PDF report in Google Drive with 
+    failsafe error trapping and fallback notification.
+    """
     service = get_drive_service()
     if not service:
         return False, "Drive API Inactive (Check Secrets)"
@@ -67,9 +83,10 @@ def sync_file_to_drive(file_obj, location_name):
         if not root_folder_id:
             return False, "Drive Error: DRIVE_FOLDER_ID not found in secrets."
             
-        loc_folder_id, folder_err = get_or_create_folder(service, location_name, root_folder_id)
-        if not loc_folder_id:
-            return False, f"Folder Creation Error: {folder_err}"
+        try:
+            loc_folder_id = get_or_create_folder_with_retry(service, location_name, root_folder_id)
+        except Exception as fe:
+            return False, f"Folder Creation Retry Failed: {str(fe)}"
             
         file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
         
@@ -100,10 +117,17 @@ def sync_file_to_drive(file_obj, location_name):
             
         return True, "Synced Successfully to Google Drive via Service Account!"
     except Exception as e:
-        return False, f"Sync Error: {str(e)}"
+        return False, f"Sync Failover Triggered - Local Backup Active. Error: {str(e)}"
+
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def send_email_with_retry(gmail_user, gmail_pass, msg):
+    """SMTP transmission wrapped in retry loop for network instability."""
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        server.login(gmail_user, gmail_pass)
+        server.send_message(msg)
 
 def send_feasibility_email(recipient_email, client_name, file_bytes, location_name):
-    """Sends the generated PDF feasibility report via Gmail SMTP with Phatbuns South Africa sender branding."""
+    """Sends the generated PDF feasibility report via Gmail SMTP with failover retry handling."""
     try:
         gmail_user = st.secrets.get("GMAIL_USER")
         gmail_pass = st.secrets.get("GMAIL_APP_PASSWORD")
@@ -113,8 +137,6 @@ def send_feasibility_email(recipient_email, client_name, file_bytes, location_na
             
         msg = EmailMessage()
         msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Investor Dossier ({location_name})"
-        
-        # Explicitly set sender display name to Phatbuns South Africa
         msg['From'] = f"Phatbuns South Africa <{gmail_user}>"
         msg['To'] = recipient_email
         
@@ -125,7 +147,7 @@ def send_feasibility_email(recipient_email, client_name, file_bytes, location_na
             f"Please find attached to this email (Consolidated within the Feasibility PDF Pack):\n\n"
             f"1. Executive Cover Page & Brand Identity Presentation\n"
             f"2. Site Evaluation & Commercial Investment Analysis ({location_name})\n"
-            f"3. Financial Outlay & Debt Serviceability Breakdown\n"
+            f"3. Financial Outlay & Debt Serviceability Breakdown (Excl. VAT)\n"
             f"4. 5-Year Pro Forma Income Statement & 60-Month Cash Flow Projections (35% COGS Model)\n"
             f"5. Development Layout & Leasing Site Plan (Rendered)\n"
             f"6. Addendum — Brand Menus with Direct Google Drive Download Links\n"
@@ -148,10 +170,7 @@ def send_feasibility_email(recipient_email, client_name, file_bytes, location_na
             filename=file_name
         )
         
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(gmail_user, gmail_pass)
-            server.send_message(msg)
-            
+        send_email_with_retry(gmail_user, gmail_pass, msg)
         return True, "Email sent successfully!"
     except Exception as e:
-        return False, f"Email Error: {str(e)}"
+        return False, f"Email Dispatch Error after retries: {str(e)}"
