@@ -46,12 +46,18 @@ def get_drive_service():
 
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def get_or_create_folder_with_retry(service, folder_name, parent_id=None):
-    """Robust folder lookup or creation with built-in retry failover loop."""
+    """Robust folder lookup or creation with built-in retry failover loop supporting Shared Drives."""
     query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
     if parent_id:
         query += f" and '{parent_id}' in parents"
         
-    results = service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+    results = service.files().list(
+        q=query, 
+        spaces='drive', 
+        includeItemsFromAllDrives=True, 
+        supportsAllDrives=True, 
+        fields="files(id, name)"
+    ).execute()
     files = results.get('files', [])
     
     if files:
@@ -64,13 +70,17 @@ def get_or_create_folder_with_retry(service, folder_name, parent_id=None):
     if parent_id:
         folder_metadata['parents'] = [parent_id]
         
-    folder = service.files().create(body=folder_metadata, fields='id').execute()
+    folder = service.files().create(
+        body=folder_metadata, 
+        supportsAllDrives=True, 
+        fields='id'
+    ).execute()
     return folder.get('id')
 
 def sync_file_to_drive(file_obj, location_name):
     """
-    Uploads or updates the generated PDF report in Google Drive with 
-    failsafe error trapping and fallback notification.
+    Uploads or updates the generated PDF report in Google Drive Shared Drive 
+    using Service Account credentials with retry failover protection.
     """
     service = get_drive_service()
     if not service:
@@ -108,14 +118,29 @@ def sync_file_to_drive(file_obj, location_name):
         }
         
         query = f"name = '{file_name}' and '{loc_folder_id}' in parents and trashed = false"
-        existing = service.files().list(q=query, spaces='drive', fields="files(id)").execute().get('files', [])
+        existing = service.files().list(
+            q=query, 
+            spaces='drive', 
+            includeItemsFromAllDrives=True, 
+            supportsAllDrives=True, 
+            fields="files(id)"
+        ).execute().get('files', [])
         
         if existing:
-            service.files().update(fileId=existing[0]['id'], media_body=media).execute()
+            service.files().update(
+                fileId=existing[0]['id'], 
+                media_body=media, 
+                supportsAllDrives=True
+            ).execute()
         else:
-            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            service.files().create(
+                body=file_metadata, 
+                media_body=media, 
+                supportsAllDrives=True, 
+                fields='id'
+            ).execute()
             
-        return True, "Synced Successfully to Google Drive via Service Account!"
+        return True, "Synced Successfully to Google Drive Shared Drive!"
     except Exception as e:
         return False, f"Sync Failover Triggered - Local Backup Active. Error: {str(e)}"
 
