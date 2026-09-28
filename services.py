@@ -77,13 +77,16 @@ def sync_file_to_drive(file_obj, location_name):
             
         file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
         
-        if hasattr(file_obj, "getvalue"):
+        # Robust handling for raw bytes, file-like objects, or custom wrappers
+        if isinstance(file_obj, bytes):
+            file_bytes = file_obj
+        elif hasattr(file_obj, "getvalue"):
             file_bytes = file_obj.getvalue()
         elif hasattr(file_obj, "read"):
             file_obj.seek(0)
             file_bytes = file_obj.read()
         else:
-            file_bytes = file_obj
+            file_bytes = bytes(file_obj)
 
         media = MediaIoBaseUpload(BytesIO(file_bytes), mimetype='application/pdf', resumable=True)
         
