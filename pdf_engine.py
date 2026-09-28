@@ -14,19 +14,19 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
     store_footprint = form_data.get("store_footprint", 167.0)
     base_net_rental = form_data.get("base_net_rental", 350.0)
     turnkey_capital = form_data.get("turnkey_capital", 3100000.0)
+    working_capital = form_data.get("working_capital", 650000.0)
     managing_agent = form_data.get("managing_agent", "Redefine Properties / Abcon")
     client_name = form_data.get("client_name", "Nisaar Ally")
+    store_model = form_data.get("store_model", "Full Sit-Down Model")
     
-    # Financial computations & terms
+    # Financial computations & terms (All Excl. VAT)
     annual_escalation = form_data.get("annual_escalation", 7.5)
     turnover_rental_pct = form_data.get("turnover_rental_pct", 8.0)
     beneficial_occupation_months = form_data.get("beneficial_occupation_months", 2.0)
-    lease_period_years = form_data.get("lease_period_years", 5.0)
     
     monthly_operating_cost = base_net_rental * store_footprint
-    working_capital = 450000.0
+    landlord_deposit = monthly_operating_cost * 2.0  # Minimum 2 months rental deposit rule
     
-    # Construct full 8-page multi-page HTML template matching exact Rondebuilt prospectus formatting
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -37,7 +37,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 size: A4;
                 margin: 10mm 12mm 14mm 12mm;
                 @bottom-left {{
-                    content: "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712";
+                    content: "CONFIDENTIAL INFORMATION (EXCL. VAT) | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939";
                     font-size: 5.5pt;
                     color: #444;
                 }}
@@ -125,22 +125,22 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <!-- PAGE 1: COVER & EXECUTIVE SUMMARY -->
         <div class="cover-page">
-            <div style="font-size: 9.5pt; font-weight: bold; color: #555; letter-spacing: 1px;">EXPRESS MODEL ({store_footprint:.0f} M²)</div>
+            <div style="font-size: 9.5pt; font-weight: bold; color: #555; letter-spacing: 1px;">{store_model.upper()} ({store_footprint:.0f} SQM)</div>
             <h1 class="cover-brand">PHAT BUNS</h1>
             <div class="cover-subtitle">SOUTH AFRICA<br>SITE EVALUATION & INVESTMENT ANALYSIS — {location_name.upper()}</div>
             
             <table class="metric-table" style="margin-top: 10mm;">
                 <tr>
-                    <th>Turnkey Setup</th>
-                    <th>Working Capital</th>
+                    <th>Turnkey Setup (Excl. VAT)</th>
+                    <th>Working Capital (Excl. VAT)</th>
                     <th>Base Net Rental</th>
-                    <th>Ops Cost</th>
+                    <th>Landlord Deposit (2 Mos)</th>
                 </tr>
                 <tr>
-                    <td><strong>R {turnkey_capital:,.0f}</strong><br><span style="font-size: 6.5pt; color: #666;">Excl. VAT (Turnkey)</span></td>
-                    <td><strong>R {working_capital:,.0f}</strong><br><span style="font-size: 6.5pt; color: #666;">Suggested Reserve</span></td>
-                    <td><strong>R {base_net_rental:.0f}/m²</strong><br><span style="font-size: 6.5pt; color: #666;">pm Excl. VAT</span></td>
-                    <td><strong>R 45,000</strong><br><span style="font-size: 6.5pt; color: #666;">Gross Terms</span></td>
+                    <td><strong>R {turnkey_capital:,.0f}</strong></td>
+                    <td><strong>R {working_capital:,.0f}</strong></td>
+                    <td><strong>R {base_net_rental:.0f}/sqm pm</strong></td>
+                    <td><strong>R {landlord_deposit:,.0f}</strong></td>
                 </tr>
             </table>
         </div>
@@ -148,7 +148,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 2: SITE PROFILE & LEASE TERMS -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7pt; color: #666;">01. SITE PROFILE & CAPITAL SCHEDULE</div>
+            <div style="font-size: 7pt; color: #666;">01. SITE PROFILE & CAPITAL SCHEDULE (EXCL. VAT)</div>
         </div>
 
         <h2>01. Site Profile & Capital Schedule</h2>
@@ -173,7 +173,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
             </tr>
             <tr>
                 <td><strong>Store Footprint</strong></td>
-                <td>{store_footprint:.2f} m² Full Sit-Down Model</td>
+                <td>{store_footprint:.2f} sqm {store_model}</td>
                 <td>10% Prior to Store Opening</td>
                 <td>R {turnkey_capital * 0.1:,.0f}</td>
             </tr>
@@ -189,12 +189,12 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <table class="metric-table">
             <tr>
                 <th>Lease Clause / Provision</th>
-                <th>Terms & Rate Structure</th>
+                <th>Terms & Rate Structure (Excl. VAT)</th>
                 <th>Financial Alignment</th>
             </tr>
             <tr>
                 <td><strong>Base Net Rental Rate Target</strong></td>
-                <td>R {base_net_rental:.0f}/m²/month (Excl. VAT & Utilities)</td>
+                <td>R {base_net_rental:.0f}/sqm/month (Excl. VAT & Utilities)</td>
                 <td>R {monthly_operating_cost:,.2f}/month</td>
             </tr>
             <tr>
@@ -208,9 +208,9 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 <td>Triggers above Base Threshold</td>
             </tr>
             <tr>
-                <td><strong>Beneficial Occupation (BO)</strong></td>
-                <td>{beneficial_occupation_months} Month Rent-Free BO for Turnkey Store Fitout</td>
-                <td>Fitout Schedule: 60 Days</td>
+                <td><strong>Landlord Rental Deposit</strong></td>
+                <td>Minimum 2 Months Total Rental Deposit (Vetted by Landlord)</td>
+                <td>R {landlord_deposit:,.2f} Excl. VAT</td>
             </tr>
         </table>
 
@@ -250,7 +250,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <table class="metric-table">
             <tr>
                 <th>Recovery Horizon</th>
-                <th>Required Turnover / Month</th>
+                <th>Required Turnover / Month (Excl. VAT)</th>
                 <th>Required Units / Month</th>
                 <th>Required Units / Day</th>
             </tr>
@@ -351,13 +351,13 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 5: 5-YEAR PRO FORMA P&L -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7pt; color: #666;">11. 5-YEAR PRO FORMA INCOME STATEMENT & INVESTMENT COMPARISON</div>
+            <div style="font-size: 7pt; color: #666;">11. 5-YEAR PRO FORMA INCOME STATEMENT & INVESTMENT COMPARISON (EXCL. VAT)</div>
         </div>
 
         <h2>11A. 5-Year Pro Forma Income Statement & P&L Forecast</h2>
         <table class="metric-table">
             <tr>
-                <th>Financial Metric</th>
+                <th>Financial Metric (Excl. VAT)</th>
                 <th>Year 1</th>
                 <th>Year 2</th>
                 <th>Year 3</th>
@@ -409,7 +409,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <h2>11B. 5-Year Cash Investment Comparison</h2>
         <table class="metric-table">
             <tr>
-                <th>Investment Metric</th>
+                <th>Investment Metric (Excl. VAT)</th>
                 <th>Bank Fixed Deposit (8.5% p.a. Pre-Tax)</th>
                 <th>Phatbuns Store Investment</th>
             </tr>
@@ -528,8 +528,8 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 Paragraph(f"<b>Phatbuns Master Prospectus - {location_name}</b>", styles['Heading1']),
                 Spacer(1, 12),
                 Paragraph(f"Client: {client_name}", styles['Normal']),
-                Paragraph(f"Footprint: {store_footprint} m2", styles['Normal']),
-                Paragraph(f"Turnkey Capital: R {turnkey_capital:,.2f}", styles['Normal']),
+                Paragraph(f"Footprint: {store_footprint} sqm", styles['Normal']),
+                Paragraph(f"Turnkey Capital: R {turnkey_capital:,.2f} Excl. VAT", styles['Normal']),
             ]
             doc.build(story)
             return buffer.getvalue()
