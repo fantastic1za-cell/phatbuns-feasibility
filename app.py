@@ -33,7 +33,6 @@ with st.form("feasibility_form"):
 
 if submitted:
     with st.spinner("Compiling Master Feasibility PDF Pack..."):
-        # Compile input dictionary containing all detailed lease terms for verification
         feasibility_data = {
             "client_name": recipient_email.split('@')[0].title(),
             "recipient_email": recipient_email,
@@ -49,7 +48,6 @@ if submitted:
             "managing_agent": managing_agent
         }
         
-        # Load blueprint images if available in assets
         blueprint_images = []
         assets_dir = os.path.join(os.path.dirname(__file__), "assets")
         if os.path.exists(assets_dir):
@@ -63,12 +61,10 @@ if submitted:
                     except Exception:
                         pass
 
-        # Generate PDF bytes
         pdf_bytes = generate_feasibility_pdf(feasibility_data, blueprint_images)
 
     st.success("PDF Generated Successfully!")
     
-    # Direct Download Option
     st.download_button(
         label="📥 Download PDF Direct",
         data=pdf_bytes,
@@ -76,7 +72,6 @@ if submitted:
         mime="application/pdf"
     )
 
-    # Sync to Google Drive
     with st.spinner("Synchronizing to Google Drive..."):
         success_drive, drive_msg = sync_file_to_drive(pdf_bytes, location_name)
         if success_drive:
@@ -84,7 +79,6 @@ if submitted:
         else:
             st.warning(f"Drive Sync Notice: {drive_msg}")
 
-    # Dispatch Email
     with st.spinner("Dispatching Executive Email Pack..."):
         success_email, email_msg = send_feasibility_email(
             recipient_email, 
