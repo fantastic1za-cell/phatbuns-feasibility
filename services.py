@@ -75,7 +75,7 @@ def sync_file_to_drive(file_obj, location_name):
         if not loc_folder_id:
             return False, f"Could not create location subfolder '{location_name}' inside target Drive folder."
             
-        file_name = getattr(file_obj, "name", f"Feasibility_Report_{location_name.replace(' ', '_')}.pdf")
+        file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
         
         if hasattr(file_obj, "getvalue"):
             file_bytes = file_obj.getvalue()
@@ -104,8 +104,8 @@ def sync_file_to_drive(file_obj, location_name):
     except Exception as e:
         return False, f"Sync Error: {str(e)}"
 
-def send_report_via_email(recipient_email, file_bytes, file_name, location_name):
-    """Sends the generated PDF feasibility report directly via Gmail SMTP."""
+def send_feasibility_email(recipient_email, client_name, file_bytes, location_name):
+    """Sends the generated PDF feasibility report via Gmail SMTP using app credentials."""
     try:
         gmail_user = st.secrets.get("GMAIL_USER")
         gmail_pass = st.secrets.get("GMAIL_APP_PASSWORD")
@@ -114,11 +114,17 @@ def send_report_via_email(recipient_email, file_bytes, file_name, location_name)
             return False, "Gmail credentials missing in secrets."
             
         msg = EmailMessage()
-        msg['Subject'] = f"Feasibility Report - {location_name}"
+        msg['Subject'] = f"Phatbuns Franchise Feasibility Report - {location_name}"
         msg['From'] = gmail_user
         msg['To'] = recipient_email
-        msg.set_content(f"Hi,\n\nPlease find attached the generated feasibility report for {location_name}.\n\nBest regards,\nMr Mobile SA")
+        msg.set_content(
+            f"Hi {client_name},\n\n"
+            f"Please find attached the comprehensive site feasibility and investment pack for {location_name}.\n\n"
+            f"Best regards,\n"
+            f"Mr Mobile SA / Phatbuns Expansion Team"
+        )
         
+        file_name = f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf"
         msg.add_attachment(
             file_bytes,
             maintype='application',
