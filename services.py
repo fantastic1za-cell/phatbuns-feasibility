@@ -77,7 +77,6 @@ def sync_file_to_drive(file_obj, location_name):
             
         file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
         
-        # Robust handling for raw bytes, file-like objects, or custom wrappers
         if isinstance(file_obj, bytes):
             file_bytes = file_obj
         elif hasattr(file_obj, "getvalue"):
@@ -108,7 +107,7 @@ def sync_file_to_drive(file_obj, location_name):
         return False, f"Sync Error: {str(e)}"
 
 def send_feasibility_email(recipient_email, client_name, file_bytes, location_name):
-    """Sends the generated PDF feasibility report via Gmail SMTP with Phatbuns South Africa branding."""
+    """Sends the generated PDF feasibility report via Gmail SMTP with Phatbuns South Africa sender branding."""
     try:
         gmail_user = st.secrets.get("GMAIL_USER")
         gmail_pass = st.secrets.get("GMAIL_APP_PASSWORD")
@@ -119,7 +118,7 @@ def send_feasibility_email(recipient_email, client_name, file_bytes, location_na
         msg = EmailMessage()
         msg['Subject'] = f"Phatbuns SA — Executive Franchisee Feasibility Pack & Investor Dossier ({location_name})"
         
-        # Set sender display name to 'Phatbuns South Africa'
+        # Explicitly set sender display name to Phatbuns South Africa
         msg['From'] = f"Phatbuns South Africa <{gmail_user}>"
         msg['To'] = recipient_email
         
