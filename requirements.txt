@@ -8,3 +8,4 @@ google-genai
 duckduckgo-search
 google-api-python-client
 google-auth
+weasyprint
