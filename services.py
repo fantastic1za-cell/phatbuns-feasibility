@@ -1,14 +1,15 @@
 import os
 import smtplib
+import json
+import tempfile
 from email.message import EmailMessage
 import streamlit as st
-import base64
 
 def get_drive_service():
     """
-    Initializes Google Drive API service. Automatically normalizes, strips whitespace,
-    and re-chunks the RSA private key into exact 64-character lines to completely 
-    prevent Cryptography / PEM MalformedFraming errors.
+    Initializes Google Drive API service. Strictly normalizes the RSA private key 
+    in accordance with RFC 1421 / cryptography.io PEM framing rules (exact 64-character 
+    line wrapping) using a secure temporary credentials file.
     """
     try:
         from google.oauth2 import service_account
@@ -19,30 +20,37 @@ def get_drive_service():
             
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
-                
-                # Clean up literal escaped newlines and extra spacing
-                pk = pk.replace("\\n", "\n").strip()
-                
-                header = "-----BEGIN PRIVATE KEY-----"
-                footer = "-----END PRIVATE KEY-----"
-                
-                if header in pk and footer in pk:
-                    # Extract pure base64 payload by stripping headers, footers, and whitespace
-                    body = pk.replace(header, "").replace(footer, "")
-                    body = "".join(body.split()) # Removes all spaces, tabs, and newlines
+                if isinstance(pk, str):
+                    # Clean up escaped newlines and carriage returns
+                    pk = pk.replace("\\n", "\n").replace("\r", "").strip()
                     
-                    # Re-chunk strictly into 64-character lines as required by RFC 1421 / cryptography
-                    chunks = [body[i:i+64] for i in range(0, len(body), 64)]
-                    pk = f"{header}\n" + "\n".join(chunks) + f"\n{footer}\n"
-                    
-                creds_dict["private_key"] = pk
+                    if "-----BEGIN PRIVATE KEY-----" in pk:
+                        # Extract pure base64 payload by stripping headers, footers, and all whitespace
+                        body = pk.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "")
+                        body = "".join(body.split())
+                        
+                        # Re-chunk strictly into 64-character lines as required by cryptography.io
+                        chunks = [body[i:i+64] for i in range(0, len(body), 64)]
+                        pk = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(chunks) + "\n-----END PRIVATE KEY-----\n"
+                        
+                    creds_dict["private_key"] = pk
+            
+            # Write to a secure temp file to prevent dictionary string-parsing bugs
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp:
+                json.dump(creds_dict, temp)
+                temp_path = temp.name
                 
-            creds = service_account.Credentials.from_service_account_info(
-                creds_dict, scopes=["https://www.googleapis.com/auth/drive"]
-            )
-            return build("drive", "v3", credentials=creds)
+            try:
+                creds = service_account.Credentials.from_service_account_file(
+                    temp_path, scopes=["https://www.googleapis.com/auth/drive"]
+                )
+                return build("drive", "v3", credentials=creds)
+            finally:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                    
     except Exception as e:
-        st.error(f"Drive Sync Error: {str(e)}")
+        st.error(f"Drive API Connection Error: {str(e)}")
     return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
@@ -72,7 +80,7 @@ def get_or_create_folder(service, folder_name, parent_id=None):
 def sync_file_to_drive(file_obj, location_name):
     service = get_drive_service()
     if not service:
-        return False, "Drive API Inactive"
+        return False, "Drive API Inactive (Check Secrets)"
         
     try:
         from googleapiclient.http import MediaIoBaseUpload
@@ -80,11 +88,11 @@ def sync_file_to_drive(file_obj, location_name):
         
         root_folder_id = get_or_create_folder(service, "Locations")
         if not root_folder_id:
-            return False, "Could not create root folder"
+            return False, "Could not create root 'Locations' folder"
             
         loc_folder_id = get_or_create_folder(service, location_name, root_folder_id)
         if not loc_folder_id:
-            return False, "Could not create location folder"
+            return False, "Could not create location subfolder"
             
         file_name = getattr(file_obj, "name", "feasibility_report.pdf")
         
