@@ -3,13 +3,13 @@ from io import BytesIO
 
 def generate_feasibility_pdf(form_data, blueprint_images=None):
     """
-    Compiles the complete 8-page master investor prospectus matching the exact 
-    Rondebuilt layout standard into raw PDF bytes using WeasyPrint.
+    Compiles the complete 8-page enterprise-grade Phatbuns master investor prospectus 
+    matching the exact Rondebuilt layout standard into raw PDF bytes using WeasyPrint.
     """
     if blueprint_images is None:
         blueprint_images = []
 
-    # Extract dynamic form inputs
+    # Extract dynamic form inputs with robust defaults
     location_name = form_data.get("location_name", "New Corner Northcliff (Shop RL 03)")
     store_footprint = form_data.get("store_footprint", 167.0)
     base_net_rental = form_data.get("base_net_rental", 350.0)
@@ -26,7 +26,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
     monthly_operating_cost = base_net_rental * store_footprint
     working_capital = 450000.0
     
-    # Construct full multi-page HTML template matching exact Rondebuilt prospectus formatting
+    # Construct full 8-page multi-page HTML template matching exact Rondebuilt prospectus formatting
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -35,15 +35,15 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <style>
             @page {{
                 size: A4;
-                margin: 12mm 15mm 15mm 15mm;
+                margin: 10mm 12mm 14mm 12mm;
                 @bottom-left {{
                     content: "CONFIDENTIAL INFORMATION | Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712";
-                    font-size: 6pt;
+                    font-size: 5.5pt;
                     color: #444;
                 }}
                 @bottom-right {{
                     content: "Page " counter(page) " of 8";
-                    font-size: 7.5pt;
+                    font-size: 7pt;
                     font-weight: bold;
                     color: #ff7518;
                 }}
@@ -51,17 +51,17 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
             body {{
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                 color: #2c3e50;
-                line-height: 1.35;
+                line-height: 1.3;
                 margin: 0;
                 padding: 0;
             }}
             .cover-page {{
                 text-align: center;
                 page-break-after: always;
-                padding-top: 25mm;
+                padding-top: 15mm;
             }}
             .cover-brand {{
-                font-size: 32pt;
+                font-size: 34pt;
                 font-weight: 900;
                 color: #ff7518;
                 margin: 0;
@@ -71,49 +71,53 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 font-size: 11pt;
                 font-weight: bold;
                 color: #1a1a1a;
-                margin-top: 8px;
-                margin-bottom: 25mm;
+                margin-top: 6px;
+                margin-bottom: 20mm;
             }}
             .page-break {{
                 page-break-before: always;
             }}
             .header-bar {{
                 border-bottom: 2px solid #ff7518;
-                padding-bottom: 4px;
-                margin-bottom: 12px;
+                padding-bottom: 3px;
+                margin-bottom: 10px;
             }}
             .brand-sm {{
-                font-size: 13pt;
+                font-size: 12pt;
                 font-weight: bold;
                 color: #ff7518;
                 margin: 0;
             }}
             h2 {{
                 color: #ff7518;
-                font-size: 10pt;
+                font-size: 9.5pt;
                 border-bottom: 1px solid #e0e0e0;
-                padding-bottom: 3px;
-                margin-top: 12px;
-                margin-bottom: 6px;
+                padding-bottom: 2px;
+                margin-top: 10px;
+                margin-bottom: 5px;
                 text-transform: uppercase;
+            }}
+            p {{
+                font-size: 8pt;
+                margin: 4px 0;
             }}
             .metric-table {{
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 4px;
-                margin-bottom: 10px;
+                margin-top: 3px;
+                margin-bottom: 8px;
             }}
             .metric-table th, .metric-table td {{
                 border: 1px solid #d0d0d0;
-                padding: 5px 8px;
+                padding: 4px 7px;
                 text-align: left;
-                font-size: 8pt;
+                font-size: 7.5pt;
             }}
             .metric-table th {{
                 background-color: #f8f9fa;
                 color: #333;
                 text-transform: uppercase;
-                font-size: 7.5pt;
+                font-size: 7pt;
             }}
         </style>
     </head>
@@ -121,11 +125,11 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <!-- PAGE 1: COVER & EXECUTIVE SUMMARY -->
         <div class="cover-page">
-            <div style="font-size: 10pt; font-weight: bold; color: #555; letter-spacing: 1px;">EXPRESS MODEL ({store_footprint:.0f} M²)</div>
+            <div style="font-size: 9.5pt; font-weight: bold; color: #555; letter-spacing: 1px;">EXPRESS MODEL ({store_footprint:.0f} M²)</div>
             <h1 class="cover-brand">PHAT BUNS</h1>
             <div class="cover-subtitle">SOUTH AFRICA<br>SITE EVALUATION & INVESTMENT ANALYSIS — {location_name.upper()}</div>
             
-            <table class="metric-table" style="margin-top: 15mm;">
+            <table class="metric-table" style="margin-top: 10mm;">
                 <tr>
                     <th>Turnkey Setup</th>
                     <th>Working Capital</th>
@@ -133,10 +137,10 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                     <th>Ops Cost</th>
                 </tr>
                 <tr>
-                    <td><strong>R {turnkey_capital:,.0f}</strong><br><span style="font-size: 7pt; color: #666;">Excl. VAT (Turnkey)</span></td>
-                    <td><strong>R {working_capital:,.0f}</strong><br><span style="font-size: 7pt; color: #666;">Suggested Reserve</span></td>
-                    <td><strong>R {base_net_rental:.0f}/m²</strong><br><span style="font-size: 7pt; color: #666;">pm Excl. VAT</span></td>
-                    <td><strong>R 45,000</strong><br><span style="font-size: 7pt; color: #666;">Gross Terms</span></td>
+                    <td><strong>R {turnkey_capital:,.0f}</strong><br><span style="font-size: 6.5pt; color: #666;">Excl. VAT (Turnkey)</span></td>
+                    <td><strong>R {working_capital:,.0f}</strong><br><span style="font-size: 6.5pt; color: #666;">Suggested Reserve</span></td>
+                    <td><strong>R {base_net_rental:.0f}/m²</strong><br><span style="font-size: 6.5pt; color: #666;">pm Excl. VAT</span></td>
+                    <td><strong>R 45,000</strong><br><span style="font-size: 6.5pt; color: #666;">Gross Terms</span></td>
                 </tr>
             </table>
         </div>
@@ -144,7 +148,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 2: SITE PROFILE & LEASE TERMS -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7.5pt; color: #666;">01. SITE PROFILE & CAPITAL SCHEDULE</div>
+            <div style="font-size: 7pt; color: #666;">01. SITE PROFILE & CAPITAL SCHEDULE</div>
         </div>
 
         <h2>01. Site Profile & Capital Schedule</h2>
@@ -239,7 +243,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <!-- PAGE 3: RECOVERY MATRIX & OPS -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7.5pt; color: #666;">04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX</div>
+            <div style="font-size: 7pt; color: #666;">04. FINANCIAL RECOVERY & UNIT SALES TARGET MATRIX</div>
         </div>
 
         <h2>04. Financial Recovery & Unit Sales Target Matrix</h2>
@@ -324,10 +328,30 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <div class="page-break"></div>
 
-        <!-- PAGE 4: 5-YEAR PRO FORMA P&L -->
+        <!-- PAGE 4: HERITAGE, MARKETING & GOVERNANCE -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7.5pt; color: #666;">11. 5-YEAR PRO FORMA INCOME STATEMENT & INVESTMENT COMPARISON</div>
+            <div style="font-size: 7pt; color: #666;">07. BRAND HERITAGE, USP & OPERATIONAL GOVERNANCE</div>
+        </div>
+
+        <h2>07. Brand Heritage, USP & Product Standards</h2>
+        <p>Founded in 2019, Phatbuns was built from a vision to reinvent the smash burger experience within the fast-casual market. Phatbuns brings a premier culinary disruption to {location_name}, specializing in artisan smash burgers, proprietary secret sauces, and hand-crafted brioche buns. All ingredients adhere strictly to central supply chain quality assurance protocols.</p>
+
+        <h2>08. Marketing, Launch Strategy & Digital Acquisition</h2>
+        <p>Franchisees benefit from a robust multi-channel marketing framework including pre-launch digital teaser campaigns, local influencer seeding, geo-fenced social media performance marketing targeting surrounding residential nodes, and integrated delivery aggregator partnerships.</p>
+
+        <h2>09. Franchisee Support, Training & Operational Governance</h2>
+        <p>Every Phatbuns franchise partner receives extensive onboarding and operational training across a 4-week intensive program covering back-of-house grill mastery, inventory control, and front-of-house guest hospitality.</p>
+
+        <h2>10. Governance, Compliance & Next Steps</h2>
+        <p>To proceed with site allocation, prospective investors must: (1) Execute the attached Non-Circumvention, Non-Disclosure Agreement (NCNDA), (2) Submit verified proof of unencumbered cash equity, (3) Settle the review administrative fee, and (4) Sign formal franchise agreements upon executive board approval.</p>
+
+        <div class="page-break"></div>
+
+        <!-- PAGE 5: 5-YEAR PRO FORMA P&L -->
+        <div class="header-bar">
+            <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
+            <div style="font-size: 7pt; color: #666;">11. 5-YEAR PRO FORMA INCOME STATEMENT & INVESTMENT COMPARISON</div>
         </div>
 
         <h2>11A. 5-Year Pro Forma Income Statement & P&L Forecast</h2>
@@ -408,62 +432,75 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <div class="page-break"></div>
 
-        <!-- PAGE 5: BRAND PORTFOLIO -->
+        <!-- PAGE 6: LAYOUT PLAN PLACEHOLDER -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7.5pt; color: #666;">BRAND PORTFOLIO & DIGITAL CATALOGS</div>
+            <div style="font-size: 7pt; color: #666;">DEVELOPMENT LEASING LAYOUT PLAN</div>
+        </div>
+        <h2>Proposed Layout Plan ({store_footprint:.0f} sqm)</h2>
+        <p>Architectural floor plan, kitchen workflow schematic, and seating allocation mapped for {location_name}.</p>
+        <div style="border: 2px dashed #ccc; padding: 40mm; text-align: center; color: #777; margin-top: 20mm;">
+            [ Attached Architectural Layout & Mall Schematic ]
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- PAGE 7: BRAND PORTFOLIO & CATALOGS -->
+        <div class="header-bar">
+            <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
+            <div style="font-size: 7pt; color: #666;">BRAND PORTFOLIO & DIGITAL CATALOGS</div>
         </div>
 
         <h2>Brand Portfolio & Concept Overview</h2>
         <table class="metric-table">
             <tr>
                 <th>Brand & Concept</th>
-                <th>Menu Overview & Social Profile</th>
+                <th>Menu Overview & Google Drive Link</th>
             </tr>
             <tr>
                 <td><strong>Phatbuns Smash Burgers</strong></td>
-                <td>Hand-pressed Angus beef smash patties served on seeded brioche, topped with proprietary secret sauces, Cheesy Doritos, and Fiery Cheetos ranges.</td>
+                <td>Hand-pressed Angus beef smash patties on seeded brioche with secret sauces. <br><a href="#" style="color: #ff7518;">Download Menu (PDF)</a></td>
             </tr>
             <tr>
                 <td><strong>PhatVille Sliders & Sides</strong></td>
-                <td>Nashville-style sliders, crispy tender boxes, dusted crinkle fries, and specialized dipping sauces optimized for delivery channels.</td>
+                <td>Nashville-style hot sliders, crispy tender boxes, and dusted crinkle fries. <br><a href="#" style="color: #ff7518;">Download Menu (PDF)</a></td>
             </tr>
             <tr>
                 <td><strong>Butter Brûlée Signature Drinks</strong></td>
-                <td>Hand-crafted specialty iced teas, indulgent gourmet milkshakes, artisanal refresher coolers, and barista specialty coffees.</td>
+                <td>Hand-crafted specialty iced teas, gourmet milkshakes, and artisanal refreshers. <br><a href="#" style="color: #ff7518;">Download Menu (PDF)</a></td>
             </tr>
             <tr>
                 <td><strong>Butter Brûlée Cookies & Desserts</strong></td>
-                <td>Gourmet freshly baked classic cookies, stuffed exclusive artisan ranges, cookie caviar tiramisu, and specialty sweet pairings.</td>
+                <td>Freshly baked classic cookies, stuffed artisan ranges, and cookie caviar tiramisu. <br><a href="#" style="color: #ff7518;">Download Menu (PDF)</a></td>
             </tr>
         </table>
 
         <div class="page-break"></div>
 
-        <!-- PAGE 6: LEGAL & SIGN-OFF -->
+        <!-- PAGE 8: LEGAL & SIGN-OFF -->
         <div class="header-bar">
             <div class="brand-sm">PHAT BUNS SOUTH AFRICA</div>
-            <div style="font-size: 7.5pt; color: #666;">GOVERNANCE, COMPLIANCE & SIGN-OFF</div>
+            <div style="font-size: 7pt; color: #666;">GOVERNANCE, COMPLIANCE & SIGN-OFF</div>
         </div>
 
         <h2>Non-Disclosure & Non-Circumvention Agreement (NCNDA)</h2>
-        <p style="font-size: 8pt;">
+        <p style="font-size: 7.5pt;">
             Entered into by and between <strong>PHATBUNS SOUTH AFRICA</strong> (Franchisor) and <strong>{client_name}</strong> (Prospective Franchisee). 
             All disclosures, financial models, recipes, and operational workflows are shared under strict confidentiality in compliance with the Consumer Protection Act (CPA) and FASA guidelines.
         </p>
 
-        <table class="metric-table" style="margin-top: 25px;">
+        <table class="metric-table" style="margin-top: 20px;">
             <tr>
                 <th style="width: 50%;">For: PHATBUNS SOUTH AFRICA</th>
                 <th style="width: 50%;">For: THE RECEIVING PARTY</th>
             </tr>
             <tr>
-                <td style="height: 55px; vertical-align: bottom;">
+                <td style="height: 50px; vertical-align: bottom;">
                     <strong>Authorized Signature:</strong> ______________________<br>
                     <strong>Name:</strong> Nisaar Ally<br>
                     <strong>Title:</strong> SA Master Rights Holder
                 </td>
-                <td style="height: 55px; vertical-align: bottom;">
+                <td style="height: 50px; vertical-align: bottom;">
                     <strong>Authorized Signature:</strong> ______________________<br>
                     <strong>Name:</strong> {client_name}<br>
                     <strong>Title:</strong> Prospective Franchisee
