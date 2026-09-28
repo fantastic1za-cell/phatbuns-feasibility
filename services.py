@@ -6,25 +6,21 @@ import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service using User OAuth credentials.
-    Bypasses Service Account 0-quota limits by directly utilizing the 
-    user's personal Google Drive storage.
+    Initializes Google Drive API service using Google Cloud Service Account credentials.
+    Bypasses token expiration and client validation errors by utilizing 
+    the service account key configuration in Streamlit secrets.
     """
     try:
-        from google.oauth2.credentials import Credentials
+        from google.oauth2 import service_account
         from googleapiclient.discovery import build
         
-        if "gcp_user_oauth" not in st.secrets:
-            st.error("Authentication Error: Missing [gcp_user_oauth] in Streamlit secrets.")
+        if "gcp_service_account" not in st.secrets:
+            st.error("Authentication Error: Missing [gcp_service_account] in Streamlit secrets.")
             return None
             
-        oauth_data = st.secrets["gcp_user_oauth"]
-        creds = Credentials(
-            token=None,
-            refresh_token=oauth_data["refresh_token"],
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=oauth_data["client_id"],
-            client_secret=oauth_data["client_secret"],
+        service_account_info = dict(st.secrets["gcp_service_account"])
+        creds = service_account.Credentials.from_service_account_info(
+            service_account_info,
             scopes=["https://www.googleapis.com/auth/drive"]
         )
         
@@ -102,7 +98,7 @@ def sync_file_to_drive(file_obj, location_name):
         else:
             service.files().create(body=file_metadata, media_body=media, fields='id').execute()
             
-        return True, "Synced Successfully to Google Drive!"
+        return True, "Synced Successfully to Google Drive via Service Account!"
     except Exception as e:
         return False, f"Sync Error: {str(e)}"
 
