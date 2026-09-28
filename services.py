@@ -119,7 +119,6 @@ def send_feasibility_email(recipient_email, recipient_name, pdf_bytes, location_
         msg['From'] = f"Phatbuns South Africa <{sender_email}>"
         msg['To'] = recipient_email
         
-        # HTML Email body with 30px height icons positioned above Warm regards
         html_content = f"""
         <html>
         <body style="font-family: Arial, sans-serif; font-size: 14px; color: #1A1A1A; line-height: 1.5;">
