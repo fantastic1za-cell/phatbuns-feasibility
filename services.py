@@ -1,50 +1,44 @@
 import os
 import smtplib
 import json
-import base64
 import tempfile
 from email.message import EmailMessage
 import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service. Automatically handles standard keys, 
-    base64-encoded service account strings, and RFC 1421 line-wrapping rules 
-    to permanently eliminate MalformedFraming errors.
+    Initializes Google Drive API service. Safely normalizes the RSA private key 
+    by stripping all escape characters, isolating the base64 body, and re-chunking 
+    strictly into 64-character lines to permanently prevent MalformedFraming errors.
     """
     try:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         
         if "gcp_service_account" in st.secrets:
-            creds_raw = st.secrets["gcp_service_account"]
-            
-            # If stored as a base64 string or standard dict
-            if isinstance(creds_raw, str):
-                creds_dict = json.loads(base64.b64decode(creds_raw).decode('utf-8'))
-            else:
-                creds_dict = dict(creds_raw)
+            creds_dict = dict(st.secrets["gcp_service_account"])
             
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
                 if isinstance(pk, str):
-                    # Strip surrounding quotes or whitespace if present
-                    pk = pk.strip("'\"")
+                    # Normalize both literal escape sequences and real newlines
+                    pk = pk.replace("\\n", "\n").replace("\r", "").strip()
                     
-                    # Fix escaped newlines
-                    pk = pk.replace("\\\\n", "\n").replace("\\n", "\n")
+                    header = "-----BEGIN PRIVATE KEY-----"
+                    footer = "-----END PRIVATE KEY-----"
                     
-                    if "-----BEGIN PRIVATE KEY-----" in pk:
-                        # Re-construct clean PEM with exact 64-character lines
-                        lines = [l.strip() for l in pk.splitlines() if l.strip()]
-                        body_lines = [l for l in lines if not l.startswith("-----")]
-                        body = "".join(body_lines)
+                    if header in pk and footer in pk:
+                        # Strip header, footer, and ALL whitespace/newlines to get pure base64
+                        body = pk.replace(header, "").replace(footer, "")
+                        body = "".join(body.split())
+                        
+                        # Re-chunk strictly into 64-character lines as required by RFC 1421 / cryptography
                         chunks = [body[i:i+64] for i in range(0, len(body), 64)]
-                        pk = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(chunks) + "\n-----END PRIVATE KEY-----\n"
+                        pk = f"{header}\n" + "\n".join(chunks) + f"\n{footer}\n"
                         
                     creds_dict["private_key"] = pk
             
-            # Load via secure temporary JSON file to avoid memory parsing bugs
+            # Write to a secure temporary JSON file to avoid memory string-parsing bugs
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp:
                 json.dump(creds_dict, temp)
                 temp_path = temp.name
