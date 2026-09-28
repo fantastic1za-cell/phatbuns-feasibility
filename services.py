@@ -1,41 +1,50 @@
 import os
 import smtplib
 import json
+import base64
 import tempfile
 from email.message import EmailMessage
 import streamlit as st
 
 def get_drive_service():
     """
-    Initializes Google Drive API service. Strictly normalizes the RSA private key 
-    in accordance with RFC 1421 / cryptography.io PEM framing rules (exact 64-character 
-    line wrapping) using a secure temporary credentials file.
+    Initializes Google Drive API service. Automatically handles standard keys, 
+    base64-encoded service account strings, and RFC 1421 line-wrapping rules 
+    to permanently eliminate MalformedFraming errors.
     """
     try:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         
         if "gcp_service_account" in st.secrets:
-            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds_raw = st.secrets["gcp_service_account"]
+            
+            # If stored as a base64 string or standard dict
+            if isinstance(creds_raw, str):
+                creds_dict = json.loads(base64.b64decode(creds_raw).decode('utf-8'))
+            else:
+                creds_dict = dict(creds_raw)
             
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
                 if isinstance(pk, str):
-                    # Clean up escaped newlines and carriage returns
-                    pk = pk.replace("\\n", "\n").replace("\r", "").strip()
+                    # Strip surrounding quotes or whitespace if present
+                    pk = pk.strip("'\"")
+                    
+                    # Fix escaped newlines
+                    pk = pk.replace("\\\\n", "\n").replace("\\n", "\n")
                     
                     if "-----BEGIN PRIVATE KEY-----" in pk:
-                        # Extract pure base64 payload by stripping headers, footers, and all whitespace
-                        body = pk.replace("-----BEGIN PRIVATE KEY-----", "").replace("-----END PRIVATE KEY-----", "")
-                        body = "".join(body.split())
-                        
-                        # Re-chunk strictly into 64-character lines as required by cryptography.io
+                        # Re-construct clean PEM with exact 64-character lines
+                        lines = [l.strip() for l in pk.splitlines() if l.strip()]
+                        body_lines = [l for l in lines if not l.startswith("-----")]
+                        body = "".join(body_lines)
                         chunks = [body[i:i+64] for i in range(0, len(body), 64)]
                         pk = "-----BEGIN PRIVATE KEY-----\n" + "\n".join(chunks) + "\n-----END PRIVATE KEY-----\n"
                         
                     creds_dict["private_key"] = pk
             
-            # Write to a secure temp file to prevent dictionary string-parsing bugs
+            # Load via secure temporary JSON file to avoid memory parsing bugs
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as temp:
                 json.dump(creds_dict, temp)
                 temp_path = temp.name
