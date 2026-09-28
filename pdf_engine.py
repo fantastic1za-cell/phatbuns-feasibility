@@ -4,7 +4,7 @@ from io import BytesIO
 def generate_feasibility_pdf(form_data, blueprint_images=None):
     """
     Compiles the complete enterprise-grade multi-page Phatbuns franchise feasibility pack 
-    into raw PDF bytes using WeasyPrint with full financial, operational, and structural schedules.
+    into raw PDF bytes using WeasyPrint with balanced page-break handling.
     """
     if blueprint_images is None:
         blueprint_images = []
@@ -27,7 +27,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
     monthly_operating_cost = base_net_rental * store_footprint
     estimated_ops_cost = 45000.0  # Utilities, security, mall ops
     
-    # Construct complete multi-section HTML template
+    # Construct complete balanced multi-section HTML template
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -36,7 +36,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
         <style>
             @page {{
                 size: A4;
-                margin: 15mm;
+                margin: 12mm 15mm 15mm 15mm;
                 @bottom-right {{
                     content: "Page " counter(page);
                     font-size: 8pt;
@@ -46,15 +46,15 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
             body {{
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                 color: #2c3e50;
-                line-height: 1.5;
+                line-height: 1.4;
                 margin: 0;
                 padding: 0;
             }}
             .header-table {{
                 width: 100%;
-                border-bottom: 3px solid #ff7518;
-                padding-bottom: 10px;
-                margin-bottom: 20px;
+                border-bottom: 2px solid #ff7518;
+                padding-bottom: 8px;
+                margin-bottom: 15px;
             }}
             .header-table td {{
                 vertical-align: middle;
@@ -62,46 +62,46 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 padding: 0;
             }}
             .brand-title {{
-                font-size: 16pt;
+                font-size: 15pt;
                 font-weight: bold;
                 color: #1a1a1a;
                 margin: 0;
             }}
             .brand-subtitle {{
-                font-size: 9pt;
+                font-size: 8.5pt;
                 color: #ff7518;
                 font-weight: bold;
                 letter-spacing: 0.5px;
             }}
             .sa-flag {{
-                height: 28px;
+                height: 24px;
                 width: auto;
                 vertical-align: middle;
             }}
             h1 {{
                 color: #1a1a1a;
-                font-size: 18pt;
-                margin: 0 0 5px 0;
+                font-size: 16pt;
+                margin: 0 0 4px 0;
             }}
             h2 {{
                 color: #ff7518;
-                font-size: 12pt;
+                font-size: 11pt;
                 border-bottom: 1px solid #e0e0e0;
-                padding-bottom: 4px;
-                margin-top: 18px;
-                margin-bottom: 10px;
+                padding-bottom: 3px;
+                margin-top: 14px;
+                margin-bottom: 8px;
             }}
             .metric-table {{
                 width: 100%;
                 border-collapse: collapse;
-                margin-top: 10px;
-                margin-bottom: 15px;
+                margin-top: 6px;
+                margin-bottom: 10px;
             }}
             .metric-table th, .metric-table td {{
                 border: 1px solid #e0e0e0;
-                padding: 8px 12px;
+                padding: 6px 10px;
                 text-align: left;
-                font-size: 9pt;
+                font-size: 8.5pt;
             }}
             .metric-table th {{
                 background-color: #f8f9fa;
@@ -111,7 +111,7 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 page-break-before: always;
             }}
             .footer-signature {{
-                margin-top: 30px;
+                margin-top: 20px;
                 page-break-inside: avoid;
             }}
         </style>
@@ -127,13 +127,13 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
                 </td>
                 <td style="text-align: right;">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Flag_of_South_Africa.svg" alt="South African Flag" class="sa-flag">
-                    <br><span style="font-size: 7.5pt; color: #777;">EXECUTIVE FEASIBILITY PACK</span>
+                    <br><span style="font-size: 7pt; color: #777;">EXECUTIVE FEASIBILITY PACK</span>
                 </td>
             </tr>
         </table>
 
         <h1>Site Feasibility Assessment</h1>
-        <p style="font-size: 10pt; color: #555; margin-top: 0;">Comprehensive Investment & Operations Pack prepared for <strong>{client_name}</strong>.</p>
+        <p style="font-size: 9pt; color: #555; margin-top: 0; margin-bottom: 10px;">Comprehensive Investment & Operations Pack prepared for <strong>{client_name}</strong>.</p>
 
         <h2>1. Location & Core Lease Parameters</h2>
         <table class="metric-table">
@@ -259,13 +259,13 @@ def generate_feasibility_pdf(form_data, blueprint_images=None):
 
         <div class="footer-signature">
             <h2>Next Steps & Authorization</h2>
-            <p style="font-size: 9.5pt;">Please review the complete schedule above, verify your investment parameters, and return an executed copy to proceed with formal store rollout and corporate approval.</p>
+            <p style="font-size: 9pt;">Please review the complete schedule above, verify your investment parameters, and return an executed copy to proceed with formal store rollout and corporate approval.</p>
             
             <br>
-            <p style="font-size: 9.5pt;"><strong>Warm regards,</strong><br>
+            <p style="font-size: 9pt;"><strong>Warm regards,</strong><br>
             <strong>Nisaar Ally</strong><br>
-            <span style="color: #666; font-size: 8.5pt;">SA Master Rights Holder | Phatbuns Expansion</span><br>
-            <span style="color: #666; font-size: 8.5pt;">Mobile: +27 (0)68 710 1939 | Email: nisaar@fantastic1.com</span></p>
+            <span style="color: #666; font-size: 8pt;">SA Master Rights Holder | Phatbuns Expansion</span><br>
+            <span style="color: #666; font-size: 8pt;">Mobile: +27 (0)68 710 1939 | Email: nisaar@fantastic1.com</span></p>
         </div>
 
     </body>
