@@ -2,11 +2,13 @@ import os
 import smtplib
 from email.message import EmailMessage
 import streamlit as st
+import base64
 
 def get_drive_service():
     """
-    Initializes Google Drive API service. Explicitly normalizes and re-frames 
-    the RSA private key to permanently resolve Streamlit TOML PEM MalformedFraming errors.
+    Initializes Google Drive API service. Automatically normalizes, strips whitespace,
+    and re-chunks the RSA private key into exact 64-character lines to completely 
+    prevent Cryptography / PEM MalformedFraming errors.
     """
     try:
         from google.oauth2 import service_account
@@ -17,12 +19,19 @@ def get_drive_service():
             
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
-                pk = pk.replace("\\n", "\n")
                 
-                if "-----BEGIN PRIVATE KEY-----" in pk and "-----END PRIVATE KEY-----" in pk:
-                    header = "-----BEGIN PRIVATE KEY-----"
-                    footer = "-----END PRIVATE KEY-----"
-                    body = pk.replace(header, "").replace(footer, "").replace("\n", "").strip()
+                # Clean up literal escaped newlines and extra spacing
+                pk = pk.replace("\\n", "\n").strip()
+                
+                header = "-----BEGIN PRIVATE KEY-----"
+                footer = "-----END PRIVATE KEY-----"
+                
+                if header in pk and footer in pk:
+                    # Extract pure base64 payload by stripping headers, footers, and whitespace
+                    body = pk.replace(header, "").replace(footer, "")
+                    body = "".join(body.split()) # Removes all spaces, tabs, and newlines
+                    
+                    # Re-chunk strictly into 64-character lines as required by RFC 1421 / cryptography
                     chunks = [body[i:i+64] for i in range(0, len(body), 64)]
                     pk = f"{header}\n" + "\n".join(chunks) + f"\n{footer}\n"
                     
