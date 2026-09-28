@@ -34,7 +34,7 @@ def get_drive_service():
         return None
 
 def get_or_create_folder(service, folder_name, parent_id=None):
-    """Finds or creates a subfolder within Google Drive."""
+    """Finds or creates a subfolder within Google Drive and returns (folder_id, error_message)."""
     try:
         query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         if parent_id:
@@ -44,7 +44,7 @@ def get_or_create_folder(service, folder_name, parent_id=None):
         files = results.get('files', [])
         
         if files:
-            return files[0]['id']
+            return files[0]['id'], None
         
         folder_metadata = {
             'name': folder_name,
@@ -54,9 +54,9 @@ def get_or_create_folder(service, folder_name, parent_id=None):
             folder_metadata['parents'] = [parent_id]
             
         folder = service.files().create(body=folder_metadata, fields='id').execute()
-        return folder.get('id')
-    except Exception:
-        return None
+        return folder.get('id'), None
+    except Exception as e:
+        return None, str(e)
 
 def sync_file_to_drive(file_obj, location_name):
     """Uploads or updates the generated PDF report in the designated Google Drive folder."""
@@ -71,9 +71,9 @@ def sync_file_to_drive(file_obj, location_name):
         if not root_folder_id:
             return False, "Drive Error: DRIVE_FOLDER_ID not found in secrets."
             
-        loc_folder_id = get_or_create_folder(service, location_name, root_folder_id)
+        loc_folder_id, folder_err = get_or_create_folder(service, location_name, root_folder_id)
         if not loc_folder_id:
-            return False, f"Could not create location subfolder '{location_name}' inside target Drive folder."
+            return False, f"Folder Creation Error: {folder_err}"
             
         file_name = getattr(file_obj, "name", f"Phatbuns_{location_name.replace(' ', '_')}_Feasibility_Report.pdf")
         
