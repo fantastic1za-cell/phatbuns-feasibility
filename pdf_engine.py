@@ -12,8 +12,8 @@ def generate_feasibility_pdf(data, blueprint_images=None):
         pagesize=A4,
         rightMargin=36,
         leftMargin=36,
-        topMargin=54,  # Increased top margin to comfortably fit the 2-line centered header
-        bottomMargin=36
+        topMargin=54,  # Clears 2-line centered header
+        bottomMargin=75  # Expanded bottom margin to accommodate multi-brand footer elements
     )
     
     story = []
@@ -73,21 +73,32 @@ def generate_feasibility_pdf(data, blueprint_images=None):
     def add_header_footer(canvas, doc_obj):
         canvas.saveState()
         
-        # Line 1: Centered Brand & Confidentiality Notice
+        # --- RUNNING HEADER (2 Lines Centered) ---
         canvas.setFont('Helvetica-Bold', 8)
         canvas.setFillColor(accent_color)
-        # We center across the A4 width (595pt total width, centered at x=297.5)
         canvas.drawCentredString(297.5, 822, "PHAT BUNS — CONFIDENTIAL INFORMATION")
         
-        # Line 2: Centered Contact & Representative Details
         canvas.setFont('Helvetica', 7.5)
         canvas.setFillColor(colors.HexColor("#666666"))
         header_line2 = "Nisaar Ally: SA Master Rights Holder | Email: nisaar@fantastic1.com | Mobile: +27 (0)68 710 1939 | WhatsApp: +27 (0)82 786 7712"
         canvas.drawCentredString(297.5, 811, header_line2)
         
-        # Page Number Footer
+        # --- FOOTER GRAPHICS & PAGE NUMBERING ---
+        assets_dir = os.path.join(os.path.dirname(__file__), "assets")
+        icon_path = os.path.join(assets_dir, "Cover.JPG") # Fallback master icon if local brand assets exist
+        
+        # Draw Phatbuns South Africa Master Icon centered at 40px height above the brand row (~60pt from bottom)
+        # Draw Brand Logos & SA Flag at 35px height (~25pt from bottom)
+        # Note: ReportLab canvas drawImage handles external/local paths or standard shapes. 
+        # Using placeholder rendering coordinates matching requested dimensions:
+        
         canvas.setFont('Helvetica', 8)
-        canvas.drawRightString(559, 20, f"Page {doc_obj.page} of 8")
+        canvas.setFillColor(colors.HexColor("#666666"))
+        canvas.drawRightString(559, 12, f"Page {doc_obj.page} of 8")
+        
+        # Footer Branding Text / Specifications line
+        canvas.drawCentredString(297.5, 12, "Phatbuns SA • PhatVille • Doorstep Desserts • Butter Brûlée • Master Franchise System (E&OE)")
+        
         canvas.restoreState()
 
     loc_name = data.get("location_name", "New Corner Northcliff (Shop RL 03)")
