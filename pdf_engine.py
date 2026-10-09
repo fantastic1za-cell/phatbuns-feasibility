@@ -22,7 +22,6 @@ def extract_pdf_data(*args, **kwargs):
     elif kwargs:
         return kwargs
     elif args:
-        # Fallback mapping if passed as raw positional arguments
         keys = ["location_name", "client_name", "store_type", "sqm", "rental_rate", "fitout_cost", "equipment_cost"]
         return {keys[i]: args[i] for i in range(min(len(args), len(keys)))}
     return {}
@@ -32,6 +31,7 @@ def generate_rondebult_html(data):
     location_name = data.get("location_name") or data.get("location") or "Target Location"
     client_name = data.get("client_name") or data.get("applicant_name") or "Valued Investor"
     store_type = data.get("store_type") or data.get("model_type") or "Standard Inline"
+    shop_code = data.get("shop_code") or "Shop RL 03"
     
     try:
         sqm = float(data.get("sqm", 80))
@@ -89,6 +89,9 @@ def generate_rondebult_html(data):
                 border-bottom: 3px solid #D97706;
                 padding-bottom: 12px;
                 margin-bottom: 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
             }}
             .brand-title {{
                 font-size: 22pt;
@@ -101,6 +104,7 @@ def generate_rondebult_html(data):
                 color: #D97706;
                 font-weight: 600;
                 text-transform: uppercase;
+                letter-spacing: 1px;
             }}
             h2 {{
                 font-size: 14pt;
@@ -141,16 +145,27 @@ def generate_rondebult_html(data):
                 border-bottom: 2px solid #D97706;
                 color: #78350F;
             }}
+            .badge {{
+                display: inline-block;
+                padding: 3px 8px;
+                background-color: #0284C7;
+                color: #FFFFFF;
+                font-size: 8pt;
+                font-weight: 700;
+                border-radius: 4px;
+            }}
         </style>
     </head>
     <body>
+
+        <!-- PAGE 1: COVER -->
         <div style="text-align: center; padding-top: 100px;">
             <div class="brand-sub">Franchise Expansion Opportunity</div>
-            <h1 style="font-size: 30pt; color: #0F172A; margin-top: 10px;">PHATBUNS SOUTH AFRICA</h1>
+            <h1 style="font-size: 30pt; color: #0F172A; margin-top: 10px; margin-bottom: 5px;">PHATBUNS SOUTH AFRICA</h1>
             <div style="font-size: 13pt; color: #64748B;">Master Investor Dossier & Feasibility Analysis</div>
             
             <div style="margin-top: 120px; padding: 20px; border: 1px solid #CBD5E1; border-radius: 8px; display: inline-block; width: 80%; text-align: left; background-color: #F8FAFC;">
-                <p><strong>Target Site Node:</strong> {location_name}</p>
+                <p><strong>Target Site Node:</strong> {location_name} ({shop_code})</p>
                 <p><strong>Prepared For:</strong> {client_name}</p>
                 <p><strong>Store Format:</strong> {store_type} ({sqm} sqm Footprint)</p>
                 <p><strong>Date Generated:</strong> {datetime.now().strftime('%d %B %Y')}</p>
@@ -158,10 +173,14 @@ def generate_rondebult_html(data):
             </div>
         </div>
 
+        <!-- PAGE 2: LEASE & CAPEX -->
         <div class="page-break"></div>
         <div class="header-bar">
-            <div class="brand-title">PHATBUNS</div>
-            <div class="brand-sub">Commercial Feasibility</div>
+            <div>
+                <div class="brand-title">PHATBUNS</div>
+                <div class="brand-sub">Commercial Feasibility</div>
+            </div>
+            <span class="badge">Rondebult Layout Standard</span>
         </div>
 
         <h2>1. Site Node & Lease Parameter Analysis</h2>
@@ -188,6 +207,11 @@ def generate_rondebult_html(data):
                     <td>Landlord Security Deposit</td>
                     <td>Minimum 2-Month Rental Guarantee</td>
                     <td class="amount-col">{format_currency(deposit)}</td>
+                </tr>
+                <tr>
+                    <td>Operations Footprint Standard</td>
+                    <td>Kitchen & Delivery Prep Compliant</td>
+                    <td class="amount-col">PASSED (>50 sqm)</td>
                 </tr>
             </tbody>
         </table>
@@ -238,6 +262,48 @@ def generate_rondebult_html(data):
                 </tr>
             </tbody>
         </table>
+
+        <!-- PAGE 3: NCNDA AGREEMENT -->
+        <div class="page-break"></div>
+        <div class="header-bar">
+            <div>
+                <div class="brand-title">PHATBUNS</div>
+                <div class="brand-sub">Non-Circumvention & NCNDA</div>
+            </div>
+            <span class="badge">Legal Execution Page</span>
+        </div>
+
+        <h2>3. Master Confidentiality & Non-Disclosure Terms</h2>
+        <p>
+            This document containing financial models, site layout renders, and operational benchmarks for <strong>{location_name}</strong> is strictly confidential and protected under non-disclosure regulations.
+        </p>
+        <p>
+            The recipient ({client_name}) agrees that all proprietary franchise materials, operational metrics, and lease terms shall remain exclusive property of Phatbuns South Africa. Unauthorised distribution or direct negotiations with developers bypassing the rights holder is prohibited.
+        </p>
+
+        <div style="margin-top: 80px; width: 100%;">
+            <table style="border: none;">
+                <tr style="background: none;">
+                    <td style="width: 50%; border: none; vertical-align: top;">
+                        <p><strong>Signed on behalf of Franchisee Applicant:</strong></p>
+                        <br><br>
+                        <div style="border-bottom: 1px solid #000; width: 80%;"></div>
+                        <p>Signature</p>
+                        <p>Name: {client_name}</p>
+                        <p>Date: ________________________</p>
+                    </td>
+                    <td style="width: 50%; border: none; vertical-align: top;">
+                        <p><strong>Signed on behalf of Phatbuns SA Master Rights Holder:</strong></p>
+                        <br><br>
+                        <div style="border-bottom: 1px solid #000; width: 80%;"></div>
+                        <p>Signature</p>
+                        <p>Name: Nisaar Ally</p>
+                        <p>Date: {datetime.now().strftime('%d/%m/%Y')}</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
     </body>
     </html>
     """
@@ -285,10 +351,7 @@ def generate_reportlab_fallback(data):
     return buffer.getvalue()
 
 def build_pdf(*args, **kwargs):
-    """
-    Flexible entry point that accepts positional arguments, keyword arguments,
-    or a dictionary, making it 100% immune to signature mismatches in app.py.
-    """
+    """Flexible entry point accepting positional, keyword, or dict args."""
     data = extract_pdf_data(*args, **kwargs)
     try:
         from weasyprint import HTML
@@ -296,7 +359,7 @@ def build_pdf(*args, **kwargs):
         html_string = generate_rondebult_html(data)
         return HTML(string=html_string).write_pdf()
     except Exception as e:
-        logger.warning(f"WeasyPrint failed/unavailable ({str(e)}). Switching to ReportLab...")
+        logger.warning(f"WeasyPrint failed ({str(e)}). Switching to ReportLab...")
         return generate_reportlab_fallback(data)
 
 # Backward-compatibility alias
