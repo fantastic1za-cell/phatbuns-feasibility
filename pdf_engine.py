@@ -399,3 +399,5 @@ def build_pdf(data):
         except Exception as fallback_err:
             logger.error(f"Critical PDF Failover Error: {str(fallback_err)}")
             raise RuntimeError(f"Engine PDF rendering failed on both primary and redundancy layers: {str(fallback_err)}")
+# Alias to maintain full backwards compatibility with app.py imports
+generate_feasibility_pdf = build_pdf
