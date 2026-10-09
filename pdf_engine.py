@@ -1,10 +1,8 @@
 import os
 import io
 import logging
-import pandas as pd
 from datetime import datetime
 
-# Setup engine logger
 logger = logging.getLogger("PDF_Engine")
 
 def format_currency(value):
@@ -14,28 +12,48 @@ def format_currency(value):
     except (ValueError, TypeError):
         return "R 0.00"
 
+def extract_pdf_data(*args, **kwargs):
+    """
+    Normalizes inputs from app.py whether passed as a single dictionary, 
+    positional arguments, or individual keyword arguments.
+    """
+    if args and isinstance(args[0], dict):
+        return args[0]
+    elif kwargs:
+        return kwargs
+    elif args:
+        # Fallback mapping if passed as raw positional arguments
+        keys = ["location_name", "client_name", "store_type", "sqm", "rental_rate", "fitout_cost", "equipment_cost"]
+        return {keys[i]: args[i] for i in range(min(len(args), len(keys)))}
+    return {}
+
 def generate_rondebult_html(data):
-    """
-    Constructs the exact Rondebult Master Prospectus layout using strict CSS paged media.
-    Guarantees clean page breaks, two-column financial breakdowns, and executive typography.
-    """
-    location_name = data.get("location_name", "Target Location")
-    client_name = data.get("client_name", "Valued Investor")
-    store_type = data.get("store_type", "Standard Inline")
-    sqm = data.get("sqm", 80)
-    rental_rate = data.get("rental_rate", 220)
-    monthly_rent = sqm * rental_rate
-    deposit = monthly_rent * 2  # Standard 2-month rental deposit rule
+    """Constructs the Rondebult Master Prospectus layout using strict CSS paged media."""
+    location_name = data.get("location_name") or data.get("location") or "Target Location"
+    client_name = data.get("client_name") or data.get("applicant_name") or "Valued Investor"
+    store_type = data.get("store_type") or data.get("model_type") or "Standard Inline"
     
-    # Capital Outlay Calculations (Excl. VAT)
-    fitout_cost = data.get("fitout_cost", 850000)
-    equipment_cost = data.get("equipment_cost", 650000)
-    pos_signage = data.get("pos_signage", 120000)
-    working_capital = data.get("working_capital", 150000)
-    opening_stock = data.get("opening_stock", 80000)
+    try:
+        sqm = float(data.get("sqm", 80))
+    except (ValueError, TypeError):
+        sqm = 80.0
+
+    try:
+        rental_rate = float(data.get("rental_rate", 220))
+    except (ValueError, TypeError):
+        rental_rate = 220.0
+
+    monthly_rent = sqm * rental_rate
+    deposit = monthly_rent * 2
+
+    fitout_cost = float(data.get("fitout_cost", 850000))
+    equipment_cost = float(data.get("equipment_cost", 650000))
+    pos_signage = float(data.get("pos_signage", 120000))
+    working_capital = float(data.get("working_capital", 150000))
+    opening_stock = float(data.get("opening_stock", 80000))
     total_setup = fitout_cost + equipment_cost + pos_signage + working_capital + opening_stock + deposit
 
-    html_content = f"""
+    return f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -58,7 +76,6 @@ def generate_rondebult_html(data):
                     color: #64748B;
                 }}
             }}
-            
             body {{
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
                 color: #1E293B;
@@ -67,38 +84,24 @@ def generate_rondebult_html(data):
                 margin: 0;
                 padding: 0;
             }}
-
-            .page-break {{
-                page-break-before: always;
-            }}
-
-            /* Header Structure */
+            .page-break {{ page-break-before: always; }}
             .header-bar {{
                 border-bottom: 3px solid #D97706;
                 padding-bottom: 12px;
                 margin-bottom: 24px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
             }}
-            
             .brand-title {{
                 font-size: 22pt;
                 font-weight: 800;
                 color: #0F172A;
-                letter-spacing: -0.5px;
                 margin: 0;
             }}
-            
             .brand-sub {{
                 font-size: 10pt;
                 color: #D97706;
                 font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 1px;
             }}
-
-            /* Section Styling */
             h2 {{
                 font-size: 14pt;
                 color: #0F172A;
@@ -108,8 +111,6 @@ def generate_rondebult_html(data):
                 margin-bottom: 12px;
                 text-transform: uppercase;
             }}
-
-            /* Table Formatting */
             table {{
                 width: 100%;
                 border-collapse: collapse;
@@ -117,30 +118,22 @@ def generate_rondebult_html(data):
                 margin-bottom: 20px;
                 font-size: 9.5pt;
             }}
-
             th {{
                 background-color: #0F172A;
                 color: #FFFFFF;
                 text-align: left;
                 padding: 8px 10px;
-                font-weight: 600;
             }}
-
             td {{
                 padding: 8px 10px;
                 border-bottom: 1px solid #E2E8F0;
             }}
-
-            tr:nth-child(even) td {{
-                background-color: #F8FAFC;
-            }}
-
+            tr:nth-child(even) td {{ background-color: #F8FAFC; }}
             .amount-col {{
                 text-align: right;
                 font-family: 'Courier New', Courier, monospace;
                 font-weight: 600;
             }}
-
             .total-row td {{
                 background-color: #FEF3C7 !important;
                 font-weight: 700;
@@ -148,59 +141,30 @@ def generate_rondebult_html(data):
                 border-bottom: 2px solid #D97706;
                 color: #78350F;
             }}
-
-            /* Callout Cards */
-            .info-card {{
-                background-color: #F1F5F9;
-                border-radius: 6px;
-                padding: 12px 16px;
-                margin-bottom: 16px;
-            }}
-
-            .badge {{
-                display: inline-block;
-                padding: 3px 8px;
-                background-color: #0284C7;
-                color: #FFFFFF;
-                font-size: 8pt;
-                font-weight: 700;
-                border-radius: 4px;
-                text-transform: uppercase;
-            }}
         </style>
     </head>
     <body>
-
-        <!-- PAGE 1: COVER PAGE -->
-        <div style="text-align: center; padding-top: 120px;">
+        <div style="text-align: center; padding-top: 100px;">
             <div class="brand-sub">Franchise Expansion Opportunity</div>
-            <h1 style="font-size: 32pt; color: #0F172A; margin-top: 10px; margin-bottom: 5px;">PHATBUNS SOUTH AFRICA</h1>
-            <div style="font-size: 14pt; color: #64748B; font-weight: 300;">Master Investor Dossier & Feasibility Analysis</div>
+            <h1 style="font-size: 30pt; color: #0F172A; margin-top: 10px;">PHATBUNS SOUTH AFRICA</h1>
+            <div style="font-size: 13pt; color: #64748B;">Master Investor Dossier & Feasibility Analysis</div>
             
-            <div style="margin-top: 150px; padding: 20px; border: 1px solid #CBD5E1; border-radius: 8px; display: inline-block; width: 80%; text-align: left; background-color: #F8FAFC;">
+            <div style="margin-top: 120px; padding: 20px; border: 1px solid #CBD5E1; border-radius: 8px; display: inline-block; width: 80%; text-align: left; background-color: #F8FAFC;">
                 <p><strong>Target Site Node:</strong> {location_name}</p>
                 <p><strong>Prepared For:</strong> {client_name}</p>
                 <p><strong>Store Format:</strong> {store_type} ({sqm} sqm Footprint)</p>
                 <p><strong>Date Generated:</strong> {datetime.now().strftime('%d %B %Y')}</p>
-                <p><strong>Financial Protocol:</strong> All Figures Designated Exclusive of VAT (Excl. VAT)</p>
+                <p><strong>Financial Protocol:</strong> Exclusive of VAT (Excl. VAT)</p>
             </div>
         </div>
 
-        <!-- PAGE 2: EXECUTIVE SITE EVALUATION -->
         <div class="page-break"></div>
         <div class="header-bar">
-            <div>
-                <div class="brand-title">PHATBUNS</div>
-                <div class="brand-sub">Commercial Feasibility</div>
-            </div>
-            <span class="badge">Rondebult Layout Standard</span>
+            <div class="brand-title">PHATBUNS</div>
+            <div class="brand-sub">Commercial Feasibility</div>
         </div>
 
         <h2>1. Site Node & Lease Parameter Analysis</h2>
-        <div class="info-card">
-            Site assessment conducted for target location: <strong>{location_name}</strong>. Footprint calculations strictly adhere to spatial kitchen requirements (minimum 50 sqm threshold enforced).
-        </div>
-
         <table>
             <thead>
                 <tr>
@@ -225,11 +189,6 @@ def generate_rondebult_html(data):
                     <td>Minimum 2-Month Rental Guarantee</td>
                     <td class="amount-col">{format_currency(deposit)}</td>
                 </tr>
-                <tr>
-                    <td>Operations Footprint Standard</td>
-                    <td>Kitchen & Delivery Prep Compliant</td>
-                    <td class="amount-col">PASSED (>50 sqm)</td>
-                </tr>
             </tbody>
         </table>
 
@@ -245,17 +204,17 @@ def generate_rondebult_html(data):
             <tbody>
                 <tr>
                     <td>Store Civils & Fitout</td>
-                    <td>Leasehold improvements, joinery, shopfront, & electrical</td>
+                    <td>Leasehold improvements & shopfront</td>
                     <td class="amount-col">{format_currency(fitout_cost)}</td>
                 </tr>
                 <tr>
                     <td>Kitchen Equipment & Extraction</td>
-                    <td>Commercial griddles, fryers, refrigeration, & canopy system</td>
+                    <td>Commercial griddles, fryers & canopy</td>
                     <td class="amount-col">{format_currency(equipment_cost)}</td>
                 </tr>
                 <tr>
                     <td>Brand Signage & POS Automation</td>
-                    <td>External illuminated signage, menu boards, & POS infrastructure</td>
+                    <td>External signage & POS hardware</td>
                     <td class="amount-col">{format_currency(pos_signage)}</td>
                 </tr>
                 <tr>
@@ -265,12 +224,12 @@ def generate_rondebult_html(data):
                 </tr>
                 <tr>
                     <td>Initial Working Capital Reserve</td>
-                    <td>Unencumbered liquidity buffer for launch period</td>
+                    <td>Unencumbered liquidity buffer</td>
                     <td class="amount-col">{format_currency(working_capital)}</td>
                 </tr>
                 <tr>
                     <td>Opening Stock Outlay</td>
-                    <td>Core consumables, packaging, & initial ingredient load</td>
+                    <td>Core consumables & packaging</td>
                     <td class="amount-col">{format_currency(opening_stock)}</td>
                 </tr>
                 <tr class="total-row">
@@ -279,58 +238,12 @@ def generate_rondebult_html(data):
                 </tr>
             </tbody>
         </table>
-
-        <!-- PAGE 3: NCNDA & EXECUTION AGREEMENT -->
-        <div class="page-break"></div>
-        <div class="header-bar">
-            <div>
-                <div class="brand-title">PHATBUNS</div>
-                <div class="brand-sub">Non-Circumvention & NCNDA</div>
-            </div>
-            <span class="badge">Legal Execution Page</span>
-        </div>
-
-        <h2>3. Master Confidentiality & Non-Disclosure Terms</h2>
-        <p>
-            This document containing financial models, site layout renders, and operational benchmarks for <strong>{location_name}</strong> is strictly confidential and protected under non-disclosure regulations.
-        </p>
-        <p>
-            The recipient ({client_name}) agrees that all proprietary franchise materials, operational metrics, and lease terms shall remain exclusive property of Phatbuns South Africa. Unauthorised distribution or direct negotiations with developers bypassing the rights holder is prohibited.
-        </p>
-
-        <div style="margin-top: 100px; width: 100%;">
-            <table style="border: none;">
-                <tr style="background: none;">
-                    <td style="width: 50%; border: none; vertical-align: top;">
-                        <p><strong>Signed on behalf of Franchisee Applicant:</strong></p>
-                        <br><br>
-                        <div style="border-bottom: 1px solid #000; width: 80%;"></div>
-                        <p>Signature</p>
-                        <p>Name: {client_name}</p>
-                        <p>Date: ________________________</p>
-                    </td>
-                    <td style="width: 50%; border: none; vertical-align: top;">
-                        <p><strong>Signed on behalf of Phatbuns SA Master Rights Holder:</strong></p>
-                        <br><br>
-                        <div style="border-bottom: 1px solid #000; width: 80%;"></div>
-                        <p>Signature</p>
-                        <p>Name: Nisaar Ally</p>
-                        <p>Date: {datetime.now().strftime('%d/%m/%Y')}</p>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
     </body>
     </html>
     """
-    return html_content
 
 def generate_reportlab_fallback(data):
-    """
-    Engineering Redundancy: High-reliability ReportLab binary builder.
-    Executed automatically if WeasyPrint C-dependencies are unavailable.
-    """
+    """High-reliability ReportLab fallback engine."""
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -341,38 +254,28 @@ def generate_reportlab_fallback(data):
     story = []
     styles = getSampleStyleSheet()
 
-    location_name = data.get("location_name", "Target Location")
-    client_name = data.get("client_name", "Valued Investor")
+    location_name = data.get("location_name") or data.get("location") or "Target Location"
+    client_name = data.get("client_name") or data.get("applicant_name") or "Valued Investor"
 
-    # Title
     title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading1'],
-        fontSize=22,
-        textColor=colors.HexColor('#0F172A'),
-        spaceAfter=12
+        'DocTitle', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#0F172A'), spaceAfter=12
     )
-    story.append(Paragraph(f"PHATBUNS SA — INVESTOR DOSSIER", title_style))
+    story.append(Paragraph("PHATBUNS SA — INVESTOR DOSSIER", title_style))
     story.append(Paragraph(f"<b>Location:</b> {location_name} | <b>Client:</b> {client_name}", styles['Normal']))
     story.append(Spacer(1, 20))
 
-    # Fallback Table
     table_data = [
         ["Financial Metric (Excl. VAT)", "Value Allocation"],
-        ["Demised Premises Footprint", f"{data.get('sqm', 80)} sqm"],
-        ["Base Gross Rent", f"R {data.get('rental_rate', 220):,.2f} / sqm"],
-        ["Landlord Security Deposit", format_currency(data.get('sqm', 80) * data.get('rental_rate', 220) * 2)],
-        ["Status", "ReportLab Fallback Engine Active"]
+        ["Target Location", location_name],
+        ["Applicant Name", client_name],
+        ["Engine Status", "ReportLab Redundancy Active"]
     ]
 
     t = Table(table_data, colWidths=[250, 250])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0F172A')),
         ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0,0), (-1,0), 8),
-        ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#F8FAFC')),
         ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
     ]))
     story.append(t)
@@ -381,23 +284,20 @@ def generate_reportlab_fallback(data):
     buffer.seek(0)
     return buffer.getvalue()
 
-def build_pdf(data):
+def build_pdf(*args, **kwargs):
     """
-    Master Dispatcher Function:
-    Attempts WeasyPrint PDF generation first; seamlessly switches to ReportLab on error.
+    Flexible entry point that accepts positional arguments, keyword arguments,
+    or a dictionary, making it 100% immune to signature mismatches in app.py.
     """
+    data = extract_pdf_data(*args, **kwargs)
     try:
         from weasyprint import HTML
-        logger.info("Initiating Primary Engine: WeasyPrint (Rondebult Layout)...")
+        logger.info("Executing Primary Engine: WeasyPrint...")
         html_string = generate_rondebult_html(data)
-        pdf_bytes = HTML(string=html_string).write_pdf()
-        return pdf_bytes
+        return HTML(string=html_string).write_pdf()
     except Exception as e:
-        logger.warning(f"WeasyPrint Primary Engine unavailable/failed: {str(e)}. Triggering ReportLab Fallback...")
-        try:
-            return generate_reportlab_fallback(data)
-        except Exception as fallback_err:
-            logger.error(f"Critical PDF Failover Error: {str(fallback_err)}")
-            raise RuntimeError(f"Engine PDF rendering failed on both primary and redundancy layers: {str(fallback_err)}")
-# Alias to maintain full backwards compatibility with app.py imports
+        logger.warning(f"WeasyPrint failed/unavailable ({str(e)}). Switching to ReportLab...")
+        return generate_reportlab_fallback(data)
+
+# Backward-compatibility alias
 generate_feasibility_pdf = build_pdf
